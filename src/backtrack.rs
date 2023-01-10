@@ -1,6 +1,6 @@
 // Generic backtracker
 
-pub trait BackTracker {
+pub trait BackTracking {
     type State;
     type Item;
 
@@ -9,18 +9,18 @@ pub trait BackTracker {
     fn children(&self, state: &Self::State) -> Vec<Self::State>;
 }
 
-pub struct BackTrackIterator<T: BackTracker> {
+pub struct BackTrackIterator<T: BackTracking> {
     bt: T,
     stack: Vec<Vec<T::State>>,
 }
 
-impl<T: BackTracker> BackTrackIterator<T> {
+impl<T: BackTracking> BackTrackIterator<T> {
     pub fn new(bt: T) -> BackTrackIterator<T> {
         BackTrackIterator { stack: vec![vec![T::root(&bt)]], bt }
     }
 }
 
-impl<T: BackTracker> Iterator for BackTrackIterator<T> {
+impl<T: BackTracking> Iterator for BackTrackIterator<T> {
     type Item = T::Item;
 
     fn next(&mut self) -> Option<Self::Item> {

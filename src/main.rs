@@ -1,6 +1,8 @@
-use rust_dsymbols::backtrack_demo::print_integer_partitions;
+use rust_dsymbols::backtrack_demo::IntPartitions;
 
 
 fn main() {
-    print_integer_partitions(10);
+    for xs in IntPartitions::new(10) {
+        println!("{:?}", xs);
+    }
 }

@@ -1,5 +1,5 @@
 use super::backtrack::BackTrackIterator;
-use super::backtrack::BackTracker;
+use super::backtrack::BackTracking;
 
 
 struct PartitionState {
@@ -8,11 +8,11 @@ struct PartitionState {
     top: u32,
 }
 
-struct Partitions {
+struct PartitionBacktTracking {
     n: u32,
 }
 
-impl BackTracker for Partitions {
+impl BackTracking for PartitionBacktTracking {
     type State = PartitionState;
     type Item = Vec<u32>;
 
@@ -35,8 +35,22 @@ impl BackTracker for Partitions {
     }
 }
 
-pub fn print_integer_partitions(n: u32) {
-    for xs in BackTrackIterator::new(Partitions { n }) {
-        println!("{:?}", xs);
+
+pub struct IntPartitions {
+    bt: BackTrackIterator<PartitionBacktTracking>,
+}
+
+impl IntPartitions {
+    pub fn new(n: u32) -> IntPartitions {
+        let bt = BackTrackIterator::new(PartitionBacktTracking { n });
+        IntPartitions { bt }
+    }
+}
+
+impl Iterator for IntPartitions {
+    type Item = Vec<u32>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.bt.next()
     }
 }
