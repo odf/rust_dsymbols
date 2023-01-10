@@ -8,11 +8,11 @@ struct PartitionState {
     top: u32,
 }
 
-struct PartitionBacktTracking {
+struct PartitionBackTracking {
     n: u32,
 }
 
-impl BackTracking for PartitionBacktTracking {
+impl BackTracking for PartitionBackTracking {
     type State = PartitionState;
     type Item = Vec<u32>;
 
@@ -36,14 +36,11 @@ impl BackTracking for PartitionBacktTracking {
 }
 
 
-pub struct IntPartitions {
-    bt: BackTrackIterator<PartitionBacktTracking>,
-}
+pub struct IntPartitions(BackTrackIterator<PartitionBackTracking>);
 
 impl IntPartitions {
     pub fn new(n: u32) -> IntPartitions {
-        let bt = BackTrackIterator::new(PartitionBacktTracking { n });
-        IntPartitions { bt }
+        IntPartitions(BackTrackIterator::new(PartitionBackTracking { n }))
     }
 }
 
@@ -51,6 +48,6 @@ impl Iterator for IntPartitions {
     type Item = Vec<u32>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.bt.next()
+        self.0.next()
     }
 }
