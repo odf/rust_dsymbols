@@ -73,7 +73,7 @@ pub trait DSet {
     fn is_complete(&self) -> bool {
         for i in 0..=self.dim() {
             for d in 1..=self.size() {
-                if let None = self.get(i, d) {
+                if self.get(i, d) == None {
                     return false;
                 }
             }
@@ -281,6 +281,7 @@ pub trait DSet {
 }
 
 
+#[derive(Clone)]
 pub struct PartialDSet {
     _size: usize,
     _dim: usize,
@@ -309,6 +310,11 @@ impl PartialDSet {
         let ke = self.idx(i, e);
         self._op[kd] = e;
         self._op[ke] = d;
+    }
+
+    pub fn grow(&mut self, count: usize) {
+        self._size += count;
+        self._op.append(&mut vec![0 as usize; count * (self.dim() + 1)]);
     }
 }
 
@@ -372,12 +378,21 @@ impl DSet for SimpleDSet {
 
 impl From<PartialDSet> for SimpleDSet {
     fn from(ds: PartialDSet) -> Self {
-        let PartialDSet { _size, _dim, _op } = ds;
-
-        assert!(&_op.iter().all(|e| *e > 0));
+        assert!(ds.is_complete());
         // TODO add more consistency checks here
 
+        let PartialDSet { _size, _dim, _op } = ds;
         SimpleDSet { _size, _dim, _op }
+    }
+}
+
+impl From<&PartialDSet> for SimpleDSet {
+    fn from(ds: &PartialDSet) -> Self {
+        assert!(ds.is_complete());
+        // TODO add more consistency checks here
+
+        let PartialDSet { _size, _dim, _op } = ds;
+        SimpleDSet { _size: *_size, _dim: *_dim, _op: _op.clone() }
     }
 }
 
