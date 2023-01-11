@@ -189,7 +189,51 @@ pub trait DSet {
         orbits
     }
 
-    
+
+    fn morphism(&self, other: &dyn DSet, img0: usize)
+        -> Option<Vec<usize>>
+    {
+        let mut m = vec![0; self.size() + 1];
+        let mut queue = VecDeque::new();
+
+        m[1] = img0;
+        queue.push_back((1, img0));
+
+        while let Some((d, e)) = queue.pop_front() {
+            for i in 0..=self.dim() {
+                let di = self.get(i, d).unwrap_or(0);
+                let ei = other.get(i, e).unwrap_or(0);
+
+                if di > 0 || ei > 0 {
+                    if m[di] == 0 {
+                        m[di] = ei;
+                        queue.push_back((di, ei));
+                    } else if m[di] != ei {
+                        return None;
+                    }
+                }
+            }
+        }
+
+        Some(m)
+    }
+
+
+    fn automorphisms(&self) -> Vec<Vec<usize>>
+        where Self: Sized
+    {
+        let mut result = vec![];
+
+        for d in 1..=self.size() {
+            if let Some(map) = self.morphism(self, d) {
+                result.push(map);
+            }
+        }
+
+        result
+    }
+
+
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut chunks = vec!();
 
