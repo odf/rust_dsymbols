@@ -1,13 +1,22 @@
 use rust_dsymbols::dset_generators::DSets;
+use rust_dsymbols::dsets::DSet;
 
 
 fn main() {
     let mut count = 0;
 
-    for ds in DSets::new(2, 4) {
-        println!("{}", ds);
-        count += 1;
-    }
+    if let Some(arg) = std::env::args().nth(1) {
+        let n: usize = arg.parse().unwrap();
 
-    println!("Found {} in total.", count);
+        for ds in DSets::new(2, n) {
+            if ds.size() == n {
+                println!("{}", ds);
+                count += 1;
+            }
+        }
+
+        println!("Found {} in total.", count);
+    } else {
+        panic!("Expected an argument.");
+    }
 }

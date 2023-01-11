@@ -142,7 +142,7 @@ fn check_canonicity(
 
             if diff < 0 {
                 return false;
-            } else {
+            } else if diff > 0 {
                 is_remap_start[d] = false;
             }
         }
