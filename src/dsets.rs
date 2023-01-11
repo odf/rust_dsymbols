@@ -298,7 +298,7 @@ impl PartialDSet {
     }
 
     fn idx(&self, i: usize, d: usize) -> usize {
-        i * self._size + d - 1
+        (d - 1) * (self._dim + 1) + i
     }
 
     pub fn set(&mut self, i: usize, d: usize, e: usize) {
@@ -354,7 +354,7 @@ pub struct SimpleDSet {
 
 impl SimpleDSet {
     fn idx(&self, i: usize, d: usize) -> usize {
-        i * self._size + d - 1
+        (d - 1) * (self._dim + 1) + i
     }
 }
 
