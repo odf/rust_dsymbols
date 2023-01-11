@@ -34,7 +34,7 @@ fn main() {
     println!("Finished DSet: {}", &ds);
     report(&ds);
 
-    let cov = ds.oriented_cover();
+    let cov = SimpleDSet::from(ds.oriented_cover());
     println!();
     println!("Oriented cover of finished set: {}", &cov);
     report(&cov);

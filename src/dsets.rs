@@ -303,15 +303,6 @@ pub struct SimpleDSet {
 }
 
 impl SimpleDSet {
-    pub fn from(ds: PartialDSet) -> SimpleDSet {
-        let PartialDSet { _size, _dim, _op } = ds;
-
-        assert!(&_op.iter().all(|e| *e > 0));
-        // TODO add more consistency checks here
-
-        SimpleDSet { _size, _dim, _op }
-    }
-
     fn idx(&self, i: usize, d: usize) -> usize {
         i * self._size + d - 1
     }
@@ -332,6 +323,17 @@ impl DSet for SimpleDSet {
         } else {
             Some(self._op[self.idx(i, d)])
         }
+    }
+}
+
+impl From<PartialDSet> for SimpleDSet {
+    fn from(ds: PartialDSet) -> Self {
+        let PartialDSet { _size, _dim, _op } = ds;
+
+        assert!(&_op.iter().all(|e| *e > 0));
+        // TODO add more consistency checks here
+
+        SimpleDSet { _size, _dim, _op }
     }
 }
 
