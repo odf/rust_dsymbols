@@ -114,11 +114,11 @@ fn scan(
 {
     let mut e = d;
 
-    for k in 1..=limit {
+    for k in 0..limit {
         if let Some(en) = ds.get(w[k], e) {
             e = en;
         } else {
-            return (e, k - 1);
+            return (e, k);
         }
     }
 
@@ -132,6 +132,9 @@ fn check_canonicity(
 {
     let mut n2o = Vec::with_capacity(ds.size() + 1);
     let mut o2n = Vec::with_capacity(ds.size() + 1);
+
+    n2o.resize(ds.size() + 1, 0);
+    o2n.resize(ds.size() + 1, 0);
 
     for d in 1..=ds.size() {
         if is_remap_start[d] {
@@ -160,6 +163,30 @@ fn compare_renumbered_from(
     o2n[d0] = 1;
 
     let mut next = 2;
+
+    for d in 1..=ds.size() {
+        for i in 0..=ds.dim() {
+            let ei = ds.get(i, n2o[d]).unwrap_or(0);
+
+            if ei == 0 {
+                return 0;
+            } else {
+                if o2n[ei] == 0 {
+                    o2n[ei] = next;
+                    n2o[next] = ei;
+                    next += 1;
+                }
+
+                let di = ds.get(i, d).unwrap_or(0);
+
+                if di == 0 {
+                    return 0;
+                } else if o2n[ei] != di {
+                    return (o2n[ei] as i64) - (di as i64);
+                }
+            }
+        }
+    }
 
     0
 }
