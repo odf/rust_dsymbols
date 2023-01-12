@@ -89,8 +89,8 @@ impl Iterator for DSets {
 
 
 fn first_undefined(ds: &PartialDSet) -> Option<(usize, usize)> {
-    for i in 0..=ds.dim() {
-        for d in 1..=ds.size() {
+    for d in 1..=ds.size() {
+        for i in 0..=ds.dim() {
             if ds.get(i, d) == None {
                 return Some((i, d));
             }
@@ -130,8 +130,8 @@ fn check_canonicity(
     ds: &PartialDSet, is_remap_start: &mut [bool]
 ) -> bool
 {
-    let mut n2o = Vec::with_capacity(ds.size() + 1);
-    let mut o2n = Vec::with_capacity(ds.size() + 1);
+    let mut n2o = vec![];
+    let mut o2n = vec![];
 
     n2o.resize(ds.size() + 1, 0);
     o2n.resize(ds.size() + 1, 0);
