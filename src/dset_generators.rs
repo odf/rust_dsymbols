@@ -1,6 +1,6 @@
-use super::backtrack::BackTrackIterator;
-use super::backtrack::BackTracking;
-use super::dsets::*;
+use crate::backtrack::BackTrackIterator;
+use crate::backtrack::BackTracking;
+use crate::dsets::*;
 
 
 struct DSetGenState {
