@@ -246,9 +246,9 @@ pub trait DSet {
 
 #[derive(Clone)]
 pub struct PartialDSet {
-    _size: usize,
-    _dim: usize,
-    _op: Vec<usize>,
+    size: usize,
+    dim: usize,
+    op: Vec<usize>,
 }
 
 impl PartialDSet {
@@ -257,44 +257,44 @@ impl PartialDSet {
         assert!(dim >= 1);
 
         let op = vec![0; size * (dim + 1)];
-        PartialDSet { _size: size, _dim: dim, _op: op }
+        PartialDSet { size, dim, op }
     }
 
     fn idx(&self, i: usize, d: usize) -> usize {
-        (d - 1) * (self._dim + 1) + i
+        (d - 1) * (self.dim + 1) + i
     }
 
     pub fn set(&mut self, i: usize, d: usize, e: usize) {
-        assert!(i <= self._dim);
-        assert!(1 <= d && d <= self._size);
-        assert!(1 <= e && e <= self._size);
+        assert!(i <= self.dim);
+        assert!(1 <= d && d <= self.size);
+        assert!(1 <= e && e <= self.size);
 
         let kd = self.idx(i, d);
         let ke = self.idx(i, e);
-        self._op[kd] = e;
-        self._op[ke] = d;
+        self.op[kd] = e;
+        self.op[ke] = d;
     }
 
     pub fn grow(&mut self, count: usize) {
-        self._size += count;
-        self._op.append(&mut vec![0 as usize; count * (self.dim() + 1)]);
+        self.size += count;
+        self.op.append(&mut vec![0 as usize; count * (self.dim() + 1)]);
     }
 }
 
 impl DSet for PartialDSet {
     fn size(&self) -> usize {
-        self._size
+        self.size
     }
 
     fn dim(&self) -> usize {
-        self._dim
+        self.dim
     }
 
     fn get(&self, i: usize, d: usize) -> Option<usize> {
-        if i > self._dim || d < 1 || d > self._size {
+        if i > self.dim || d < 1 || d > self.size {
             None
         } else {
-            match self._op[self.idx(i, d)] {
+            match self.op[self.idx(i, d)] {
                 0 => None,
                 di => Some(di)
             }
@@ -311,31 +311,31 @@ impl fmt::Display for PartialDSet {
 
 #[derive(Clone)]
 pub struct SimpleDSet {
-    _size: usize,
-    _dim: usize,
-    _op: Vec<usize>,
+    size: usize,
+    dim: usize,
+    op: Vec<usize>,
 }
 
 impl SimpleDSet {
     fn idx(&self, i: usize, d: usize) -> usize {
-        (d - 1) * (self._dim + 1) + i
+        (d - 1) * (self.dim + 1) + i
     }
 }
 
 impl DSet for SimpleDSet {
     fn size(&self) -> usize {
-        self._size
+        self.size
     }
 
     fn dim(&self) -> usize {
-        self._dim
+        self.dim
     }
 
     fn get(&self, i: usize, d: usize) -> Option<usize> {
-        if i > self._dim || d < 1 || d > self._size {
+        if i > self.dim || d < 1 || d > self.size {
             None
         } else {
-            Some(self._op[self.idx(i, d)])
+            Some(self.op[self.idx(i, d)])
         }
     }
 }
@@ -345,8 +345,8 @@ impl From<PartialDSet> for SimpleDSet {
         assert!(ds.is_complete());
         // TODO add more consistency checks here
 
-        let PartialDSet { _size, _dim, _op } = ds;
-        SimpleDSet { _size, _dim, _op }
+        let PartialDSet { size, dim, op } = ds;
+        SimpleDSet { size, dim, op }
     }
 }
 
