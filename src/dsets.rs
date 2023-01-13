@@ -314,15 +314,28 @@ pub struct SimpleDSet {
     size: usize,
     dim: usize,
     op: Vec<usize>,
+    counter: usize,
 }
 
 impl SimpleDSet {
     fn idx(&self, i: usize, d: usize) -> usize {
         (d - 1) * (self.dim + 1) + i
     }
+
+    pub fn from_partial(ds: PartialDSet, counter: usize) -> Self {
+        assert!(ds.is_complete());
+        // TODO add more consistency checks here
+
+        let PartialDSet { size, dim, op } = ds;
+        SimpleDSet { size, dim, op, counter }
+    }
 }
 
 impl DSet for SimpleDSet {
+    fn set_count(&self) -> usize {
+        self.counter
+    }
+
     fn size(&self) -> usize {
         self.size
     }
@@ -337,16 +350,6 @@ impl DSet for SimpleDSet {
         } else {
             Some(self.op[self.idx(i, d)])
         }
-    }
-}
-
-impl From<PartialDSet> for SimpleDSet {
-    fn from(ds: PartialDSet) -> Self {
-        assert!(ds.is_complete());
-        // TODO add more consistency checks here
-
-        let PartialDSet { size, dim, op } = ds;
-        SimpleDSet { size, dim, op }
     }
 }
 

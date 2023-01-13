@@ -16,7 +16,7 @@ struct DSetBackTracking {
 
 impl BackTracking for DSetBackTracking {
     type State = DSetGenState;
-    type Item = SimpleDSet;
+    type Item = PartialDSet;
 
     fn root(&self) -> Self::State {
         DSetGenState {
@@ -27,7 +27,7 @@ impl BackTracking for DSetBackTracking {
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
         if state.dset.is_complete() {
-            Some(SimpleDSet::from(state.dset.clone()))
+            Some(state.dset.clone())
         } else {
             None
         }
@@ -71,11 +71,17 @@ impl BackTracking for DSetBackTracking {
 }
 
 
-pub struct DSets(BackTrackIterator<DSetBackTracking>);
+pub struct DSets {
+    bt: BackTrackIterator<DSetBackTracking>,
+    counter: usize,
+}
 
 impl DSets {
     pub fn new(dim: usize, max_size: usize) -> DSets {
-        DSets(BackTrackIterator::new(DSetBackTracking { dim, max_size }))
+        DSets {
+            bt: BackTrackIterator::new(DSetBackTracking { dim, max_size }),
+            counter: 0,
+        }
     }
 }
 
@@ -83,7 +89,12 @@ impl Iterator for DSets {
     type Item = SimpleDSet;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
+        if let Some(ds) = self.bt.next() {
+            self.counter += 1;
+            Some(SimpleDSet::from_partial(ds, self.counter))
+        } else {
+            None
+        }
     }
 }
 
