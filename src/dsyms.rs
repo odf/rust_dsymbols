@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::dsets::*;
 
 pub trait DSym : DSet {
@@ -48,4 +50,204 @@ pub fn collect_orbits(ds: &SimpleDSet) -> (Vec<usize>, Vec<Vec<usize>>) {
     }
 
     (orbit_rs, orbit_index)
+}
+
+
+struct PartialDSym {
+    dset: SimpleDSet,
+    orbit_index: Vec<Vec<usize>>,
+    orbit_rs: Vec<usize>,
+    orbit_vs: Vec<usize>,
+}
+
+impl PartialDSym {
+    fn new(dset: &SimpleDSet) -> PartialDSym {
+        let (orbit_rs, orbit_index) = collect_orbits(&dset);
+        let orbit_vs = vec![0; orbit_rs.len()];
+
+        PartialDSym { dset: dset.clone(), orbit_index, orbit_rs, orbit_vs }
+    }
+
+    fn set_v(&mut self, i: usize, j: usize, d: usize, v: usize) {
+        assert!(1 <= d);
+
+        if j == i + 1 {
+            self.orbit_vs[self.orbit_index[i][d]] = v;
+        } else if i == j + 1 {
+            self.orbit_vs[self.orbit_index[j][d]] = v;
+        } else {
+            panic!("Illegal index pair: {},{}", i, j);
+        }
+    }
+}
+
+impl DSet for PartialDSym {
+    fn size(&self) -> usize {
+        self.dset.size()
+    }
+
+    fn dim(&self) -> usize {
+        self.dset.dim()
+    }
+
+    fn get(&self, i: usize, d: usize) -> Option<usize> {
+        self.dset.get(i, d)
+    }
+}
+
+impl DSym for PartialDSym {
+    fn r(&self, i: usize, j: usize, d: usize) -> usize {
+        assert!(i <= self.dim());
+        assert!(j <= self.dim());
+        assert!(1 <= d && d <= self.size());
+
+        if j == i + 1 {
+            self.orbit_rs[self.orbit_index[i][d]]
+        } else if i == j + 1 {
+            self.orbit_rs[self.orbit_index[j][d]]
+        } else if j != i && self.get(i, d) == self.get(j, d) {
+            1
+        } else {
+            2
+        }
+    }
+
+    fn v(&self, i: usize, j: usize, d: usize) -> usize {
+        assert!(i <= self.dim());
+        assert!(j <= self.dim());
+        assert!(1 <= d && d <= self.size());
+
+        if j == i + 1 {
+            self.orbit_vs[self.orbit_index[i][d]]
+        } else if i == j + 1 {
+            self.orbit_vs[self.orbit_index[j][d]]
+        } else if j != i && self.get(i, d) == self.get(j, d) {
+            2
+        } else {
+            1
+        }
+    }
+}
+
+impl fmt::Display for PartialDSym {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self as &dyn DSet).fmt(f)
+    }
+}
+
+
+struct SimpleDSym {
+    dset: SimpleDSet,
+    orbit_index: Vec<Vec<usize>>,
+    orbit_rs: Vec<usize>,
+    orbit_vs: Vec<usize>,
+}
+
+impl DSet for SimpleDSym {
+    fn size(&self) -> usize {
+        self.dset.size()
+    }
+
+    fn dim(&self) -> usize {
+        self.dset.dim()
+    }
+
+    fn get(&self, i: usize, d: usize) -> Option<usize> {
+        self.dset.get(i, d)
+    }
+}
+
+impl DSym for SimpleDSym {
+    fn r(&self, i: usize, j: usize, d: usize) -> usize {
+        assert!(i <= self.dim());
+        assert!(j <= self.dim());
+        assert!(1 <= d && d <= self.size());
+
+        if j == i + 1 {
+            self.orbit_rs[self.orbit_index[i][d]]
+        } else if i == j + 1 {
+            self.orbit_rs[self.orbit_index[j][d]]
+        } else if j != i && self.get(i, d) == self.get(j, d) {
+            1
+        } else {
+            2
+        }
+    }
+
+    fn v(&self, i: usize, j: usize, d: usize) -> usize {
+        assert!(i <= self.dim());
+        assert!(j <= self.dim());
+        assert!(1 <= d && d <= self.size());
+
+        if j == i + 1 {
+            self.orbit_vs[self.orbit_index[i][d]]
+        } else if i == j + 1 {
+            self.orbit_vs[self.orbit_index[j][d]]
+        } else if j != i && self.get(i, d) == self.get(j, d) {
+            2
+        } else {
+            1
+        }
+    }
+}
+
+impl From<PartialDSym> for SimpleDSym {
+    fn from(ds: PartialDSym) -> Self {
+        assert!(ds.is_complete());
+        // TODO add more consistency checks here
+
+        let PartialDSym { dset, orbit_index, orbit_rs, orbit_vs } = ds;
+        SimpleDSym { dset, orbit_index, orbit_rs, orbit_vs }
+    }
+}
+
+impl fmt::Display for SimpleDSym {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self as &dyn DSet).fmt(f)
+    }
+}
+
+
+struct NumberedDSym {
+    ds: SimpleDSym,
+    set_count: usize,
+    symbol_count: usize,
+}
+
+impl NumberedDSym {
+    fn from(ds: SimpleDSym, set_count: usize, symbol_count: usize) -> Self {
+        NumberedDSym { ds, set_count, symbol_count }
+    }
+}
+
+impl DSet for NumberedDSym {
+    fn size(&self) -> usize {
+        self.ds.size()
+    }
+
+    fn dim(&self) -> usize {
+        self.ds.dim()
+    }
+
+    fn get(&self, i: usize, d: usize) -> Option<usize> {
+        self.ds.get(i, d)
+    }
+
+    fn set_count(&self) -> usize {
+        self.set_count
+    }
+
+    fn symbol_count(&self) -> usize {
+        self.symbol_count
+    }
+}
+
+impl DSym for NumberedDSym {
+    fn r(&self, i: usize, j: usize, d: usize) -> usize {
+        self.ds.r(i, j, d)
+    }
+
+    fn v(&self, i: usize, j: usize, d: usize) -> usize {
+        self.ds.v(i, j, d)
+    }
 }
