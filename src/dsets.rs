@@ -309,6 +309,7 @@ impl fmt::Display for PartialDSet {
 }
 
 
+#[derive(Clone)]
 pub struct SimpleDSet {
     _size: usize,
     _dim: usize,
@@ -346,16 +347,6 @@ impl From<PartialDSet> for SimpleDSet {
 
         let PartialDSet { _size, _dim, _op } = ds;
         SimpleDSet { _size, _dim, _op }
-    }
-}
-
-impl From<&PartialDSet> for SimpleDSet {
-    fn from(ds: &PartialDSet) -> Self {
-        assert!(ds.is_complete());
-        // TODO add more consistency checks here
-
-        let PartialDSet { _size, _dim, _op } = ds;
-        SimpleDSet { _size: *_size, _dim: *_dim, _op: _op.clone() }
     }
 }
 

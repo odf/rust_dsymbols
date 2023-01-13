@@ -27,7 +27,7 @@ impl BackTracking for DSetBackTracking {
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
         if state.dset.is_complete() {
-            Some(SimpleDSet::from(&state.dset))
+            Some(SimpleDSet::from(state.dset.clone()))
         } else {
             None
         }
