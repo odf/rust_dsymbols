@@ -9,6 +9,26 @@ pub trait DSym : DSet {
     fn m(&self, i: usize, j: usize, d: usize) -> usize {
         self.r(i, j, d) * self.v(i, j, d)
     }
+
+    fn oriented_cover(&self) -> Option<PartialDSym> {
+        if self.is_oriented() {
+            None
+        } else {
+            let dset = DSet::oriented_cover(self).unwrap();
+            let dset = SimpleDSet::from_partial(dset, 0);
+            let mut cov = PartialDSym::new(&dset);
+
+            for i in 0..cov.dim() {
+                for d in cov.orbit_reps_2d(i, i + 1) {
+                    let e = (d - 1) % self.size() + 1;
+                    let vd = DSym::m(self, i, i + 1, e) / cov.r(i, i + 1, d);
+                    cov.set_v(i, i + 1, d, vd);
+                }
+            }
+
+            Some(cov)
+        }
+    }
 }
 
 
@@ -54,7 +74,7 @@ pub fn collect_orbits(ds: &SimpleDSet) -> (Vec<usize>, Vec<Vec<usize>>) {
 
 
 #[derive(Clone)]
-struct PartialDSym {
+pub struct PartialDSym {
     dset: SimpleDSet,
     orbit_index: Vec<Vec<usize>>,
     orbit_rs: Vec<usize>,
@@ -136,13 +156,13 @@ impl DSym for PartialDSym {
 
 impl fmt::Display for PartialDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (self as &dyn DSet).fmt(f)
+        DSet::fmt(self, f)
     }
 }
 
 
 #[derive(Clone)]
-struct SimpleDSym {
+pub struct SimpleDSym {
     dset: SimpleDSet,
     orbit_index: Vec<Vec<usize>>,
     orbit_rs: Vec<usize>,
@@ -218,6 +238,6 @@ impl DSym for SimpleDSym {
 
 impl fmt::Display for SimpleDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (self as &dyn DSet).fmt(f)
+        DSet::fmt(self, f)
     }
 }

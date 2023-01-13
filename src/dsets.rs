@@ -89,19 +89,9 @@ pub trait DSet {
     }
 
 
-    fn oriented_cover(&self) -> PartialDSet {
+    fn oriented_cover(&self) -> Option<PartialDSet> {
         if self.is_oriented() {
-            let mut ds = PartialDSet::new(self.size(), self.dim());
-
-            for i in 0..=self.dim() {
-                for d in 1..=self.size() {
-                    if let Some(di) = self.get(i, d) {
-                        ds.set(i, d, di);
-                    }
-                }
-            }
-
-            ds
+            None
         } else {
             let sz = self.size();
             let ori = self.partial_orientation();
@@ -121,7 +111,7 @@ pub trait DSet {
                 }
             }
 
-            cov
+            Some(cov)
         }
     }
 
@@ -304,7 +294,7 @@ impl DSet for PartialDSet {
 
 impl fmt::Display for PartialDSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (self as &dyn DSet).fmt(f)
+        DSet::fmt(self, f)
     }
 }
 
@@ -355,6 +345,6 @@ impl DSet for SimpleDSet {
 
 impl fmt::Display for SimpleDSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (self as &dyn DSet).fmt(f)
+        DSet::fmt(self, f)
     }
 }
