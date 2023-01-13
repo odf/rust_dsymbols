@@ -1,4 +1,5 @@
-use std::{collections::{VecDeque, HashSet}, fmt};
+use std::collections::VecDeque;
+use std::fmt;
 
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -9,33 +10,6 @@ pub enum Sign {
 }
 
 use Sign::*;
-
-
-#[derive(Debug)]
-pub struct Orbit2d {
-    elements: Vec<usize>,
-    i: usize,
-    j: usize,
-    is_chain: bool,
-}
-
-impl Orbit2d {
-    fn len(&self) -> usize {
-        self.elements.len()
-    }
-
-    fn r(&self) -> usize {
-        if self.is_chain { self.len() } else { (self.len() + 1) / 2 }
-    }
-
-    fn v_min(&self) -> usize {
-        match self.r() {
-            1 => 3,
-            2 => 2,
-            _ => 1,
-        }
-    }
-}
 
 
 pub trait DSet {
@@ -152,41 +126,31 @@ pub trait DSet {
     }
 
 
-    fn orbits(&self, i: usize, j: usize) -> Vec<Orbit2d> {
-        let mut orbits = vec![];
-        let mut seen = HashSet::new();
+    fn orbit_reps_2d(&self, i: usize, j: usize) -> Vec<usize> {
+        let mut result = vec![];
+        let mut seen = vec![false; self.size() + 1];
 
         for d in 1..=self.size() {
-            if !seen.contains(&d) {
-                seen.insert(d);
+            if !seen[d] {
+                result.push(d);
+                seen[d] = true;
 
-                let mut elements = vec![d];
-                let mut is_chain = false;
                 let mut e = d;
                 let mut k = i;
 
                 loop {
-                    if let Some(ek) = self.get(k, e) {
-                        is_chain = is_chain || ek == e;
-                        e = ek;
-                    }
+                    e = self.get(k, e).unwrap_or(e);
                     k = i + j - k;
-
-                    if !seen.contains(&e) {
-                        seen.insert(e);
-                        elements.push(e);
-                    }
+                    seen[e] = true;
 
                     if e == d && k == i {
                         break;
                     }
                 }
-
-                orbits.push(Orbit2d { elements, i, j, is_chain });
             }
         }
 
-        orbits
+        result
     }
 
 
@@ -266,8 +230,7 @@ pub trait DSet {
                 chunks.push(",".to_string());
             }
 
-            for orb in self.orbits(i, i + 1) {
-                let &d = orb.elements.first().unwrap();
+            for d in self.orbit_reps_2d(i, i + 1) {
                 if d > 1 {
                     chunks.push(" ".to_string());
                 }
