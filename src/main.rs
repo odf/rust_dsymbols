@@ -1,5 +1,6 @@
 use rust_dsymbols::dset_generators::DSets;
 use rust_dsymbols::dsets::DSet;
+use rust_dsymbols::dsyms::{DSym, PartialDSym};
 
 
 fn main() {
@@ -16,7 +17,26 @@ fn main() {
         }
 
         println!("Found {} in total.", count);
+        println!();
     } else {
         panic!("Expected an argument.");
     }
+
+    count = 0;
+    for ds in DSets::new(2, 4) {
+        count += 1;
+        if count == 25 {
+            let mut ds = PartialDSym::new(&ds);
+            ds.set_v(0, 1, 2);
+            ds.set_v(1, 1, 3);
+            ds.set_v(1, 2, 4);
+            println!("  Example symbol: {}", &ds);
+            let cov = DSym::oriented_cover(&ds).unwrap();
+            println!("  Oriented cover: {}", &cov);
+            println!("  Oriented cover is oriented: {}", cov.is_oriented());
+            let map = cov.morphism(&ds, 1);
+            println!("  Covering map: {:?}", &map);
+        }
+    }
+    println!();
 }
