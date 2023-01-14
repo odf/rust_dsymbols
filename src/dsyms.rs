@@ -37,25 +37,26 @@ pub trait DSym : DSet {
             1
         }
     }
+}
 
-    fn oriented_cover(&self) -> Option<PartialDSym> {
-        if self.is_oriented() {
-            None
-        } else {
-            let dset = DSet::oriented_cover(self).unwrap();
-            let dset = SimpleDSet::from_partial(dset, 0);
-            let mut cov = PartialDSym::new(&dset);
 
-            for i in 0..cov.dim() {
-                for d in cov.orbit_reps_2d(i, i + 1) {
-                    let e = (d - 1) % self.size() + 1;
-                    let vd = self.m(i, i + 1, e) / cov.r(i, i + 1, d);
-                    cov.set_v(i, d, vd);
-                }
+fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
+    where T: DSym
+{
+    if ds.is_oriented() {
+        None
+    } else {
+        let mut cov = PartialDSym::new(setcov);
+
+        for i in 0..cov.dim() {
+            for d in cov.orbit_reps_2d(i, i + 1) {
+                let e = (d - 1) % ds.size() + 1;
+                let vd = ds.m(i, i + 1, e) / cov.r(i, i + 1, d);
+                cov.set_v(i, d, vd);
             }
-
-            Some(cov)
         }
+
+        Some(cov)
     }
 }
 
@@ -155,6 +156,16 @@ impl DSym for PartialDSym {
     }
 }
 
+impl OrientedCover<PartialDSym> for PartialDSym {
+    fn oriented_cover(&self) -> Option<PartialDSym> {
+        if let Some(setcov) = self.dset.oriented_cover() {
+            oriented_cover(self, &SimpleDSet::from_partial(setcov, 1))
+        } else {
+            None
+        }
+    }
+}
+
 impl fmt::Display for PartialDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         DSet::fmt(self, f)
@@ -214,6 +225,16 @@ impl DSym for SimpleDSym {
 
     fn get_v(&self, i: usize, d: usize) -> usize {
         self.orbit_vs[self.orbit_index[i][d]]
+    }
+}
+
+impl OrientedCover<PartialDSym> for SimpleDSym {
+    fn oriented_cover(&self) -> Option<PartialDSym> {
+        if let Some(setcov) = self.dset.oriented_cover() {
+            oriented_cover(self, &SimpleDSet::from_partial(setcov, 1))
+        } else {
+            None
+        }
     }
 }
 

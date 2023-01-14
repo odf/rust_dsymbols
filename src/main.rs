@@ -1,6 +1,6 @@
 use rust_dsymbols::dset_generators::DSets;
-use rust_dsymbols::dsets::DSet;
-use rust_dsymbols::dsyms::{DSym, PartialDSym};
+use rust_dsymbols::dsets::{DSet, OrientedCover};
+use rust_dsymbols::dsyms::PartialDSym;
 
 
 fn main() {
@@ -31,7 +31,7 @@ fn main() {
             ds.set_v(1, 1, 3);
             ds.set_v(1, 2, 4);
             println!("  Example symbol: {}", &ds);
-            let cov = DSym::oriented_cover(&ds).unwrap();
+            let cov = ds.oriented_cover().unwrap();
             println!("  Oriented cover: {}", &cov);
             println!("  Oriented cover is oriented: {}", cov.is_oriented());
             let map = cov.morphism(&ds, 1);
