@@ -55,4 +55,5 @@ name = "rust_dsymbols"
 version = "0.1.0"
 dependencies = [
  "num-rational",
+ "num-traits",
 ]
