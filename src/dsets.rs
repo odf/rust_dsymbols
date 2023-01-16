@@ -209,6 +209,39 @@ pub trait DSet {
 
         f.write_str(&text[..])
     }
+
+    fn to_binary(&self) -> Option<Vec<u8>> {
+        const END: usize = 0;
+        const UNDEF: usize = 255;
+
+        if self.size() > 254 {
+            None
+        } else {
+            let mut result = Vec::with_capacity(self.dim() * self.size());
+
+            result.push(self.dim() as u8);
+
+            for i in 0..=self.dim() {
+                for d in 1..=self.size() {
+                    let e = self.get(i, d).unwrap_or(UNDEF);
+                    if e == UNDEF || e >= d {
+                        result.push(e as u8);
+                    }
+                }
+            }
+
+            for i in 0..self.dim() {
+                for d in self.orbit_reps_2d(i, i + 1) {
+                    let m = self.m(i, i + 1, d);
+                    result.push(if m == 0 { UNDEF } else { m } as u8);
+                }
+            }
+
+            result.push(END as u8);
+
+            Some(result)
+        }
+    }
 }
 
 
