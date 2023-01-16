@@ -221,12 +221,10 @@ pub trait DSet {
 
             result.push(self.dim() as u8);
 
-            for i in 0..=self.dim() {
-                for d in 1..=self.size() {
+            for d in 1..=self.size() {
+                for i in 0..=self.dim() {
                     let e = self.get(i, d).unwrap_or(UNDEF);
-                    if e == UNDEF || e >= d {
-                        result.push(e as u8);
-                    }
+                    result.push(e as u8);
                 }
             }
 
