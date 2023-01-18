@@ -219,7 +219,7 @@ impl BackTracking for DSymBackTracking {
     fn root(&self) -> Self::State {
         let vs = self.orbit_vmins.clone();
         let curv = self.base_curvature;
-        let next = 0;
+        let next = if curv.is_negative() { self.orbit_count() } else { 0 };
 
         Self::State { vs, curv, next }
     }
@@ -239,35 +239,27 @@ impl BackTracking for DSymBackTracking {
         let mut result = vec![];
 
         if state.next < self.orbit_count() {
-            if state.curv.is_negative() {
-                result.push(Self::State {
-                    vs: state.vs.clone(),
-                    curv: state.curv,
-                    next: self.orbit_count(),
-                })
-            } else {
-                let n = state.next;
-                let vmin = state.vs[n];
+            let n = state.next;
+            let vmin = state.vs[n];
 
-                for v in vmin..=7 {
-                    let mut vs = state.vs.clone();
-                    vs[n] = v;
+            for v in vmin..=7 {
+                let mut vs = state.vs.clone();
+                vs[n] = v;
 
-                    let k = if self.orbit_is_chain[n] { 1 } else { 2 };
-                    let curv = state.curv
-                        - Rational64::new(k, vmin as i64)
-                        + Rational64::new(k, v as i64);
+                let k = if self.orbit_is_chain[n] { 1 } else { 2 };
+                let curv = state.curv
+                    - Rational64::new(k, vmin as i64)
+                    + Rational64::new(k, v as i64);
 
-                    if !curv.is_negative()
-                        || self.is_minimally_hyperbolic(&vs, curv)
-                    {
-                        let next = state.next + 1;
+                if curv.is_negative() {
+                    if self.is_minimally_hyperbolic(&vs, curv) {
+                        let next = self.orbit_count();
                         result.push(Self::State { vs, curv, next });
                     }
-
-                    if curv.is_negative() {
-                        break;
-                    }
+                    break;
+                } else {
+                    let next = state.next + 1;
+                    result.push(Self::State { vs, curv, next });
                 }
             }
         }
