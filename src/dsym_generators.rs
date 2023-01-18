@@ -19,7 +19,9 @@ struct DSymBackTracking {
     orbit_index: Vec<Vec<usize>>,
     orbit_vmins: Vec<usize>,
     orbit_is_chain: Vec<bool>,
-    orbit_maps: Vec<Vec<usize>>,
+    orbit_maps: Option<Vec<Vec<usize>>>,
+    base_curvature: Rational64,
+    canonicity_test_needed: bool,
 }
 
 impl DSymBackTracking {
@@ -44,16 +46,14 @@ impl DSymBackTracking {
             }
         }
 
-        let mut orbit_maps =vec![];
-        for map in dset.automorphisms() {
-            let mut m = vec![0; orbit_rs.len()];
-            for i in 0..dset.dim() {
-                for d in 1..=dset.size() {
-                    m[orbit_index[i][d]] = orbit_index[i][map[d]];
-                }
-            }
-            orbit_maps.push(m);
-        }
+        let base_curvature = curvature(&dset, &orbit_vmins, &orbit_is_chain);
+        let canonicity_test_needed = signum(base_curvature).to_integer() >= 0;
+
+        let orbit_maps = if canonicity_test_needed {
+            Some(orbit_maps(&dset, orbit_vmins.len(), &orbit_index))
+        } else {
+            None
+        };
 
         DSymBackTracking {
             dset: dset.clone(),
@@ -61,23 +61,13 @@ impl DSymBackTracking {
             orbit_vmins,
             orbit_is_chain,
             orbit_maps,
+            base_curvature,
+            canonicity_test_needed,
         }
     }
 
     fn orbit_count(&self) -> usize {
         self.orbit_vmins.len()
-    }
-
-    fn curvature(&self, vs: &[usize]) -> Rational64 {
-        let n = self.dset.size() as i64;
-        let mut curv = Rational64::new(-n, 2);
-
-        for i in 0..self.orbit_count() {
-            let k = if self.orbit_is_chain[i] { 1 } else { 2 };
-            curv += Rational64::new(k, vs[i] as i64);
-        }
-
-        curv
     }
 
     fn is_minimally_hyperbolic(&self, vs: &[usize], curv: Rational64) -> bool {
@@ -101,12 +91,17 @@ impl DSymBackTracking {
     }
 
     fn is_canonical(&self, vs: &[usize]) -> bool {
-        for m in &self.orbit_maps {
-            let ws: Vec<_> = (0..vs.len()).map(|i| vs[m[i]]).collect();
-            if &ws[..] > vs {
-                return false;
+        if self.canonicity_test_needed {
+            let maps = self.orbit_maps.as_ref().unwrap();
+
+            for m in maps {
+                let ws: Vec<_> = (0..vs.len()).map(|i| vs[m[i]]).collect();
+                if &ws[..] > vs {
+                    return false;
+                }
             }
         }
+
         true
     }
 
@@ -185,6 +180,37 @@ impl DSymBackTracking {
     }
 }
 
+fn curvature(dset: &SimpleDSet, vs: &[usize], is_chain: &[bool]) -> Rational64 {
+    let n = dset.size() as i64;
+    let mut curv = Rational64::new(-n, 2);
+
+    for i in 0..vs.len() {
+        let k = if is_chain[i] { 1 } else { 2 };
+        curv += Rational64::new(k, vs[i] as i64);
+    }
+
+    curv
+}
+
+
+fn orbit_maps(
+    dset: &SimpleDSet, orbit_count: usize, orbit_index: &Vec<Vec<usize>>
+) -> Vec<Vec<usize>> {
+    let mut orbit_maps =vec![];
+
+    for map in dset.automorphisms() {
+        let mut m = vec![0; orbit_count];
+        for i in 0..dset.dim() {
+            for d in 1..=dset.size() {
+                m[orbit_index[i][d]] = orbit_index[i][map[d]];
+            }
+        }
+        orbit_maps.push(m);
+    }
+
+    orbit_maps
+}
+
 
 impl BackTracking for DSymBackTracking {
     type State = DSymGenState;
@@ -192,7 +218,7 @@ impl BackTracking for DSymBackTracking {
 
     fn root(&self) -> Self::State {
         let vs = self.orbit_vmins.clone();
-        let curv = self.curvature(&vs);
+        let curv = self.base_curvature;
         let next = 0;
 
         Self::State { vs, curv, next }
