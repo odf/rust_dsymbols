@@ -37,39 +37,6 @@ pub trait DSym : DSet {
             1
         }
     }
-
-    fn to_binary(&self) -> Option<Vec<u8>> {
-        const END: usize = 0;
-        const UNDEF: usize = 255;
-
-        if self.size() > 254 {
-            None
-        } else {
-            let mut result = Vec::with_capacity(self.dim() * self.size());
-
-            result.push(self.dim() as u8);
-
-            for d in 1..=self.size() {
-                for i in 0..=self.dim() {
-                    let e = self.get(i, d).unwrap_or(UNDEF);
-                    if e == UNDEF || e >= d {
-                        result.push(e as u8);
-                    }
-                }
-            }
-
-            for i in 0..self.dim() {
-                for d in self.orbit_reps_2d(i, i + 1) {
-                    let v = self.v(i, i + 1, d);
-                    result.push(if v == 0 { UNDEF } else { v } as u8);
-                }
-            }
-
-            result.push(END as u8);
-
-            Some(result)
-        }
-    }
 }
 
 
@@ -222,6 +189,35 @@ impl SimpleDSym {
 
         let PartialDSym { dset, orbit_index, orbit_rs, orbit_vs } = ds;
         SimpleDSym { dset, orbit_index, orbit_rs, orbit_vs, counter }
+    }
+
+    pub fn to_binary(&self) -> Option<Vec<u8>> {
+        const END: usize = 0;
+
+        if self.size() > 254 {
+            None
+        } else {
+            let mut result = Vec::with_capacity(self.dim() * self.size());
+
+            result.push(self.dim() as u8);
+
+            for d in 1..=self.size() {
+                for i in 0..=self.dim() {
+                    let e = self.get(i, d).unwrap();
+                    if e >= d {
+                        result.push(e as u8);
+                    }
+                }
+            }
+
+            for v in &self.orbit_vs {
+                result.push(*v as u8);
+            }
+
+            result.push(END as u8);
+
+            Some(result)
+        }
     }
 }
 

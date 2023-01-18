@@ -1,7 +1,6 @@
 use std::io::{Write, stdout};
 
 use rust_dsymbols::dset_generators::DSets;
-use rust_dsymbols::dsyms::DSym;
 use rust_dsymbols::dsym_generators::DSyms;
 
 
