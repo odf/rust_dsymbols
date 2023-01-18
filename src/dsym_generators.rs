@@ -1,5 +1,5 @@
 use num_rational::Rational64;
-use num_traits::signum;
+use num_traits::Signed;
 
 use crate::backtrack::BackTrackIterator;
 use crate::backtrack::BackTracking;
@@ -47,7 +47,7 @@ impl DSymBackTracking {
         }
 
         let base_curvature = curvature(&dset, &orbit_vmins, &orbit_is_chain);
-        let canonicity_test_needed = signum(base_curvature).to_integer() >= 0;
+        let canonicity_test_needed = !base_curvature.is_negative();
 
         let orbit_maps = if canonicity_test_needed {
             Some(orbit_maps(&dset, orbit_vmins.len(), &orbit_index))
@@ -71,7 +71,7 @@ impl DSymBackTracking {
     }
 
     fn is_minimally_hyperbolic(&self, vs: &[usize], curv: Rational64) -> bool {
-        if signum(curv).to_integer() >= 0 {
+        if !curv.is_negative() {
             false
         } else {
             for i in 0..self.orbit_count() {
@@ -81,7 +81,7 @@ impl DSymBackTracking {
                     let c = curv
                         - Rational64::new(k, v)
                         + Rational64::new(k, v - 1);
-                    if signum(c).to_integer() < 0 {
+                    if c.is_negative() {
                         return false;
                     }
                 }
@@ -106,7 +106,7 @@ impl DSymBackTracking {
     }
 
     fn is_good(&self, vs: &[usize], curv: Rational64) -> bool {
-        if signum(curv).to_integer() <= 0 {
+        if !curv.is_positive() {
             true
         } else {
             let ds = &self.dset;
@@ -239,7 +239,7 @@ impl BackTracking for DSymBackTracking {
         let mut result = vec![];
 
         if state.next < self.orbit_count() {
-            if signum(state.curv).to_integer() < 0 {
+            if state.curv.is_negative() {
                 result.push(Self::State {
                     vs: state.vs.clone(),
                     curv: state.curv,
@@ -258,14 +258,14 @@ impl BackTracking for DSymBackTracking {
                         - Rational64::new(k, vmin as i64)
                         + Rational64::new(k, v as i64);
 
-                    if signum(curv).to_integer() >= 0
+                    if !curv.is_negative()
                         || self.is_minimally_hyperbolic(&vs, curv)
                     {
                         let next = state.next + 1;
                         result.push(Self::State { vs, curv, next });
                     }
 
-                    if signum(curv).to_integer() < 0 {
+                    if curv.is_negative() {
                         break;
                     }
                 }
