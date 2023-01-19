@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::io::{Write, stdout};
 
 use rust_dsymbols::dset_generators::DSets;
@@ -9,9 +10,25 @@ fn main() {
         let n: usize = arg.parse().unwrap();
 
         generate_binary(n);
+        //generate_binary_profiled(n);
     } else {
         panic!("Expected an argument.");
     }
+}
+
+
+fn generate_binary_profiled(n: usize) {
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build().unwrap();
+
+    generate_binary(n);
+
+    if let Ok(report) = guard.report().build() {
+        let file = File::create("flamegraph.svg").unwrap();
+        report.flamegraph(file).unwrap();
+    };
 }
 
 
