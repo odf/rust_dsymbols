@@ -17,6 +17,7 @@ struct DSymGenState {
 struct DSymBackTracking {
     dset: SimpleDSet,
     orbit_index: Vec<Vec<usize>>,
+    orbit_rs: Vec<usize>,
     orbit_vmins: Vec<usize>,
     orbit_is_chain: Vec<bool>,
     orbit_maps: Option<Vec<Vec<usize>>>,
@@ -58,6 +59,7 @@ impl DSymBackTracking {
         DSymBackTracking {
             dset: dset.clone(),
             orbit_index,
+            orbit_rs,
             orbit_vmins,
             orbit_is_chain,
             orbit_maps,
@@ -168,15 +170,12 @@ impl DSymBackTracking {
     }
 
     fn make_dsym(&self, vs: &[usize]) -> PartialDSym {
-        let mut ds = PartialDSym::new(&self.dset);
-
-        for i in 0..ds.dim() {
-            for d in 1..=ds.size() {
-                ds.set_v(i, d, vs[self.orbit_index[i][d]]);
-            }
-        }
-
-        ds
+        PartialDSym::from(
+            self.dset.clone(),
+            self.orbit_index.clone(),
+            self.orbit_rs.clone(),
+            vs.iter().cloned().collect()
+        )
     }
 }
 

@@ -118,6 +118,16 @@ impl PartialDSym {
         PartialDSym { dset: dset.clone(), orbit_index, orbit_rs, orbit_vs }
     }
 
+    pub fn from(
+        dset: SimpleDSet,
+        orbit_index: Vec<Vec<usize>>,
+        orbit_rs: Vec<usize>,
+        orbit_vs: Vec<usize>
+    ) -> PartialDSym
+    {
+        PartialDSym { dset, orbit_index, orbit_rs, orbit_vs }
+    }
+
     pub fn set_v(&mut self, i: usize, d: usize, v: usize) {
         assert!(1 <= d);
         self.orbit_vs[self.orbit_index[i][d]] = v;
