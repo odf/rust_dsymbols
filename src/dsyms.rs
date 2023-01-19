@@ -61,8 +61,11 @@ fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
 }
 
 
-pub fn collect_orbits(ds: &SimpleDSet) -> (Vec<usize>, Vec<Vec<usize>>) {
+pub fn collect_orbits(ds: &SimpleDSet)
+    -> (Vec<usize>, Vec<bool>, Vec<Vec<usize>>)
+{
     let mut orbit_rs = vec![];
+    let mut orbit_is_chain = vec![];
     let mut orbit_index = vec![vec![0; ds.size() + 1]; ds.dim()];
     let mut seen = vec![false; ds.size() + 1];
 
@@ -79,9 +82,12 @@ pub fn collect_orbits(ds: &SimpleDSet) -> (Vec<usize>, Vec<Vec<usize>>) {
                 let mut e = d;
                 let mut k = i;
                 let mut steps = 0;
+                let mut is_chain = false;
 
                 loop {
-                    e = ds.get(k, e).unwrap();
+                    let ek = ds.get(k, e).unwrap();
+                    is_chain |= ek == e;
+                    e = ek;
                     k = i + (i + 1) - k;
                     steps += 1;
 
@@ -94,11 +100,12 @@ pub fn collect_orbits(ds: &SimpleDSet) -> (Vec<usize>, Vec<Vec<usize>>) {
                 }
 
                 orbit_rs.push(steps / 2);
+                orbit_is_chain.push(is_chain);
             }
         }
     }
 
-    (orbit_rs, orbit_index)
+    (orbit_rs, orbit_is_chain, orbit_index)
 }
 
 
@@ -112,7 +119,7 @@ pub struct PartialDSym {
 
 impl PartialDSym {
     pub fn new(dset: &SimpleDSet) -> PartialDSym {
-        let (orbit_rs, orbit_index) = collect_orbits(&dset);
+        let (orbit_rs, _, orbit_index) = collect_orbits(&dset);
         let orbit_vs = vec![0; orbit_rs.len()];
 
         PartialDSym { dset: dset.clone(), orbit_index, orbit_rs, orbit_vs }
