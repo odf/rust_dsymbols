@@ -6,6 +6,7 @@ use crate::dsets::*;
 struct DSetGenState {
     dset: PartialDSet,
     is_remap_start: Vec<bool>,
+    next_i_d: Option<(usize, usize)>,
 }
 
 
@@ -22,11 +23,12 @@ impl BackTracking for DSetBackTracking {
         DSetGenState {
             dset: PartialDSet::new(1, self.dim),
             is_remap_start: vec![false; self.max_size + 1],
+            next_i_d: Some((0, 1)),
         }
     }
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
-        if state.dset.is_complete() {
+        if state.next_i_d.is_none() {
             Some(state.dset.clone())
         } else {
             None
@@ -36,10 +38,11 @@ impl BackTracking for DSetBackTracking {
     fn children(&self, state: &Self::State) -> Vec<Self::State> {
         let mut result = vec![];
 
-        let ds = &state.dset;
+        if let Some((i, d)) = state.next_i_d {
+            let ds = &state.dset;
+            let max_e = self.max_size.min(ds.size() + 1);
 
-        if let Some((i, d)) = first_undefined(ds) {
-            for e in d..=self.max_size.min(ds.size() + 1) {
+            for e in d..=max_e {
                 if ds.get(i, e) == None {
                     let mut dset = ds.clone();
                     let mut is_remap_start = state.is_remap_start.clone();
@@ -60,7 +63,10 @@ impl BackTracking for DSetBackTracking {
                     }
 
                     if check_canonicity(&dset, &mut is_remap_start) {
-                        result.push(Self::State { dset, is_remap_start });
+                        let next_i_d = next_undefined(&dset, i, d);
+                        result.push(
+                            Self::State { dset, is_remap_start, next_i_d }
+                        );
                     }
                 }
             }
@@ -79,7 +85,9 @@ pub struct DSets {
 impl DSets {
     pub fn new(dim: usize, max_size: usize) -> DSets {
         DSets {
-            bt: BackTrackIterator::new(DSetBackTracking { dim, max_size }),
+            bt: BackTrackIterator::new(
+                DSetBackTracking { dim, max_size }
+            ),
             counter: 0,
         }
     }
@@ -99,8 +107,16 @@ impl Iterator for DSets {
 }
 
 
-fn first_undefined(ds: &PartialDSet) -> Option<(usize, usize)> {
-    for d in 1..=ds.size() {
+fn next_undefined(ds: &PartialDSet, i0: usize, d0: usize)
+    -> Option<(usize, usize)>
+{
+    for i in i0..=ds.dim() {
+        if ds.get(i, d0) == None {
+            return Some((i, d0));
+        }
+    }
+
+    for d in (d0 + 1)..=ds.size() {
         for i in 0..=ds.dim() {
             if ds.get(i, d) == None {
                 return Some((i, d));
