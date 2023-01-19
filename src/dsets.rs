@@ -349,6 +349,10 @@ impl SimpleDSet {
         assert!(ds.is_complete());
         // TODO add more consistency checks here
 
+        Self::from_partial_unchecked(ds, counter)
+    }
+
+    pub fn from_partial_unchecked(ds: PartialDSet, counter: usize) -> Self {
         let PartialDSet { size, dim, op } = ds;
         SimpleDSet { size, dim, op, counter }
     }

@@ -91,7 +91,7 @@ impl Iterator for DSets {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(ds) = self.bt.next() {
             self.counter += 1;
-            Some(SimpleDSet::from_partial(ds, self.counter))
+            Some(SimpleDSet::from_partial_unchecked(ds, self.counter))
         } else {
             None
         }
