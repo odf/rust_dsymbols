@@ -36,6 +36,9 @@ impl BackTracking for DSetBackTracking {
     }
 
     fn children(&self, state: &Self::State) -> Vec<Self::State> {
+        let mut n2o = vec![0; self.max_size + 1];
+        let mut o2n = vec![0; self.max_size + 1];
+
         let mut result = vec![];
 
         if let Some((i, d)) = state.next_i_d {
@@ -62,7 +65,9 @@ impl BackTracking for DSetBackTracking {
                         continue;
                     }
 
-                    if check_canonicity(&dset, &mut is_remap_start) {
+                    if check_canonicity(
+                        &dset, &mut is_remap_start, &mut n2o, &mut o2n
+                    ) {
                         let next_i_d = next_undefined(&dset, i, d);
                         result.push(
                             Self::State { dset, is_remap_start, next_i_d }
@@ -154,18 +159,15 @@ fn scan(
 
 
 fn check_canonicity(
-    ds: &PartialDSet, is_remap_start: &mut [bool]
+    ds: &PartialDSet,
+    is_remap_start: &mut [bool],
+    n2o: &mut [usize],
+    o2n: &mut [usize]
 ) -> bool
 {
-    let mut n2o = vec![];
-    let mut o2n = vec![];
-
-    n2o.resize(ds.size() + 1, 0);
-    o2n.resize(ds.size() + 1, 0);
-
     for d in 1..=ds.size() {
         if is_remap_start[d] {
-            let diff = compare_renumbered_from(ds, d, &mut n2o, &mut o2n);
+            let diff = compare_renumbered_from(ds, d, n2o, o2n);
 
             if diff < 0 {
                 return false;
