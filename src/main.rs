@@ -4,31 +4,35 @@ use rust_dsymbols::dset_generators::DSets;
 use rust_dsymbols::dsym_generators::DSyms;
 
 
+#[cfg(not(feature = "pprof"))]
 fn main() {
     if let Some(arg) = std::env::args().nth(1) {
         let n: usize = arg.parse().unwrap();
 
         generate_binary(n);
-        //generate_binary_profiled(n);
     } else {
         panic!("Expected an argument.");
     }
 }
 
 
-#[cfg(pprof)]
-fn generate_binary_profiled(n: usize) {
-    let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
-        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-        .build().unwrap();
+#[cfg(feature = "pprof")]
+fn main() {
+    if let Some(arg) = std::env::args().nth(1) {
+        let n: usize = arg.parse().unwrap();
 
-    generate_binary(n);
+        let guard = pprof::ProfilerGuardBuilder::default()
+            .frequency(1000)
+            .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+            .build().unwrap();
 
-    if let Ok(report) = guard.report().build() {
-        let file = std::fs::File::create("flamegraph.svg").unwrap();
-        report.flamegraph(file).unwrap();
-    };
+        generate_binary(n);
+
+        if let Ok(report) = guard.report().build() {
+            let file = std::fs::File::create("flamegraph.svg").unwrap();
+            report.flamegraph(file).unwrap();
+        };
+    }
 }
 
 
