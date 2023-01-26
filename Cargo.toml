@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 num-rational = "0.4"
 num-traits = "0.2"
-pprof = { version = "0.11", features = ["flamegraph"] }
+pprof = { version = "0.11", features = ["flamegraph"], optional = true }
