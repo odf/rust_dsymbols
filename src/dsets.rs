@@ -45,26 +45,20 @@ pub trait DSet {
 
 
     fn is_complete(&self) -> bool {
-        for i in 0..=self.dim() {
-            for d in 1..=self.size() {
-                if self.get(i, d) == None {
-                    return false;
-                }
-            }
-        }
-        true
+        (0..=self.dim()).all(|i|
+            (1..=self.size()).all(|d|
+                self.get(i, d).is_some()
+            )
+        )
     }
 
 
     fn is_loopless(&self) -> bool {
-        for i in 0..=self.dim() {
-            for d in 1..=self.size() {
-                if self.get(i, d) == Some(d) {
-                    return false;
-                }
-            }
-        }
-        true
+        (0..=self.dim()).all(|i|
+            (1..self.size()).all(|d|
+                self.get(i, d) != Some(d)
+            )
+        )
     }
 
 
