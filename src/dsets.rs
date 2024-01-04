@@ -128,15 +128,14 @@ pub trait DSet {
 
         while let Some((d, e)) = queue.pop_front() {
             for i in 0..=self.dim() {
-                let di = self.get(i, d).unwrap_or(0);
-                let ei = other.get(i, e).unwrap_or(0);
-
-                if di > 0 || ei > 0 {
-                    if m[di] == 0 {
-                        m[di] = ei;
-                        queue.push_back((di, ei));
-                    } else if m[di] != ei {
-                        return None;
+                if let Some(di) = self.get(i, d) {
+                    if let Some(ei) = other.get(i, e) {
+                        if m[di] == 0 {
+                            m[di] = ei;
+                            queue.push_back((di, ei));
+                        } else if m[di] != ei {
+                            return None;
+                        }
                     }
                 }
             }
