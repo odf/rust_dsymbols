@@ -1,5 +1,5 @@
-use super::backtrack::BackTrackIterator;
-use super::backtrack::BackTracking;
+use rust_dsymbols::backtrack::BackTrackIterator;
+use rust_dsymbols::backtrack::BackTracking;
 
 
 struct PartitionState {
@@ -49,5 +49,24 @@ impl Iterator for IntPartitions {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
+    }
+}
+
+
+fn main() {
+    let n = if let Some(arg) = std::env::args().nth(1) {
+        arg.parse().unwrap()
+    } else {
+        8
+    };
+
+    println!("All the ways of writing {} as a sum of positive integers:", n);
+    println!();
+
+    for p in IntPartitions::new(n) {
+        println!(
+            "{}",
+            p.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" + ")
+        );
     }
 }
