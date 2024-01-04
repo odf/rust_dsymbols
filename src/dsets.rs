@@ -161,67 +161,44 @@ pub trait DSet {
 
 
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut text = String::with_capacity(self.dim() * self.size() * 2);
+        write!(f, "<{}.{}:", self.set_count(), self.symbol_count())?;
 
-        text.push('<');
-        string_push_num(&mut text, self.set_count());
-        text.push('.');
-        string_push_num(&mut text, self.symbol_count());
-        text.push(':');
-
-        string_push_num(&mut text, self.size());
-        if self.dim() != 2 {
-            text.push(' ');
-            string_push_num(&mut text, self.dim());
+        if self.dim() == 2 {
+            write!(f, "{}:", self.size())?;
+        } else {
+            write!(f, "{} {}:", self.size(), self.dim())?;
         }
-        text.push(':');
 
         for i in 0..=self.dim() {
             if i > 0 {
-                text.push(',');
+                write!(f, ",")?;
             }
             for d in 1..=self.size() {
                 let e = self.get(i, d).unwrap_or(0);
                 if e == 0 || e >= d {
                     if d > 1 {
-                        text.push(' ');
+                        write!(f, " ")?;
                     }
-                    string_push_num(&mut text, e);
+                    write!(f, "{}", e)?;
                 }
             }
         }
-        text.push(':');
+        write!(f, ":")?;
 
         for i in 0..self.dim() {
             if i > 0 {
-                text.push(',');
+                write!(f, ",")?;
             }
-
             for d in self.orbit_reps_2d(i, i + 1) {
                 if d > 1 {
-                    text.push(' ');
+                    write!(f, " ")?;
                 }
-                string_push_num(&mut text, self.m(i, i + 1, d));
+                write!(f, "{}", self.m(i, i + 1, d))?;
             }
         }
-        text.push('>');
+        write!(f, ">")?;
 
-        f.write_str(&text[..])
-    }
-}
-
-
-fn string_push_num(text: &mut String, n: usize) {
-    if n >= 1000 {
-        text.push_str(&n.to_string()[..]);
-    } else {
-        if n >= 100 {
-            text.push(char::from_digit((n / 100) as u32, 10).unwrap());
-        }
-        if n >= 10 {
-            text.push(char::from_digit(((n % 100) / 10) as u32, 10).unwrap());
-        }
-        text.push(char::from_digit((n % 10) as u32, 10).unwrap());
+        Ok(())
     }
 }
 
