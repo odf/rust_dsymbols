@@ -55,7 +55,7 @@ pub trait DSet {
 
     fn is_loopless(&self) -> bool {
         (0..=self.dim()).all(|i|
-            (1..self.size()).all(|d|
+            (1..=self.size()).all(|d|
                 self.get(i, d) != Some(d)
             )
         )
@@ -65,16 +65,20 @@ pub trait DSet {
     fn is_weakly_oriented(&self) -> bool {
         let ori = self.partial_orientation();
 
-        for i in 0..=self.dim() {
-            for d in 1..=self.size() {
-                if let Some(di) = self.get(i, d) {
-                    if di != d && ori[d] != ZERO && ori[di] == ori[d] {
-                        return false;
-                    }
-                }
-            }
+        (0..=self.dim()).all(|i|
+            (1..=self.size()).all(|d|
+                self.orientations_match(i, d, &ori)
+            )
+        )
+    }
+
+
+    fn orientations_match(&self, i: usize, d: usize, ori: &Vec<Sign>) -> bool {
+        if let Some(di) = self.get(i, d) {
+            di == d || ori[d] == ZERO || ori[di] != ori[d]
+        } else {
+            true
         }
-        true
     }
 
 
