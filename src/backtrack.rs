@@ -1,5 +1,3 @@
-// Generic backtracker
-
 pub trait BackTracking {
     type State;
     type Item;
@@ -25,15 +23,12 @@ impl<T: BackTracking> Iterator for BackTrackIterator<T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.stack.len() > 0 {
-            let list = self.stack.last().unwrap();
-            let current = list.last().unwrap();
+            let current = self.stack.last().unwrap().last().unwrap();
             let value = T::extract(&self.bt, current);
             let todo = T::children(&self.bt, current);
 
             if todo.len() > 0 {
-                let mut todo = todo;
-                todo.reverse();
-                self.stack.push(todo);
+                self.stack.push(todo.into_iter().rev().collect());
             } else {
                 while self.stack.len() > 0 &&
                       self.stack.last().unwrap().len() < 2
@@ -41,15 +36,13 @@ impl<T: BackTracking> Iterator for BackTrackIterator<T> {
                     self.stack.pop();
                 }
 
-                if self.stack.len() > 0 {
-                    let mut list = self.stack.pop().unwrap();
-                    list.pop();
-                    self.stack.push(list);
+                if let Some(todo) = self.stack.last_mut() {
+                    todo.pop();
                 }
             }
 
-            if let Some(value) = value {
-                return Some(value);
+            if value.is_some() {
+                return value;
             }
         }
 
