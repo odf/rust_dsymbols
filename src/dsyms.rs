@@ -140,6 +140,10 @@ impl DSet for PartialDSym {
     fn m(&self, i: usize, j: usize, d: usize) -> usize {
         self.r(i, j, d) * self.v(i, j, d)
     }
+
+    fn is_complete(&self) -> bool {
+        self.dset.is_complete() && self.orbit_vs.iter().all(|&v| v > 0)
+    }
 }
 
 impl DSym for PartialDSym {
@@ -230,6 +234,11 @@ impl DSet for SimpleDSym {
 
     fn m(&self, i: usize, j: usize, d: usize) -> usize {
         self.r(i, j, d) * self.v(i, j, d)
+    }
+
+    fn is_complete(&self) -> bool {
+        // checked on creation
+        true
     }
 }
 

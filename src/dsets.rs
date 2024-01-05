@@ -312,6 +312,11 @@ impl DSet for SimpleDSet {
             Some(self.op[self.idx(i, d)])
         }
     }
+
+    fn is_complete(&self) -> bool {
+        // checked on creation
+        true
+    }
 }
 
 impl fmt::Display for SimpleDSet {
