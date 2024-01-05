@@ -40,27 +40,6 @@ pub trait DSym : DSet {
 }
 
 
-fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
-    where T: DSym
-{
-    if ds.is_oriented() {
-        None
-    } else {
-        let mut cov = PartialDSym::new(setcov);
-
-        for i in 0..cov.dim() {
-            for d in cov.orbit_reps_2d(i, i + 1) {
-                let e = (d - 1) % ds.size() + 1;
-                let vd = ds.m(i, i + 1, e) / cov.r(i, i + 1, d);
-                cov.set_v(i, d, vd);
-            }
-        }
-
-        Some(cov)
-    }
-}
-
-
 pub fn collect_orbits(ds: &SimpleDSet)
     -> (Vec<usize>, Vec<bool>, Vec<Vec<usize>>)
 {
@@ -173,16 +152,6 @@ impl DSym for PartialDSym {
     }
 }
 
-impl OrientedCover<PartialDSym> for PartialDSym {
-    fn oriented_cover(&self) -> Option<PartialDSym> {
-        if let Some(setcov) = self.dset.oriented_cover() {
-            oriented_cover(self, &SimpleDSet::from_partial(setcov, 1))
-        } else {
-            None
-        }
-    }
-}
-
 impl fmt::Display for PartialDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         DSet::fmt(self, f)
@@ -274,7 +243,35 @@ impl DSym for SimpleDSym {
     }
 }
 
-impl OrientedCover<PartialDSym> for SimpleDSym {
+impl fmt::Display for SimpleDSym {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        DSet::fmt(self, f)
+    }
+}
+
+
+fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
+    where T: DSym
+{
+    if ds.is_oriented() {
+        None
+    } else {
+        let mut cov = PartialDSym::new(setcov);
+
+        for i in 0..cov.dim() {
+            for d in cov.orbit_reps_2d(i, i + 1) {
+                let e = (d - 1) % ds.size() + 1;
+                let vd = ds.m(i, i + 1, e) / cov.r(i, i + 1, d);
+                cov.set_v(i, d, vd);
+            }
+        }
+
+        Some(cov)
+    }
+}
+
+
+impl OrientedCover<PartialDSym> for PartialDSym {
     fn oriented_cover(&self) -> Option<PartialDSym> {
         if let Some(setcov) = self.dset.oriented_cover() {
             oriented_cover(self, &SimpleDSet::from_partial(setcov, 1))
@@ -284,8 +281,12 @@ impl OrientedCover<PartialDSym> for SimpleDSym {
     }
 }
 
-impl fmt::Display for SimpleDSym {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DSet::fmt(self, f)
+impl OrientedCover<PartialDSym> for SimpleDSym {
+    fn oriented_cover(&self) -> Option<PartialDSym> {
+        if let Some(setcov) = self.dset.oriented_cover() {
+            oriented_cover(self, &SimpleDSet::from_partial(setcov, 1))
+        } else {
+            None
+        }
     }
 }
