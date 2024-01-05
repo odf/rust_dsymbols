@@ -200,8 +200,8 @@ impl SimpleDSym {
                 }
             }
 
-            for v in &self.orbit_vs {
-                result.push(*v as u8);
+            for &v in &self.orbit_vs {
+                result.push(v as u8);
             }
 
             result.push(END as u8);
