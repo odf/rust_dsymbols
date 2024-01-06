@@ -36,8 +36,8 @@ impl BackTracking for DSetBackTracking {
     }
 
     fn children(&self, state: &Self::State) -> Vec<Self::State> {
-        let mut n2o = vec![0; self.max_size + 1];
-        let mut o2n = vec![0; self.max_size + 1];
+        let mut new2old = vec![0; self.max_size + 1];
+        let mut old2new = vec![0; self.max_size + 1];
 
         let mut result = vec![];
 
@@ -66,7 +66,7 @@ impl BackTracking for DSetBackTracking {
                     }
 
                     if check_canonicity(
-                        &dset, &mut is_remap_start, &mut n2o, &mut o2n
+                        &dset, &mut is_remap_start, &mut new2old, &mut old2new
                     ) {
                         let next_i_d = next_undefined(&dset, i, d);
                         result.push(
@@ -182,27 +182,27 @@ fn check_canonicity(
 
 
 fn compare_renumbered_from(
-    ds: &PartialDSet, d0: usize, n2o: &mut [usize], o2n: &mut [usize]
+    ds: &PartialDSet, d0: usize, new2old: &mut [usize], old2new: &mut [usize]
 ) -> i64
 {
-    n2o.fill(0);
-    o2n.fill(0);
+    new2old.fill(0);
+    old2new.fill(0);
 
-    n2o[1] = d0;
-    o2n[d0] = 1;
+    new2old[1] = d0;
+    old2new[d0] = 1;
 
     let mut next = 2;
 
     for d in 1..=ds.size() {
         for i in 0..=ds.dim() {
-            let ei = ds.get(i, n2o[d]).unwrap_or(0);
+            let ei = ds.get(i, new2old[d]).unwrap_or(0);
 
             if ei == 0 {
                 return 0;
             } else {
-                if o2n[ei] == 0 {
-                    o2n[ei] = next;
-                    n2o[next] = ei;
+                if old2new[ei] == 0 {
+                    old2new[ei] = next;
+                    new2old[next] = ei;
                     next += 1;
                 }
 
@@ -210,8 +210,8 @@ fn compare_renumbered_from(
 
                 if di == 0 {
                     return 0;
-                } else if o2n[ei] != di {
-                    return (o2n[ei] as i64) - (di as i64);
+                } else if old2new[ei] != di {
+                    return (old2new[ei] as i64) - (di as i64);
                 }
             }
         }
