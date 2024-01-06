@@ -43,7 +43,7 @@ impl BackTracking for DSetBackTracking {
 
         if let Some((i, d)) = state.next_i_d {
             let ds = &state.dset;
-            let max_e = self.max_size.min(ds.size() + 1);
+            let max_e = (ds.size() + 1).min(self.max_size);
 
             for e in d..=max_e {
                 if ds.get(i, e) == None {
