@@ -57,11 +57,7 @@ impl BackTracking for DSetBackTracking {
 
                     dset.set(i, d, e);
 
-                    let (head, tail, gap, k) = scan_02_orbit(&dset, d);
-
-                    if gap == 1 {
-                        dset.set(k, head, tail);
-                    } else if gap == 0 && head != tail {
+                    if !check_and_apply_implications(&mut dset, i, d) {
                         continue;
                     }
 
@@ -129,6 +125,26 @@ fn next_undefined(ds: &PartialDSet, i0: usize, d0: usize)
         }
     }
     None
+}
+
+
+fn check_and_apply_implications(
+    dset: &mut PartialDSet, i: usize, d: usize
+) -> bool {
+    // TODO only works for 2d symbols right now
+
+    let (head, tail, gap, k) = scan_02_orbit(dset, d);
+
+    if i == 1 {
+        true
+    } else if gap == 0 && head != tail {
+        false
+    } else {
+        if gap == 1 {
+            dset.set(k, head, tail);
+        }
+        true
+    }
 }
 
 
