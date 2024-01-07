@@ -37,6 +37,8 @@ impl DSymBackTracking {
         }
 
         let base_curvature = Rational64::new(curv_sixfold, 6);
+
+        // TODO only one result in this case - need to express this better
         let canonicity_test_needed = !base_curvature.is_negative();
 
         let orbit_maps = if canonicity_test_needed {
