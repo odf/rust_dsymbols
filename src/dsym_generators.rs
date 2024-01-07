@@ -65,10 +65,7 @@ impl DSymBackTracking {
                 if vs[i] > self.orbit_vmins[i] {
                     let v = vs[i] as i64;
                     let k = if self.orbit_is_chain[i] { 1 } else { 2 };
-                    let c = curv
-                        - Rational64::new(k, v)
-                        + Rational64::new(k, v - 1);
-                    if c.is_negative() {
+                    if curv < Rational64::new(-k, v * (v - 1)) {
                         return false;
                     }
                 }
@@ -232,17 +229,16 @@ impl BackTracking for DSymBackTracking {
         if n >= self.orbit_count() || self.base_curvature.is_negative() {
             Vec::new()
         } else {
-            let vmin = state.vs[n];
+            let vmin = state.vs[n] as i64;
             let mut result = Vec::new();
 
             for v in vmin..=7 {
                 let mut vs = state.vs.clone();
-                vs[n] = v;
+                vs[n] = v as usize;
 
                 let k = if self.orbit_is_chain[n] { 1 } else { 2 };
                 let curv = state.curv
-                    - Rational64::new(k, vmin as i64)
-                    + Rational64::new(k, v as i64);
+                    + Rational64::new(k * (vmin - v), v * vmin);
 
                 if curv.is_negative() {
                     if self.is_minimally_hyperbolic(&vs, curv) {
