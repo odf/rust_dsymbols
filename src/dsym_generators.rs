@@ -102,45 +102,7 @@ impl DSymBackTracking {
         if !curv.is_positive() {
             true
         } else {
-            let ds = &self.dset;
-            let mut cones = vec![];
-            let mut corners = vec![];
-
-            for d in ds.orbit_reps_2d(0, 2) {
-                let d0 = ds.get(0, d).unwrap();
-                let d2 = ds.get(2, d).unwrap();
-
-                if d0 == d && d2 == d {
-                    corners.push(2)
-                } else if d0 != d && d2 == d0 {
-                    cones.push(2)
-                }
-            }
-
-            for i in 0..self.orbit_count() {
-                if vs[i] > 1 {
-                    if self.orbit_is_chain[i] {
-                        corners.push(vs[i]);
-                    } else {
-                        cones.push(vs[i]);
-                    }
-                }
-            }
-
-            cones.sort();
-            cones.reverse();
-            corners.sort();
-            corners.reverse();
-
-            let front = degree_list_as_string(cones);
-            let middle = String::from(
-                if self.dset.is_loopless() { "" } else { "*" }
-            );
-            let back = degree_list_as_string(corners);
-            let cross = String::from(
-                if self.dset.is_weakly_oriented() { "" } else { "x" }
-            );
-            let key = [ front, middle, back, cross ].join("");
+            let key = self.orbifold_symbol(vs);
 
             [
                 "", "*", "x",
@@ -152,6 +114,49 @@ impl DSymBackTracking {
                 "*44", "*33", "*22", "4*", "3*", "2*", "4x", "3x", "2x"
             ].contains(&&key[..])
         }
+    }
+
+    fn orbifold_symbol(&self, vs: &[usize]) -> String {
+        let ds = &self.dset;
+        let mut cones = vec![];
+        let mut corners = vec![];
+
+        for d in ds.orbit_reps_2d(0, 2) {
+            let d0 = ds.get(0, d).unwrap();
+            let d2 = ds.get(2, d).unwrap();
+
+            if d0 == d && d2 == d {
+                corners.push(2)
+            } else if d0 != d && d2 == d0 {
+                cones.push(2)
+            }
+        }
+
+        for i in 0..self.orbit_count() {
+            if vs[i] > 1 {
+                if self.orbit_is_chain[i] {
+                    corners.push(vs[i]);
+                } else {
+                    cones.push(vs[i]);
+                }
+            }
+        }
+
+        cones.sort();
+        cones.reverse();
+        corners.sort();
+        corners.reverse();
+
+        let front = degree_list_as_string(cones);
+        let middle = String::from(
+            if self.dset.is_loopless() { "" } else { "*" }
+        );
+        let back = degree_list_as_string(corners);
+        let cross = String::from(
+            if self.dset.is_weakly_oriented() { "" } else { "x" }
+        );
+
+        [ front, middle, back, cross ].join("")
     }
 
     fn make_dsym(&self, vs: &[usize]) -> PartialDSym {
