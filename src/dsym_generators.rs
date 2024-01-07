@@ -22,7 +22,6 @@ struct DSymBackTracking {
     orbit_is_chain: Vec<bool>,
     orbit_maps: Option<Vec<Vec<usize>>>,
     base_curvature: Rational64,
-    canonicity_test_needed: bool,
 }
 
 impl DSymBackTracking {
@@ -38,13 +37,11 @@ impl DSymBackTracking {
 
         let base_curvature = Rational64::new(curv_sixfold, 6);
 
-        // TODO only one result in this case - need to express this better
-        let canonicity_test_needed = !base_curvature.is_negative();
-
-        let orbit_maps = if canonicity_test_needed {
-            Some(orbit_maps(&dset, orbit_vmins.len(), &orbit_index))
-        } else {
+        let orbit_maps = if base_curvature.is_negative() {
+            // already (minimally) hyperbolic, so there's nothing to generate
             None
+        } else {
+            Some(orbit_maps(&dset, orbit_vmins.len(), &orbit_index))
         };
 
         DSymBackTracking {
@@ -55,7 +52,6 @@ impl DSymBackTracking {
             orbit_is_chain,
             orbit_maps,
             base_curvature,
-            canonicity_test_needed,
         }
     }
 
@@ -64,9 +60,7 @@ impl DSymBackTracking {
     }
 
     fn is_minimally_hyperbolic(&self, vs: &[usize], curv: Rational64) -> bool {
-        if !curv.is_negative() {
-            false
-        } else {
+        if curv.is_negative() {
             for i in 0..self.orbit_count() {
                 if vs[i] > self.orbit_vmins[i] {
                     let v = vs[i] as i64;
@@ -80,18 +74,16 @@ impl DSymBackTracking {
                 }
             }
             true
+        } else {
+            false
         }
     }
 
     fn is_canonical(&self, vs: &[usize]) -> bool {
-        if self.canonicity_test_needed {
-            let maps = self.orbit_maps.as_ref().unwrap();
-
-            for m in maps {
-                let ws: Vec<_> = (0..vs.len()).map(|i| vs[m[i]]).collect();
-                if &ws[..] > vs {
-                    return false;
-                }
+        for m in self.orbit_maps.as_ref().unwrap() {
+            let ws: Vec<_> = (0..vs.len()).map(|i| vs[m[i]]).collect();
+            if &ws[..] > vs {
+                return false;
             }
         }
 
@@ -222,7 +214,9 @@ impl BackTracking for DSymBackTracking {
     }
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
-        if state.next >= self.orbit_count()
+        if self.base_curvature.is_negative() {
+            Some(self.make_dsym(&state.vs))
+        } else if state.next >= self.orbit_count()
             && self.is_good(&state.vs, state.curv)
             && self.is_canonical(&state.vs)
         {
@@ -233,11 +227,13 @@ impl BackTracking for DSymBackTracking {
     }
 
     fn children(&self, state: &Self::State) -> Vec<Self::State> {
-        let mut result = vec![];
+        let n = state.next;
 
-        if state.next < self.orbit_count() {
-            let n = state.next;
+        if n >= self.orbit_count() || self.base_curvature.is_negative() {
+            Vec::new()
+        } else {
             let vmin = state.vs[n];
+            let mut result = Vec::new();
 
             for v in vmin..=7 {
                 let mut vs = state.vs.clone();
@@ -259,9 +255,9 @@ impl BackTracking for DSymBackTracking {
                     result.push(Self::State { vs, curv, next });
                 }
             }
-        }
 
-        result
+            result
+        }
     }
 }
 
