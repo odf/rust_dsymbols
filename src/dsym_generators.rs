@@ -132,17 +132,11 @@ impl DSymBackTracking {
             corners.sort();
             corners.reverse();
 
-            let front = cones.iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<_>>()
-                .join("");
+            let front = degree_list_as_string(cones);
             let middle = String::from(
                 if self.dset.is_loopless() { "" } else { "*" }
             );
-            let back = corners.iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<_>>()
-                .join("");
+            let back = degree_list_as_string(corners);
             let cross = String::from(
                 if self.dset.is_weakly_oriented() { "" } else { "x" }
             );
@@ -168,6 +162,11 @@ impl DSymBackTracking {
             vs.iter().cloned().collect()
         )
     }
+}
+
+
+fn degree_list_as_string(vs: Vec<usize>) -> String {
+    vs.iter().map(|v| v.to_string()).collect::<Vec<_>>().join("")
 }
 
 
