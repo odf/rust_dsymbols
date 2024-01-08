@@ -1,6 +1,3 @@
-use num_rational::Rational64;
-use num_traits::Signed;
-
 use crate::backtrack::BackTrackIterator;
 use crate::backtrack::BackTracking;
 use crate::dsets::*;
@@ -9,7 +6,7 @@ use crate::dsyms::*;
 
 struct DSymGenState {
     vs: Vec<usize>,
-    curv: Rational64,
+    curv: i64,
     next: usize,
 }
 
@@ -21,7 +18,7 @@ struct DSymBackTracking {
     orbit_vmins: Vec<usize>,
     orbit_is_chain: Vec<bool>,
     orbit_maps: Option<Vec<Vec<usize>>>,
-    base_curvature: Rational64,
+    base_curvature: i64,
 }
 
 impl DSymBackTracking {
@@ -29,15 +26,13 @@ impl DSymBackTracking {
         let (orbit_rs, orbit_is_chain, orbit_index) = collect_orbits(&dset);
         let orbit_vmins = compute_vmins(&orbit_rs);
 
-        let mut curv_sixfold = -3 * dset.size() as i64;
+        let mut base_curvature = -420 / 2 * dset.size() as i64;
         for i in 0..orbit_vmins.len() {
             let k = if orbit_is_chain[i] { 1 } else { 2 };
-            curv_sixfold += 6 * k / orbit_vmins[i] as i64;
+            base_curvature += 420 * k / orbit_vmins[i] as i64;
         }
 
-        let base_curvature = Rational64::new(curv_sixfold, 6);
-
-        let orbit_maps = if base_curvature.is_negative() {
+        let orbit_maps = if base_curvature < 0 {
             // already (minimally) hyperbolic, so there's nothing to generate
             None
         } else {
@@ -59,13 +54,14 @@ impl DSymBackTracking {
         self.orbit_vmins.len()
     }
 
-    fn is_minimally_hyperbolic(&self, vs: &[usize], curv: Rational64) -> bool {
-        if curv.is_negative() {
+    fn is_minimally_hyperbolic(&self, vs: &[usize], curv: i64) -> bool {
+        if curv < 0 {
             for i in 0..self.orbit_count() {
                 if vs[i] > self.orbit_vmins[i] {
                     let v = vs[i] as i64;
                     let k = if self.orbit_is_chain[i] { 1 } else { 2 };
-                    if curv < Rational64::new(-k, v * (v - 1)) {
+                    let c = curv - 420 * k / v + 420 * k / (v - 1);
+                    if c < 0 {
                         return false;
                     }
                 }
@@ -87,8 +83,8 @@ impl DSymBackTracking {
         true
     }
 
-    fn is_good(&self, vs: &[usize], curv: Rational64) -> bool {
-        if !curv.is_positive() {
+    fn is_good(&self, vs: &[usize], curv: i64) -> bool {
+        if curv <= 0 {
             true
         } else {
             let key = self.orbifold_symbol(vs);
@@ -205,13 +201,13 @@ impl BackTracking for DSymBackTracking {
     fn root(&self) -> Self::State {
         let vs = self.orbit_vmins.clone();
         let curv = self.base_curvature;
-        let next = if curv.is_negative() { self.orbit_count() } else { 0 };
+        let next = if curv < 0 { self.orbit_count() } else { 0 };
 
         Self::State { vs, curv, next }
     }
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
-        if self.base_curvature.is_negative() {
+        if self.base_curvature < 0 {
             Some(self.make_dsym(&state.vs))
         } else if state.next >= self.orbit_count()
             && self.is_good(&state.vs, state.curv)
@@ -226,7 +222,7 @@ impl BackTracking for DSymBackTracking {
     fn children(&self, state: &Self::State) -> Vec<Self::State> {
         let n = state.next;
 
-        if n >= self.orbit_count() || self.base_curvature.is_negative() {
+        if n >= self.orbit_count() || self.base_curvature < 0 {
             Vec::new()
         } else {
             let vmin = state.vs[n] as i64;
@@ -237,10 +233,9 @@ impl BackTracking for DSymBackTracking {
                 vs[n] = v as usize;
 
                 let k = if self.orbit_is_chain[n] { 1 } else { 2 };
-                let curv = state.curv
-                    + Rational64::new(k * (vmin - v), v * vmin);
+                let curv = state.curv - 420 * k / vmin + 420 * k / v;
 
-                if curv.is_negative() {
+                if curv < 0 {
                     if self.is_minimally_hyperbolic(&vs, curv) {
                         let next = self.orbit_count();
                         result.push(Self::State { vs, curv, next });
