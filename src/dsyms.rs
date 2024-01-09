@@ -64,7 +64,7 @@ pub fn collect_orbits(ds: &SimpleDSet)
                 let mut is_chain = false;
 
                 loop {
-                    let ek = ds.get(k, e).unwrap();
+                    let ek = ds.get_unchecked(k, e);
                     is_chain |= ek == e;
                     e = ek;
                     k = i + (i + 1) - k;
@@ -193,7 +193,7 @@ impl SimpleDSym {
 
             for d in 1..=self.size() {
                 for i in 0..=self.dim() {
-                    let e = self.get(i, d).unwrap();
+                    let e = self.dset.get_unchecked(i, d);
                     if e >= d {
                         result.push(e as u8);
                     }

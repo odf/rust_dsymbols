@@ -236,6 +236,10 @@ impl PartialDSet {
         self.size += count;
         self.op.append(&mut vec![0 as usize; count * (self.dim() + 1)]);
     }
+
+    pub fn get_unchecked(&self, i: usize, d: usize) -> usize {
+        self.op[self.idx(i, d)]
+    }
 }
 
 impl DSet for PartialDSet {
@@ -251,11 +255,19 @@ impl DSet for PartialDSet {
         if i > self.dim || d < 1 || d > self.size {
             None
         } else {
-            match self.op[self.idx(i, d)] {
+            match self.get_unchecked(i, d) {
                 0 => None,
                 di => Some(di)
             }
         }
+    }
+
+    fn is_complete(&self) -> bool {
+        (0..=self.dim()).all(|i|
+            (1..=self.size()).all(|d|
+                self.get_unchecked(i, d) != 0
+            )
+        )
     }
 }
 
@@ -290,6 +302,10 @@ impl SimpleDSet {
         let PartialDSet { size, dim, op } = ds;
         SimpleDSet { size, dim, op, counter }
     }
+
+    pub fn get_unchecked(&self, i: usize, d: usize) -> usize {
+        self.op[self.idx(i, d)]
+    }
 }
 
 impl DSet for SimpleDSet {
@@ -309,7 +325,7 @@ impl DSet for SimpleDSet {
         if i > self.dim || d < 1 || d > self.size {
             None
         } else {
-            Some(self.op[self.idx(i, d)])
+            Some(self.get_unchecked(i, d))
         }
     }
 
