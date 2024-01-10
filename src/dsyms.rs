@@ -54,31 +54,29 @@ pub fn collect_orbits(ds: &SimpleDSet)
         for d in 1..=ds.size() {
             if !seen[d] {
                 let orbit_nr = orbit_rs.len();
-
-                orbit_index[i][d] = orbit_nr;
-                seen[d] = true;
-
                 let mut e = d;
-                let mut k = i;
                 let mut steps = 0;
                 let mut is_chain = false;
 
                 loop {
-                    let ek = ds.get_unchecked(k, e);
-                    is_chain |= ek == e;
-                    e = ek;
-                    k = i + (i + 1) - k;
-                    steps += 1;
+                    let ei = ds.get_unchecked(i, e);
+                    is_chain |= ei == e;
+                    orbit_index[i][ei] = orbit_nr;
+                    seen[ei] = true;
 
+                    e = ds.get_unchecked(i + 1, ei);
+                    is_chain |= e == ei;
                     orbit_index[i][e] = orbit_nr;
                     seen[e] = true;
 
-                    if e == d && k == i {
+                    steps += 1;
+
+                    if e == d {
                         break;
                     }
                 }
 
-                orbit_rs.push(steps / 2);
+                orbit_rs.push(steps);
                 orbit_is_chain.push(is_chain);
             }
         }
