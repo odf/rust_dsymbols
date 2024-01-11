@@ -11,6 +11,9 @@ struct DSymGenState {
 }
 
 
+const CURV_FAC: i64 = 420;
+
+
 struct DSymBackTracking {
     dset: SimpleDSet,
     orbit_index: Vec<Vec<usize>>,
@@ -26,10 +29,10 @@ impl DSymBackTracking {
         let (orbit_rs, orbit_is_chain, orbit_index) = collect_orbits(&dset);
         let orbit_vmins = compute_vmins(&orbit_rs);
 
-        let mut base_curvature = -420 / 2 * dset.size() as i64;
+        let mut base_curvature = -CURV_FAC / 2 * dset.size() as i64;
         for i in 0..orbit_vmins.len() {
             let k = if orbit_is_chain[i] { 1 } else { 2 };
-            base_curvature += 420 * k / orbit_vmins[i] as i64;
+            base_curvature += CURV_FAC * k / orbit_vmins[i] as i64;
         }
 
         let orbit_maps = if base_curvature < 0 {
@@ -60,7 +63,7 @@ impl DSymBackTracking {
                 if vs[i] > self.orbit_vmins[i] {
                     let v = vs[i] as i64;
                     let k = if self.orbit_is_chain[i] { 1 } else { 2 };
-                    let c = curv - 420 * k / v + 420 * k / (v - 1);
+                    let c = curv - k * CURV_FAC / v + k * CURV_FAC / (v - 1);
                     if c < 0 {
                         return false;
                     }
@@ -233,7 +236,7 @@ impl BackTracking for DSymBackTracking {
                 vs[n] = v as usize;
 
                 let k = if self.orbit_is_chain[n] { 1 } else { 2 };
-                let curv = state.curv - 420 * k / vmin + 420 * k / v;
+                let curv = state.curv - k * CURV_FAC / vmin + k * CURV_FAC / v;
 
                 if curv < 0 {
                     if self.is_minimally_hyperbolic(&vs, curv) {
