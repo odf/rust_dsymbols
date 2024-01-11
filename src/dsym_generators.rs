@@ -4,6 +4,43 @@ use crate::dsets::*;
 use crate::dsyms::*;
 
 
+pub enum Geometries {
+    Spherical,
+    Euclidean,
+    Hyperbolic,
+    NonSpherical,
+    NonEuclidean,
+    NonHyperbolic,
+    All,
+}
+
+impl Geometries {
+    fn min_curvature(&self) -> i64 {
+        match self {
+            Geometries::Spherical => 1,
+            Geometries::Euclidean => 0,
+            Geometries::Hyperbolic => i64::MIN,
+            Geometries::NonSpherical => i64::MIN,
+            Geometries::NonEuclidean => i64::MIN,
+            Geometries::NonHyperbolic => 0,
+            Geometries::All => i64::MIN,
+        }
+    }
+
+    fn max_curvature(&self) -> i64 {
+        match self {
+            Geometries::Spherical => 4 * CURV_FAC,
+            Geometries::Euclidean => 0,
+            Geometries::Hyperbolic => -1,
+            Geometries::NonSpherical => 0,
+            Geometries::NonEuclidean => 4 * CURV_FAC,
+            Geometries::NonHyperbolic => 4 * CURV_FAC,
+            Geometries::All => 4 * CURV_FAC,
+        }
+    }
+}
+
+
 struct DSymGenState {
     vs: Vec<usize>,
     curv: i64,
@@ -22,10 +59,12 @@ struct DSymBackTracking {
     orbit_is_chain: Vec<bool>,
     orbit_maps: Option<Vec<Vec<usize>>>,
     base_curvature: i64,
+    min_curvature: i64,
+    max_curvature: i64,
 }
 
 impl DSymBackTracking {
-    fn new(dset: &SimpleDSet) -> DSymBackTracking {
+    fn new(dset: &SimpleDSet, geoms: Geometries) -> DSymBackTracking {
         let (orbit_rs, orbit_is_chain, orbit_index) = collect_orbits(&dset);
         let orbit_vmins = compute_vmins(&orbit_rs);
 
@@ -35,11 +74,17 @@ impl DSymBackTracking {
             base_curvature += CURV_FAC * k / orbit_vmins[i] as i64;
         }
 
-        let orbit_maps = if base_curvature < 0 {
-            // already (minimally) hyperbolic, so there's nothing to generate
-            None
+        let min_curvature = geoms.min_curvature().max(if base_curvature < 0 {
+            base_curvature
         } else {
+            -CURV_FAC // implied by minimal hyperbolicity
+        });
+        let max_curvature = geoms.max_curvature();
+
+        let orbit_maps = if base_curvature >= 0 {
             Some(orbit_maps(&dset, orbit_vmins.len(), &orbit_index))
+        } else {
+            None
         };
 
         DSymBackTracking {
@@ -50,6 +95,8 @@ impl DSymBackTracking {
             orbit_is_chain,
             orbit_maps,
             base_curvature,
+            min_curvature,
+            max_curvature,
         }
     }
 
@@ -210,12 +257,17 @@ impl BackTracking for DSymBackTracking {
     }
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
-        if self.base_curvature < 0 {
-            Some(self.make_dsym(&state.vs))
-        } else if state.next >= self.orbit_count()
-            && self.is_good(&state.vs, state.curv)
-            && self.is_canonical(&state.vs)
-        {
+        let good =
+            state.curv >= self.min_curvature &&
+            state.curv <= self.max_curvature && (
+                self.base_curvature < 0 || (
+                    state.next >= self.orbit_count() &&
+                    self.is_good(&state.vs, state.curv) &&
+                    self.is_canonical(&state.vs)
+                )
+            );
+
+        if good {
             Some(self.make_dsym(&state.vs))
         } else {
             None
@@ -238,15 +290,17 @@ impl BackTracking for DSymBackTracking {
                 let k = if self.orbit_is_chain[n] { 1 } else { 2 };
                 let curv = state.curv - k * CURV_FAC / vmin + k * CURV_FAC / v;
 
-                if curv < 0 {
-                    if self.is_minimally_hyperbolic(&vs, curv) {
-                        let next = self.orbit_count();
+                if curv >= self.min_curvature {
+                    if curv < 0 {
+                        if self.is_minimally_hyperbolic(&vs, curv) {
+                            let next = self.orbit_count();
+                            result.push(Self::State { vs, curv, next });
+                        }
+                        break;
+                    } else {
+                        let next = state.next + 1;
                         result.push(Self::State { vs, curv, next });
                     }
-                    break;
-                } else {
-                    let next = state.next + 1;
-                    result.push(Self::State { vs, curv, next });
                 }
             }
 
@@ -262,9 +316,9 @@ pub struct DSyms {
 }
 
 impl DSyms {
-    pub fn new(dset: &SimpleDSet) -> DSyms {
+    pub fn new(dset: &SimpleDSet, geoms: Geometries) -> DSyms {
         DSyms {
-            bt: BackTrackIterator::new(DSymBackTracking::new(dset)),
+            bt: BackTrackIterator::new(DSymBackTracking::new(dset, geoms)),
             counter: 0,
         }
     }
