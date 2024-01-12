@@ -1,16 +1,16 @@
+use std::str::FromStr;
+
 use crate::backtrack::BackTrackIterator;
 use crate::backtrack::BackTracking;
 use crate::dsets::*;
 use crate::dsyms::*;
 
 
+#[derive(Clone, Copy)]
 pub enum Geometries {
     Spherical,
     Euclidean,
     Hyperbolic,
-    NonSpherical,
-    NonEuclidean,
-    NonHyperbolic,
     All,
 }
 
@@ -20,9 +20,6 @@ impl Geometries {
             Geometries::Spherical => 1,
             Geometries::Euclidean => 0,
             Geometries::Hyperbolic => i64::MIN,
-            Geometries::NonSpherical => i64::MIN,
-            Geometries::NonEuclidean => i64::MIN,
-            Geometries::NonHyperbolic => 0,
             Geometries::All => i64::MIN,
         }
     }
@@ -32,10 +29,21 @@ impl Geometries {
             Geometries::Spherical => 4 * CURV_FAC,
             Geometries::Euclidean => 0,
             Geometries::Hyperbolic => -1,
-            Geometries::NonSpherical => 0,
-            Geometries::NonEuclidean => 4 * CURV_FAC,
-            Geometries::NonHyperbolic => 4 * CURV_FAC,
             Geometries::All => 4 * CURV_FAC,
+        }
+    }
+}
+
+impl FromStr for Geometries {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &s.to_lowercase()[..] {
+            "spherical" | "s" => Ok(Geometries::Spherical),
+            "euclidean" | "e" => Ok(Geometries::Euclidean),
+            "hyperbolic" | "h" => Ok(Geometries::Hyperbolic),
+            "all" | "a" => Ok(Geometries::All),
+            _ => Err("unknown geometry '".to_string() + s + "'"),
         }
     }
 }

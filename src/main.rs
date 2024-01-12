@@ -5,17 +5,20 @@ use rust_dsymbols::dsym_generators::{DSyms, Geometries};
 
 
 fn main() {
-    if let Some(arg) = std::env::args().nth(1) {
-        call_generate(arg.parse().unwrap());
-    } else {
-        panic!("Expected an argument.");
-    }
+    let args: Vec<_> = std::env::args().collect();
+
+    // TODO add some error handling
+    let max_size = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(16);
+    let geometries = args.get(2).and_then(|s| s.parse().ok())
+        .unwrap_or(Geometries::All);
+
+    call_generate(max_size, geometries);
 }
 
 
 #[cfg(not(feature = "pprof"))]
-fn call_generate(n: usize) {
-    generate_binary(n);
+fn call_generate(n: usize, geometries: Geometries) {
+    generate_binary(n, geometries);
 }
 
 
@@ -26,7 +29,7 @@ fn call_generate(n: usize) {
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    generate_binary(n);
+    generate_binary(n, geometries);
 
     if let Ok(report) = guard.report().build() {
         let file = std::fs::File::create("flamegraph.svg").unwrap();
@@ -35,12 +38,12 @@ fn call_generate(n: usize) {
 }
 
 
-fn generate_binary(n: usize) {
+fn generate_binary(n: usize, geometries: Geometries) {
     let mut count: u64 = 0;
     let mut previous = vec![];
 
     for dset in DSets::new(2, n) {
-        for dsym in DSyms::new(&dset, Geometries::All) {
+        for dsym in DSyms::new(&dset, geometries) {
             count += 1;
 
             let code = dsym.to_binary().unwrap();
