@@ -23,7 +23,7 @@ fn call_generate(n: usize, geometries: Geometries) {
 
 
 #[cfg(feature = "pprof")]
-fn call_generate(n: usize) {
+fn call_generate(n: usize, geometries: Geometries) {
     let guard = pprof::ProfilerGuardBuilder::default()
         .frequency(1000)
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
