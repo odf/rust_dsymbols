@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::backtrack::BackTrackIterator;
 use crate::backtrack::BackTracking;
 use crate::dsets::*;
@@ -129,34 +131,42 @@ fn next_undefined(ds: &PartialDSet, i0: usize, d0: usize)
 
 
 fn check_and_apply_implications(
-    dset: &mut PartialDSet, i: usize, d: usize
+    dset: &mut PartialDSet, idx: usize, elm: usize
 ) -> bool {
-    // TODO only works for 2d symbols right now
+    let mut queue = VecDeque::from([(idx, elm)]);
 
-    let (head, tail, gap, k) = scan_02_orbit(dset, d);
+    while !queue.is_empty() {
+        let (i, d) = queue.pop_front().unwrap();
 
-    if i == 1 {
-        true
-    } else if gap == 0 && head != tail {
-        false
-    } else {
-        if gap == 1 {
-            dset.set(k, head, tail);
+        for j in 0..=dset.dim() {
+            if i.abs_diff(j) > 1 {
+                let (head, tail, gap, k) = scan_orbit(dset, i, j, d);
+
+                if gap == 0 && head != tail {
+                    return false;
+                } else if gap == 1 {
+                    dset.set(k, head, tail);
+                    queue.push_back((k, head));
+                }
+            }
         }
-        true
     }
+
+    true
 }
 
 
-fn scan_02_orbit(ds: &PartialDSet, d: usize) -> (usize, usize, usize, usize) {
-    let (head, i) = scan(ds, [0, 2, 0, 2], d, 4);
-    let (tail, j) = scan(ds, [2, 0, 2, 0], d, 4 - i);
+fn scan_orbit(ds: &PartialDSet, i: usize, j: usize, d: usize)
+    -> (usize, usize, usize, usize)
+{
+    let (head, a) = scan_single_direction(ds, [i, j, i, j], d, 4);
+    let (tail, b) = scan_single_direction(ds, [j, i, j, i], d, 4 - a);
 
-    (head, tail, 4 - i - j, 2 * (i % 2))
+    (head, tail, 4 - a - b, if a % 2 == 0 { i } else { j })
 }
 
 
-fn scan(
+fn scan_single_direction(
     ds: &PartialDSet, w: [usize; 4], d: usize, limit: usize
 ) -> (usize, usize)
 {
