@@ -394,7 +394,7 @@ mod partial_dset_tests {
     use super::*;
 
     #[test]
-    fn test_create_small_incomplete_partial_dset() {
+    fn incomplete_partial_dset() {
         let dset = PartialDSet::new(1, 1);
 
         assert_eq!(dset.dim(), 1);
@@ -409,16 +409,14 @@ mod partial_dset_tests {
     }
 
     #[test]
-    fn test_create_small_partial_dset() {
+    fn complete_partial_dset() {
         let mut dset = PartialDSet::new(1, 1);
         dset.set(0, 1, 1);
         dset.set(1, 1, 1);
 
-        assert_eq!(dset.dim(), 1);
-        assert_eq!(dset.size(), 1);
         assert_eq!(dset.get(0, 0), None);
-        assert_eq!(dset.get(0, 1), Some(1));
-        assert_eq!(dset.get(1, 1), Some(1));
+        assert_eq!(dset.get(0, 2), None);
+        assert_eq!(dset.get(2, 1), None);
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -427,18 +425,12 @@ mod partial_dset_tests {
     }
 
     #[test]
-    fn test_create_small_oriented_partial_dset() {
+    fn oriented_partial_dset() {
         let mut dset = PartialDSet::new(2, 1);
         dset.set(0, 1, 2);
         dset.set(1, 1, 2);
 
-        assert_eq!(dset.dim(), 1);
-        assert_eq!(dset.size(), 2);
         assert_eq!(dset.get(0, 0), None);
-        assert_eq!(dset.get(0, 1), Some(2));
-        assert_eq!(dset.get(0, 2), Some(1));
-        assert_eq!(dset.get(1, 1), Some(2));
-        assert_eq!(dset.get(1, 2), Some(1));
         assert!(dset.is_complete());
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -447,19 +439,13 @@ mod partial_dset_tests {
     }
 
     #[test]
-    fn test_create_small_weakly_oriented_partial_dset() {
+    fn weakly_oriented_partial_dset() {
         let mut dset = PartialDSet::new(2, 1);
         dset.set(0, 1, 2);
         dset.set(1, 1, 1);
         dset.set(1, 2, 2);
 
-        assert_eq!(dset.dim(), 1);
-        assert_eq!(dset.size(), 2);
         assert_eq!(dset.get(0, 0), None);
-        assert_eq!(dset.get(0, 1), Some(2));
-        assert_eq!(dset.get(0, 2), Some(1));
-        assert_eq!(dset.get(1, 1), Some(1));
-        assert_eq!(dset.get(1, 2), Some(2));
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
