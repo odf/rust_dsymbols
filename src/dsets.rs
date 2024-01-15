@@ -406,6 +406,8 @@ mod partial_dset_tests {
         assert!(dset.is_weakly_oriented());
         assert!(dset.is_oriented());
         assert_eq!(dset.to_string(), "<1.1:1 1:0,0:0>");
+        assert_eq!(dset.automorphisms().len(), 1);
+        assert!(dset.oriented_cover().is_none());
     }
 
     #[test]
@@ -422,6 +424,11 @@ mod partial_dset_tests {
         assert!(dset.is_weakly_oriented());
         assert!(!dset.is_oriented());
         assert_eq!(dset.to_string(), "<1.1:1 1:1,1:0>");
+        assert_eq!(dset.automorphisms().len(), 1);
+        assert_eq!(
+            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
+            Some("<1.1:2 1:2,2:0>".to_string())
+        )
     }
 
     #[test]
@@ -436,6 +443,8 @@ mod partial_dset_tests {
         assert!(dset.is_weakly_oriented());
         assert!(dset.is_oriented());
         assert_eq!(dset.to_string(), "<1.1:2 1:2,2:0>");
+        assert_eq!(dset.automorphisms().len(), 2);
+        assert!(dset.oriented_cover().is_none());
     }
 
     #[test]
@@ -451,5 +460,10 @@ mod partial_dset_tests {
         assert!(dset.is_weakly_oriented());
         assert!(!dset.is_oriented());
         assert_eq!(dset.to_string(), "<1.1:2 1:2,1 2:0>");
+        assert_eq!(dset.automorphisms().len(), 2);
+        assert_eq!(
+            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
+            Some("<1.1:4 1:2 4,3 4:0>".to_string())
+        )
     }
 }
