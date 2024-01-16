@@ -436,7 +436,7 @@ mod partial_dset_tests {
     }
 
     #[test]
-    fn complete_partial_dset() {
+    fn minimal_partial_dset() {
         let dset = build_dset(1, 1, HashMap::from([((0, 1), 1), ((1, 1), 1)]));
 
         assert_eq!(dset.get(0, 0), None);
@@ -455,23 +455,15 @@ mod partial_dset_tests {
     }
 
     #[test]
-    fn oriented_partial_dset() {
-        let dset = build_dset(2, 1, HashMap::from([((0, 1), 2), ((1, 1), 2)]));
-
-        assert_eq!(dset.get(0, 0), None);
-        assert!(dset.is_complete());
-        assert!(dset.is_loopless());
-        assert!(dset.is_weakly_oriented());
-        assert!(dset.is_oriented());
-        assert_eq!(dset.to_string(), "<1.1:2 1:2,2:0>");
-        assert_eq!(dset.automorphisms().len(), 2);
-        assert!(dset.oriented_cover().is_none());
-    }
-
-    #[test]
-    fn weakly_oriented_partial_dset() {
+    fn non_oriented_partial_dset() {
         let dset = build_dset(
-            2, 1, HashMap::from([((0, 1), 2), ((1, 1), 1), ((1, 2), 2)])
+            3,
+            2,
+            HashMap::from([
+                ((0, 1), 2), ((0, 3), 3),
+                ((1, 1), 1), ((1, 2), 3),
+                ((2, 1), 2), ((2, 3), 3),
+            ])
         );
 
         assert_eq!(dset.get(0, 0), None);
@@ -479,11 +471,33 @@ mod partial_dset_tests {
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(!dset.is_oriented());
-        assert_eq!(dset.to_string(), "<1.1:2 1:2,1 2:0>");
-        assert_eq!(dset.automorphisms().len(), 2);
+        assert_eq!(dset.to_string(), "<1.1:3:2 3,1 3,2 3:0,0>");
+        assert_eq!(dset.automorphisms().len(), 1);
         assert_eq!(
             dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
-            Some("<1.1:4 1:2 4,3 4:0>".to_string())
+            Some("<1.1:6:2 6 5,4 3 6,2 6 5:0,0>".to_string())
         )
+    }
+
+    #[test]
+    fn oriented_partial_dset() {
+        let dset = build_dset(
+            4,
+            2,
+            HashMap::from([
+                ((0, 1), 2), ((0, 3), 4),
+                ((1, 1), 4), ((1, 2), 3),
+                ((2, 1), 2), ((2, 3), 4),
+            ])
+        );
+
+        assert_eq!(dset.get(0, 0), None);
+        assert!(dset.is_complete());
+        assert!(dset.is_loopless());
+        assert!(dset.is_weakly_oriented());
+        assert!(dset.is_oriented());
+        assert_eq!(dset.to_string(), "<1.1:4:2 4,4 3,2 4:0,0>");
+        assert_eq!(dset.automorphisms().len(), 4);
+        assert!(dset.oriented_cover().is_none());
     }
 }
