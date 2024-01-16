@@ -226,8 +226,19 @@ impl PartialDSet {
         assert!(1 <= d && d <= self.size);
         assert!(1 <= e && e <= self.size);
 
+        let di = self.get_unchecked(i, d);
+        let ei = self.get_unchecked(i, e);
+
+        if di != 0 {
+            assert_eq!(di, e);
+        }
+        if ei != 0 {
+            assert_eq!(ei, d);
+        }
+
         let kd = self.idx(i, d);
         let ke = self.idx(i, e);
+
         self.op[kd] = e;
         self.op[ke] = d;
     }
@@ -391,11 +402,25 @@ impl OrientedCover<PartialDSet> for SimpleDSet {
 
 #[cfg(test)]
 mod partial_dset_tests {
+    use std::collections::HashMap;
+
     use super::*;
+
+    fn build_dset(size: usize, dim: usize, op: HashMap<(usize, usize), usize>)
+        -> PartialDSet
+    {
+        let mut dset = PartialDSet::new(size, dim);
+
+        for ((i, d), e) in op {
+            dset.set(i, d, e);
+        }
+
+        dset
+    }
 
     #[test]
     fn incomplete_partial_dset() {
-        let dset = PartialDSet::new(1, 1);
+        let dset = build_dset(1, 1, HashMap::new());
 
         assert_eq!(dset.dim(), 1);
         assert_eq!(dset.size(), 1);
@@ -412,9 +437,7 @@ mod partial_dset_tests {
 
     #[test]
     fn complete_partial_dset() {
-        let mut dset = PartialDSet::new(1, 1);
-        dset.set(0, 1, 1);
-        dset.set(1, 1, 1);
+        let dset = build_dset(1, 1, HashMap::from([((0, 1), 1), ((1, 1), 1)]));
 
         assert_eq!(dset.get(0, 0), None);
         assert_eq!(dset.get(0, 2), None);
@@ -433,9 +456,7 @@ mod partial_dset_tests {
 
     #[test]
     fn oriented_partial_dset() {
-        let mut dset = PartialDSet::new(2, 1);
-        dset.set(0, 1, 2);
-        dset.set(1, 1, 2);
+        let dset = build_dset(2, 1, HashMap::from([((0, 1), 2), ((1, 1), 2)]));
 
         assert_eq!(dset.get(0, 0), None);
         assert!(dset.is_complete());
@@ -449,10 +470,9 @@ mod partial_dset_tests {
 
     #[test]
     fn weakly_oriented_partial_dset() {
-        let mut dset = PartialDSet::new(2, 1);
-        dset.set(0, 1, 2);
-        dset.set(1, 1, 1);
-        dset.set(1, 2, 2);
+        let dset = build_dset(
+            2, 1, HashMap::from([((0, 1), 2), ((1, 1), 1), ((1, 2), 2)])
+        );
 
         assert_eq!(dset.get(0, 0), None);
         assert!(dset.is_complete());
