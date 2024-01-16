@@ -501,3 +501,89 @@ mod partial_dset_tests {
         assert!(dset.oriented_cover().is_none());
     }
 }
+
+
+#[cfg(test)]
+mod simple_dset_tests {
+    use std::collections::HashMap;
+
+    use super::*;
+
+    fn build_dset(size: usize, dim: usize, op: HashMap<(usize, usize), usize>)
+        -> SimpleDSet
+    {
+        let mut dset = PartialDSet::new(size, dim);
+
+        for ((i, d), e) in op {
+            dset.set(i, d, e);
+        }
+
+        SimpleDSet::from_partial(dset, 1)
+    }
+
+    #[test]
+    fn minimal_simple_dset() {
+        let dset = build_dset(1, 1, HashMap::from([((0, 1), 1), ((1, 1), 1)]));
+
+        assert_eq!(dset.get(0, 0), None);
+        assert_eq!(dset.get(0, 2), None);
+        assert_eq!(dset.get(2, 1), None);
+        assert!(dset.is_complete());
+        assert!(!dset.is_loopless());
+        assert!(dset.is_weakly_oriented());
+        assert!(!dset.is_oriented());
+        assert_eq!(dset.to_string(), "<1.1:1 1:1,1:0>");
+        assert_eq!(dset.automorphisms().len(), 1);
+        assert_eq!(
+            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
+            Some("<1.1:2 1:2,2:0>".to_string())
+        )
+    }
+
+    #[test]
+    fn non_oriented_simple_dset() {
+        let dset = build_dset(
+            3,
+            2,
+            HashMap::from([
+                ((0, 1), 2), ((0, 3), 3),
+                ((1, 1), 1), ((1, 2), 3),
+                ((2, 1), 2), ((2, 3), 3),
+            ])
+        );
+
+        assert_eq!(dset.get(0, 0), None);
+        assert!(dset.is_complete());
+        assert!(!dset.is_loopless());
+        assert!(dset.is_weakly_oriented());
+        assert!(!dset.is_oriented());
+        assert_eq!(dset.to_string(), "<1.1:3:2 3,1 3,2 3:0,0>");
+        assert_eq!(dset.automorphisms().len(), 1);
+        assert_eq!(
+            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
+            Some("<1.1:6:2 6 5,4 3 6,2 6 5:0,0>".to_string())
+        )
+    }
+
+    #[test]
+    fn oriented_simple_dset() {
+        let dset = build_dset(
+            4,
+            2,
+            HashMap::from([
+                ((0, 1), 2), ((0, 3), 4),
+                ((1, 1), 4), ((1, 2), 3),
+                ((2, 1), 2), ((2, 3), 4),
+            ])
+        );
+
+        assert_eq!(dset.get(0, 0), None);
+        assert!(dset.is_complete());
+        assert!(dset.is_loopless());
+        assert!(dset.is_weakly_oriented());
+        assert!(dset.is_oriented());
+        assert_eq!(dset.to_string(), "<1.1:4:2 4,4 3,2 4:0,0>");
+        assert_eq!(dset.automorphisms().len(), 4);
+        assert!(dset.oriented_cover().is_none());
+    }
+}
