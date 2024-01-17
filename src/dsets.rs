@@ -393,9 +393,9 @@ impl OrientedCover<PartialDSet> for PartialDSet {
     }
 }
 
-impl OrientedCover<PartialDSet> for SimpleDSet {
-    fn oriented_cover(&self) -> Option<PartialDSet> {
-        oriented_cover(self)
+impl OrientedCover<SimpleDSet> for SimpleDSet {
+    fn oriented_cover(&self) -> Option<SimpleDSet> {
+        oriented_cover(self).map(|ds| SimpleDSet::from_partial(ds, 1))
     }
 }
 

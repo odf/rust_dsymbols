@@ -280,20 +280,15 @@ fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
 
 impl OrientedCover<PartialDSym> for PartialDSym {
     fn oriented_cover(&self) -> Option<PartialDSym> {
-        if let Some(setcov) = self.dset.oriented_cover() {
-            oriented_cover(self, &SimpleDSet::from_partial(setcov, 1))
-        } else {
-            None
-        }
+        self.dset.oriented_cover()
+            .and_then(|setcov| oriented_cover(self, &setcov))
     }
 }
 
-impl OrientedCover<PartialDSym> for SimpleDSym {
-    fn oriented_cover(&self) -> Option<PartialDSym> {
-        if let Some(setcov) = self.dset.oriented_cover() {
-            oriented_cover(self, &SimpleDSet::from_partial(setcov, 1))
-        } else {
-            None
-        }
+impl OrientedCover<SimpleDSym> for SimpleDSym {
+    fn oriented_cover(&self) -> Option<SimpleDSym> {
+        self.dset.oriented_cover()
+            .and_then(|setcov| oriented_cover(self, &setcov))
+            .map(|ds| SimpleDSym::from_partial(ds, 1))
     }
 }
