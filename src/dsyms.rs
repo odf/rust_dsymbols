@@ -102,7 +102,7 @@ impl PartialDSym {
         PartialDSym { dset: dset.clone(), orbit_index, orbit_rs, orbit_vs }
     }
 
-    pub fn from(
+    pub fn build(
         dset: SimpleDSet,
         orbit_index: Vec<Vec<usize>>,
         orbit_rs: Vec<usize>,
@@ -141,6 +141,15 @@ impl DSet for PartialDSym {
 
     fn is_complete(&self) -> bool {
         self.dset.is_complete() && self.orbit_vs.iter().all(|&v| v > 0)
+    }
+}
+
+impl From<SimpleDSet> for PartialDSym {
+    fn from(dset: SimpleDSet) -> Self {
+        let (orbit_rs, _, orbit_index) = collect_orbits(&dset);
+        let orbit_vs = vec![0; orbit_rs.len()];
+
+        PartialDSym { dset, orbit_index, orbit_rs, orbit_vs }
     }
 }
 
@@ -269,7 +278,7 @@ fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
     if ds.is_oriented() {
         None
     } else {
-        let mut cov = PartialDSym::new(setcov);
+        let mut cov: PartialDSym = setcov.clone().into();
 
         for i in 0..cov.dim() {
             for d in cov.orbit_reps_2d(i, i + 1) {

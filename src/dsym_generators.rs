@@ -201,15 +201,6 @@ impl DSymBackTracking {
 
         [ front, middle, back, cross ].join("")
     }
-
-    fn make_dsym(&self, vs: &[usize]) -> PartialDSym {
-        PartialDSym::from(
-            self.dset.clone(),
-            self.orbit_index.clone(),
-            self.orbit_rs.clone(),
-            vs.iter().cloned().collect()
-        )
-    }
 }
 
 
@@ -276,7 +267,12 @@ impl BackTracking for DSymBackTracking {
             );
 
         if good {
-            Some(self.make_dsym(&state.vs))
+            Some(PartialDSym::build(
+                self.dset.clone(),
+                self.orbit_index.clone(),
+                self.orbit_rs.clone(),
+                state.vs.iter().cloned().collect()
+            ))
         } else {
             None
         }
