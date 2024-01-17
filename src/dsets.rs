@@ -346,6 +346,12 @@ impl DSet for SimpleDSet {
     }
 }
 
+impl From<PartialDSet> for SimpleDSet {
+    fn from(value: PartialDSet) -> Self {
+        SimpleDSet::from_partial(value, 1)
+    }
+}
+
 impl fmt::Display for SimpleDSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         DSet::fmt(self, f)
@@ -395,7 +401,7 @@ impl OrientedCover<PartialDSet> for PartialDSet {
 
 impl OrientedCover<SimpleDSet> for SimpleDSet {
     fn oriented_cover(&self) -> Option<SimpleDSet> {
-        oriented_cover(self).map(|ds| SimpleDSet::from_partial(ds, 1))
+        oriented_cover(self).map(Into::into)
     }
 }
 
@@ -518,7 +524,7 @@ mod simple_dset_tests {
             dset.set(i, d, e);
         }
 
-        SimpleDSet::from_partial(dset, 1)
+        dset.into()
     }
 
     #[test]

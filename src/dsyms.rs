@@ -250,6 +250,12 @@ impl DSym for SimpleDSym {
     }
 }
 
+impl From<PartialDSym> for SimpleDSym {
+    fn from(value: PartialDSym) -> Self {
+        SimpleDSym::from_partial(value, 1)
+    }
+}
+
 impl fmt::Display for SimpleDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         DSet::fmt(self, f)
@@ -289,6 +295,6 @@ impl OrientedCover<SimpleDSym> for SimpleDSym {
     fn oriented_cover(&self) -> Option<SimpleDSym> {
         self.dset.oriented_cover()
             .and_then(|setcov| oriented_cover(self, &setcov))
-            .map(|ds| SimpleDSym::from_partial(ds, 1))
+            .map(Into::into)
     }
 }
