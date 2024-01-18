@@ -7,7 +7,18 @@ use nom::combinator::{map, map_opt};
 
 
 pub struct DSymSpec {
+    pub set_count: u32,
+    pub sym_count: u32,
+    pub size: u32,
+    pub dim: u32,
+    pub op_spec: Vec<Vec<u32>>,
+    pub v_spec: Vec<Vec<u32>>
+}
 
+
+pub fn parse_dsymbol(input: &str) -> Result<(&str, DSymSpec), String>
+{
+    dsymbol(input).finish().map_err(|e| e.to_string())
 }
 
 
@@ -39,9 +50,7 @@ fn int_lists(input: &str) -> IResult<&str, Vec<Vec<u32>>> {
 }
 
 
-fn dsymbol(input: &str)
-    -> IResult<&str, ((u32, u32), (u32, u32), Vec<Vec<u32>>, Vec<Vec<u32>>)>
-{
+fn dsymbol(input: &str) -> IResult<&str, DSymSpec> {
     map(
         tuple((
             tuple((space0, char('<'), space0)),
@@ -54,7 +63,10 @@ fn dsymbol(input: &str)
             int_lists,
             tuple((space0, char('>'), space0)),
         )),
-        |(_, c, _, e, _, o, _, m, _)| (c, e, o, m)
+        |(_, (set_count, sym_count), _, (size, dim), _, op_spec, _, v_spec, _)|
+        {
+            DSymSpec { set_count, sym_count, size, dim, op_spec, v_spec }
+        }
     )(input)
 }
 
