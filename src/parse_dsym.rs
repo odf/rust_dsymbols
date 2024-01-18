@@ -22,34 +22,6 @@ pub fn parse_dsymbol(input: &str) -> Result<(&str, DSymSpec), String>
 }
 
 
-fn integer(input: &str) -> IResult<&str, u32> {
-    map_opt(digit1, map_integer)(input)
-}
-
-
-fn counts(input: &str) -> IResult<&str, (u32, u32)> {
-    separated_pair(integer, char('.'), integer)(input)
-}
-
-
-fn extents(input: &str) -> IResult<&str, (u32, u32)> {
-    alt((
-        separated_pair(integer, space1, integer),
-        map(integer, |n| (n, 2))
-    ))(input)
-}
-
-
-fn int_list(input: &str) -> IResult<&str, Vec<u32>> {
-    separated_list1(space1, integer)(input)
-}
-
-
-fn int_lists(input: &str) -> IResult<&str, Vec<Vec<u32>>> {
-    separated_list1(tuple((space0, char(','), space0)), int_list)(input)
-}
-
-
 fn dsymbol(input: &str) -> IResult<&str, DSymSpec> {
     map(
         tuple((
@@ -68,6 +40,34 @@ fn dsymbol(input: &str) -> IResult<&str, DSymSpec> {
             DSymSpec { set_count, sym_count, size, dim, op_spec, v_spec }
         }
     )(input)
+}
+
+
+fn counts(input: &str) -> IResult<&str, (u32, u32)> {
+    separated_pair(integer, char('.'), integer)(input)
+}
+
+
+fn extents(input: &str) -> IResult<&str, (u32, u32)> {
+    alt((
+        separated_pair(integer, space1, integer),
+        map(integer, |n| (n, 2))
+    ))(input)
+}
+
+
+fn int_lists(input: &str) -> IResult<&str, Vec<Vec<u32>>> {
+    separated_list1(tuple((space0, char(','), space0)), int_list)(input)
+}
+
+
+fn int_list(input: &str) -> IResult<&str, Vec<u32>> {
+    separated_list1(space1, integer)(input)
+}
+
+
+fn integer(input: &str) -> IResult<&str, u32> {
+    map_opt(digit1, map_integer)(input)
 }
 
 
