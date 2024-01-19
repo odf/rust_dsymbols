@@ -6,6 +6,7 @@ use nom::IResult;
 use nom::combinator::{map, map_opt};
 
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct DSymSpec {
     pub set_count: u32,
     pub sym_count: u32,
@@ -77,4 +78,81 @@ fn map_integer(digits: &str) -> Option<u32> {
     } else {
         None
     }
+}
+
+
+#[test]
+fn test_parse_tiny_dsymbol() {
+    assert_eq!(
+        dsymbol("<1.1:1:1,1,1:3,4>"),
+        Ok(("", DSymSpec {
+            set_count: 1,
+            sym_count: 1,
+            size: 1,
+            dim: 2,
+            op_spec: vec![vec![1], vec![1], vec![1]],
+            v_spec: vec![vec![3], vec![4]],
+        }))
+    );
+}
+
+
+#[test]
+fn test_parse_larger_dsymbol() {
+    assert_eq!(
+        dsymbol("<10.8:2 3:1 2,1 2,1 2,2:3 3,3 4,4>"),
+        Ok(("", DSymSpec {
+            set_count: 10,
+            sym_count: 8,
+            size: 2,
+            dim: 3,
+            op_spec: vec![vec![1, 2], vec![1, 2], vec![1, 2], vec![2]],
+            v_spec: vec![vec![3, 3], vec![3, 4], vec![4]],
+        }))
+    );
+}
+
+
+#[test]
+fn test_parse_incomplete_dsymbol() {
+    assert_eq!(
+        dsymbol("<1.1:1:1,1,0:3,0>"),
+        Ok(("", DSymSpec {
+            set_count: 1,
+            sym_count: 1,
+            size: 1,
+            dim: 2,
+            op_spec: vec![vec![1], vec![1], vec![0]],
+            v_spec: vec![vec![3], vec![0]],
+        }))
+    );
+}
+
+
+#[test]
+fn test_parse_with_extra_spaces() {
+    assert_eq!(
+        dsymbol(" < 10.8: 2 3:1 2 , 1 2,  1 2  ,2 :3 3 , 3   4,4 >  "),
+        Ok(("", DSymSpec {
+            set_count: 10,
+            sym_count: 8,
+            size: 2,
+            dim: 3,
+            op_spec: vec![vec![1, 2], vec![1, 2], vec![1, 2], vec![2]],
+            v_spec: vec![vec![3, 3], vec![3, 4], vec![4]],
+        }))
+    );
+}
+
+
+#[test]
+fn test_parse_malformed() {
+    assert!(dsymbol("").is_err());
+    assert!(dsymbol("<>").is_err());
+    assert!(dsymbol("1.1:1:1,1,1:3,4").is_err());
+    assert!(dsymbol("<<1.1:1:1,1,1:3,4>>").is_err());
+    assert!(dsymbol("<1. 1:1:1,1,1:3,4>").is_err());
+    assert!(dsymbol("<1.1:1:1,1,1:3,4:>").is_err());
+    assert!(dsymbol("<1.1::1,1,1:3,4>").is_err());
+    assert!(dsymbol("<1.1:1:1,,1:3,4>").is_err());
 }
