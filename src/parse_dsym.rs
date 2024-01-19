@@ -8,12 +8,12 @@ use nom::combinator::{map, map_opt};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DSymSpec {
-    pub set_count: u32,
-    pub sym_count: u32,
-    pub size: u32,
-    pub dim: u32,
-    pub op_spec: Vec<Vec<u32>>,
-    pub v_spec: Vec<Vec<u32>>
+    pub set_count: usize,
+    pub sym_count: usize,
+    pub size: usize,
+    pub dim: usize,
+    pub op_spec: Vec<Vec<usize>>,
+    pub v_spec: Vec<Vec<usize>>
 }
 
 
@@ -44,12 +44,12 @@ fn dsymbol(input: &str) -> IResult<&str, DSymSpec> {
 }
 
 
-fn counts(input: &str) -> IResult<&str, (u32, u32)> {
+fn counts(input: &str) -> IResult<&str, (usize, usize)> {
     separated_pair(integer, char('.'), integer)(input)
 }
 
 
-fn extents(input: &str) -> IResult<&str, (u32, u32)> {
+fn extents(input: &str) -> IResult<&str, (usize, usize)> {
     alt((
         separated_pair(integer, space1, integer),
         map(integer, |n| (n, 2))
@@ -57,24 +57,27 @@ fn extents(input: &str) -> IResult<&str, (u32, u32)> {
 }
 
 
-fn int_lists(input: &str) -> IResult<&str, Vec<Vec<u32>>> {
+fn int_lists(input: &str) -> IResult<&str, Vec<Vec<usize>>> {
     separated_list1(tuple((space0, char(','), space0)), int_list)(input)
 }
 
 
-fn int_list(input: &str) -> IResult<&str, Vec<u32>> {
+fn int_list(input: &str) -> IResult<&str, Vec<usize>> {
     separated_list1(space1, integer)(input)
 }
 
 
-fn integer(input: &str) -> IResult<&str, u32> {
+fn integer(input: &str) -> IResult<&str, usize> {
     map_opt(digit1, map_integer)(input)
 }
 
 
-fn map_integer(digits: &str) -> Option<u32> {
+fn map_integer(digits: &str) -> Option<usize> {
     if digits.len() <= 9 {
-        Some(digits.chars().fold(0, |n, c| n * 10 + c.to_digit(10).unwrap()))
+        Some(
+            digits.chars()
+                .fold(0, |n, c| n * 10 + c.to_digit(10).unwrap() as usize)
+        )
     } else {
         None
     }
