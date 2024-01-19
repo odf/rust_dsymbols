@@ -68,19 +68,7 @@ fn int_list(input: &str) -> IResult<&str, Vec<usize>> {
 
 
 fn integer(input: &str) -> IResult<&str, usize> {
-    map_opt(digit1, map_integer)(input)
-}
-
-
-fn map_integer(digits: &str) -> Option<usize> {
-    if digits.len() <= 9 {
-        Some(
-            digits.chars()
-                .fold(0, |n, c| n * 10 + c.to_digit(10).unwrap() as usize)
-        )
-    } else {
-        None
-    }
+    map_opt(digit1, |digits: &str| digits.parse().ok())(input)
 }
 
 
