@@ -1,6 +1,8 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use crate::dsets::*;
+use crate::parse_dsym;
+
 
 pub trait DSym : DSet {
     fn get_r(&self, i: usize, d: usize) -> usize;
@@ -153,6 +155,12 @@ impl From<SimpleDSet> for PartialDSym {
     }
 }
 
+impl From<PartialDSet> for PartialDSym {
+    fn from(dset: PartialDSet) -> Self {
+        SimpleDSet::from(dset).into()
+    }
+}
+
 impl DSym for PartialDSym {
     fn get_r(&self, i: usize, d: usize) -> usize {
         self.orbit_rs[self.orbit_index[i][d]]
@@ -166,6 +174,69 @@ impl DSym for PartialDSym {
 impl fmt::Display for PartialDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         DSet::fmt(self, f)
+    }
+}
+
+impl FromStr for PartialDSym {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (_, spec) = parse_dsym::parse_dsymbol(s)?;
+
+        if spec.size < 1 {
+            Err("size must be at least 1".into())
+        } else if spec.dim < 1 {
+            Err("dimension must be at least 1".into())
+        } else if spec.op_spec.len() != spec.dim as usize + 1 {
+            Err("incorrect dimension for op specifications".into())
+        } else if spec.m_spec.len() != spec.dim as usize {
+            Err("incorrect dimension for degree specifications".into())
+        } else {
+            let mut dset = PartialDSet::new(spec.size, spec.dim);
+
+            for i in 0..=spec.dim {
+                let op_i = spec.op_spec.get(i).unwrap();
+                let mut k = 0;
+
+                for d in 1..=spec.size {
+                    if dset.get_unchecked(i, d) == 0 {
+                        let &di = op_i.get(k)
+                            .ok_or("incomplete op spec".to_string())?;
+                        dset.set(i, d, di);
+                        k += 1;
+                    }
+                }
+
+                if k < op_i.len() {
+                    return Err("unused data in op spec".into());
+                }
+            }
+
+            let mut dsym = PartialDSym::from(dset);
+
+            for i in 0..spec.dim {
+                let ms_i = spec.m_spec.get(i).unwrap();
+                let mut k = 0;
+
+                for d in 1..=spec.size {
+                    if dsym.get_v(i, d) == 0 {
+                        let &m = ms_i.get(k)
+                            .ok_or("incomplete degree spec".to_string())?;
+                        if m % dsym.get_r(i, d) != 0 {
+                            return Err("illegal degree value".into());
+                        }
+                        dsym.set_v(i, d, m / dsym.get_r(i, d));
+                        k += 1;
+                    }
+                }
+
+                if k < ms_i.len() {
+                    return Err("unused data in degree spec".into());
+                }
+            }
+
+            Ok(dsym.into())
+        }
     }
 }
 
@@ -306,4 +377,27 @@ impl OrientedCover<SimpleDSym> for SimpleDSym {
             .and_then(|setcov| oriented_cover(self, &setcov))
             .map(Into::into)
     }
+}
+
+
+#[test]
+fn test_parse_from_string() {
+    let s = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
+    let dsym: PartialDSym = s.parse().unwrap();
+
+    assert_eq!(dsym.dim(), 3);
+    assert_eq!(dsym.size(), 2);
+    assert_eq!(dsym.get(0, 0), None);
+    assert_eq!(dsym.get(0, 3), None);
+    assert_eq!(dsym.get(4, 1), None);
+    assert!(dsym.is_complete());
+    assert!(!dsym.is_loopless());
+    assert!(dsym.is_weakly_oriented());
+    assert!(!dsym.is_oriented());
+    assert_eq!(dsym.to_string(), s);
+    assert_eq!(dsym.automorphisms().len(), 2); // TODO counting for D-set here
+    assert_eq!(
+        dsym.oriented_cover().and_then(|dso| Some(dso.to_string())),
+        Some("<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>".to_string())
+    )
 }
