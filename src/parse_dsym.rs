@@ -13,7 +13,7 @@ pub struct DSymSpec {
     pub size: usize,
     pub dim: usize,
     pub op_spec: Vec<Vec<usize>>,
-    pub v_spec: Vec<Vec<usize>>
+    pub m_spec: Vec<Vec<usize>>
 }
 
 
@@ -36,9 +36,9 @@ fn dsymbol(input: &str) -> IResult<&str, DSymSpec> {
             int_lists,
             tuple((space0, char('>'), space0)),
         )),
-        |(_, (set_count, sym_count), _, (size, dim), _, op_spec, _, v_spec, _)|
+        |(_, (set_count, sym_count), _, (size, dim), _, op_spec, _, m_spec, _)|
         {
-            DSymSpec { set_count, sym_count, size, dim, op_spec, v_spec }
+            DSymSpec { set_count, sym_count, size, dim, op_spec, m_spec }
         }
     )(input)
 }
@@ -82,7 +82,7 @@ fn test_parse_tiny_dsymbol() {
             size: 1,
             dim: 2,
             op_spec: vec![vec![1], vec![1], vec![1]],
-            v_spec: vec![vec![3], vec![4]],
+            m_spec: vec![vec![3], vec![4]],
         }))
     );
 }
@@ -98,7 +98,7 @@ fn test_parse_larger_dsymbol() {
             size: 2,
             dim: 3,
             op_spec: vec![vec![1, 2], vec![1, 2], vec![1, 2], vec![2]],
-            v_spec: vec![vec![3, 3], vec![3, 4], vec![4]],
+            m_spec: vec![vec![3, 3], vec![3, 4], vec![4]],
         }))
     );
 }
@@ -114,7 +114,7 @@ fn test_parse_incomplete_dsymbol() {
             size: 1,
             dim: 2,
             op_spec: vec![vec![1], vec![1], vec![0]],
-            v_spec: vec![vec![3], vec![0]],
+            m_spec: vec![vec![3], vec![0]],
         }))
     );
 }
@@ -130,7 +130,7 @@ fn test_parse_with_extra_spaces() {
             size: 2,
             dim: 3,
             op_spec: vec![vec![1, 2], vec![1, 2], vec![1, 2], vec![2]],
-            v_spec: vec![vec![3, 3], vec![3, 4], vec![4]],
+            m_spec: vec![vec![3, 3], vec![3, 4], vec![4]],
         }))
     );
 }
