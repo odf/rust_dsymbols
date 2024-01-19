@@ -2,7 +2,7 @@ use nom::branch::alt;
 use nom::character::complete::{char, digit1, space1, space0};
 use nom::multi::separated_list1;
 use nom::sequence::{separated_pair, tuple};
-use nom::{IResult, Finish};
+use nom::IResult;
 use nom::combinator::{map, map_opt};
 
 
@@ -18,7 +18,7 @@ pub struct DSymSpec {
 
 pub fn parse_dsymbol(input: &str) -> Result<(&str, DSymSpec), String>
 {
-    dsymbol(input).finish().map_err(|e| e.to_string())
+    dsymbol(input).map_err(|e| e.to_string())
 }
 
 
