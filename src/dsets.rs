@@ -12,15 +12,52 @@ pub enum Sign {
 use Sign::*;
 
 
-pub trait DSet {
+pub trait DSym {
     fn size(&self) -> usize;
     fn dim(&self) -> usize;
     fn get(&self, _i: usize, _d: usize) -> Option<usize>;
 
     fn set_count(&self) -> usize { 1 }
     fn symbol_count(&self) -> usize { 1 }
-    fn m(&self, _i: usize, _j: usize, _d: usize) -> usize { 0 }
 
+    fn get_r(&self, _i: usize, _d: usize) -> usize { 0 }
+    fn get_v(&self, _i: usize, _d: usize) -> usize { 0 }
+
+    fn r(&self, i: usize, j: usize, d: usize) -> usize {
+        assert!(i <= self.dim());
+        assert!(j <= self.dim());
+        assert!(1 <= d && d <= self.size());
+
+        if j == i + 1 {
+            self.get_r(i, d)
+        } else if i == j + 1 {
+            self.get_r(j, d)
+        } else if j != i && self.get(i, d) == self.get(j, d) {
+            1
+        } else {
+            2
+        }
+    }
+
+    fn v(&self, i: usize, j: usize, d: usize) -> usize {
+        assert!(i <= self.dim());
+        assert!(j <= self.dim());
+        assert!(1 <= d && d <= self.size());
+
+        if j == i + 1 {
+            self.get_v(i, d)
+        } else if i == j + 1 {
+            self.get_v(j, d)
+        } else if j != i && self.get(i, d) == self.get(j, d) {
+            2
+        } else {
+            1
+        }
+    }
+
+    fn m(&self, i: usize, j: usize, d: usize) -> usize {
+        self.r(i, j, d) * self.v(i, j, d)
+    }
 
     fn partial_orientation(&self) -> Vec<Sign> {
         let mut sgn = vec![ZERO; self.size() + 1];
@@ -115,7 +152,7 @@ pub trait DSet {
     }
 
 
-    fn morphism(&self, other: &dyn DSet, img0: usize)
+    fn morphism(&self, other: &dyn DSym, img0: usize)
         -> Option<Vec<usize>>
     {
         let mut m = vec![0; self.size() + 1];
@@ -253,7 +290,7 @@ impl PartialDSet {
     }
 }
 
-impl DSet for PartialDSet {
+impl DSym for PartialDSet {
     fn size(&self) -> usize {
         self.size
     }
@@ -284,7 +321,7 @@ impl DSet for PartialDSet {
 
 impl fmt::Display for PartialDSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DSet::fmt(self, f)
+        DSym::fmt(self, f)
     }
 }
 
@@ -319,7 +356,7 @@ impl SimpleDSet {
     }
 }
 
-impl DSet for SimpleDSet {
+impl DSym for SimpleDSet {
     fn set_count(&self) -> usize {
         self.counter
     }
@@ -354,13 +391,13 @@ impl From<PartialDSet> for SimpleDSet {
 
 impl fmt::Display for SimpleDSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DSet::fmt(self, f)
+        DSym::fmt(self, f)
     }
 }
 
 
 fn oriented_cover<T>(ds: &T) -> Option<PartialDSet>
-    where T: DSet
+    where T: DSym
 {
     if ds.is_oriented() {
         None

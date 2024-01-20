@@ -4,44 +4,6 @@ use crate::dsets::*;
 use crate::parse_dsym;
 
 
-pub trait DSym : DSet {
-    fn get_r(&self, i: usize, d: usize) -> usize;
-    fn get_v(&self, i: usize, d: usize) -> usize;
-
-    fn r(&self, i: usize, j: usize, d: usize) -> usize {
-        assert!(i <= self.dim());
-        assert!(j <= self.dim());
-        assert!(1 <= d && d <= self.size());
-
-        if j == i + 1 {
-            self.get_r(i, d)
-        } else if i == j + 1 {
-            self.get_r(j, d)
-        } else if j != i && self.get(i, d) == self.get(j, d) {
-            1
-        } else {
-            2
-        }
-    }
-
-    fn v(&self, i: usize, j: usize, d: usize) -> usize {
-        assert!(i <= self.dim());
-        assert!(j <= self.dim());
-        assert!(1 <= d && d <= self.size());
-
-        if j == i + 1 {
-            self.get_v(i, d)
-        } else if i == j + 1 {
-            self.get_v(j, d)
-        } else if j != i && self.get(i, d) == self.get(j, d) {
-            2
-        } else {
-            1
-        }
-    }
-}
-
-
 pub fn collect_orbits(ds: &SimpleDSet)
     -> (Vec<usize>, Vec<bool>, Vec<Vec<usize>>)
 {
@@ -120,7 +82,7 @@ impl PartialDSym {
     }
 }
 
-impl DSet for PartialDSym {
+impl DSym for PartialDSym {
     fn set_count(&self) -> usize {
         self.dset.set_count()
     }
@@ -137,8 +99,12 @@ impl DSet for PartialDSym {
         self.dset.get(i, d)
     }
 
-    fn m(&self, i: usize, j: usize, d: usize) -> usize {
-        self.r(i, j, d) * self.v(i, j, d)
+    fn get_r(&self, i: usize, d: usize) -> usize {
+        self.orbit_rs[self.orbit_index[i][d]]
+    }
+
+    fn get_v(&self, i: usize, d: usize) -> usize {
+        self.orbit_vs[self.orbit_index[i][d]]
     }
 
     fn is_complete(&self) -> bool {
@@ -161,19 +127,9 @@ impl From<PartialDSet> for PartialDSym {
     }
 }
 
-impl DSym for PartialDSym {
-    fn get_r(&self, i: usize, d: usize) -> usize {
-        self.orbit_rs[self.orbit_index[i][d]]
-    }
-
-    fn get_v(&self, i: usize, d: usize) -> usize {
-        self.orbit_vs[self.orbit_index[i][d]]
-    }
-}
-
 impl fmt::Display for PartialDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DSet::fmt(self, f)
+        DSym::fmt(self, f)
     }
 }
 
@@ -289,7 +245,7 @@ impl SimpleDSym {
     }
 }
 
-impl DSet for SimpleDSym {
+impl DSym for SimpleDSym {
     fn set_count(&self) -> usize {
         self.dset.set_count()
     }
@@ -310,23 +266,17 @@ impl DSet for SimpleDSym {
         self.dset.get(i, d)
     }
 
-    fn m(&self, i: usize, j: usize, d: usize) -> usize {
-        self.r(i, j, d) * self.v(i, j, d)
-    }
-
-    fn is_complete(&self) -> bool {
-        // checked on creation
-        true
-    }
-}
-
-impl DSym for SimpleDSym {
     fn get_r(&self, i: usize, d: usize) -> usize {
         self.orbit_rs[self.orbit_index[i][d]]
     }
 
     fn get_v(&self, i: usize, d: usize) -> usize {
         self.orbit_vs[self.orbit_index[i][d]]
+    }
+
+    fn is_complete(&self) -> bool {
+        // checked on creation
+        true
     }
 }
 
@@ -338,7 +288,7 @@ impl From<PartialDSym> for SimpleDSym {
 
 impl fmt::Display for SimpleDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DSet::fmt(self, f)
+        DSym::fmt(self, f)
     }
 }
 
