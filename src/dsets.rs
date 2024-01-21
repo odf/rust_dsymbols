@@ -23,40 +23,36 @@ pub trait DSym {
     fn get_r(&self, _i: usize, _d: usize) -> usize { 0 }
     fn get_v(&self, _i: usize, _d: usize) -> usize { 0 }
 
-    fn r(&self, i: usize, j: usize, d: usize) -> usize {
-        assert!(i <= self.dim());
-        assert!(j <= self.dim());
-        assert!(1 <= d && d <= self.size());
-
-        if j == i + 1 {
-            self.get_r(i, d)
+    fn r(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
+            None
+        } else if j == i + 1 {
+            Some(self.get_r(i, d))
         } else if i == j + 1 {
-            self.get_r(j, d)
+            Some(self.get_r(j, d))
         } else if j != i && self.get(i, d) == self.get(j, d) {
-            1
+            Some(1)
         } else {
-            2
+            Some(2)
         }
     }
 
-    fn v(&self, i: usize, j: usize, d: usize) -> usize {
-        assert!(i <= self.dim());
-        assert!(j <= self.dim());
-        assert!(1 <= d && d <= self.size());
-
-        if j == i + 1 {
-            self.get_v(i, d)
+    fn v(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
+            None
+        } else if j == i + 1 {
+            Some(self.get_v(i, d))
         } else if i == j + 1 {
-            self.get_v(j, d)
+            Some(self.get_v(j, d))
         } else if j != i && self.get(i, d) == self.get(j, d) {
-            2
+            Some(2)
         } else {
-            1
+            Some(1)
         }
     }
 
-    fn m(&self, i: usize, j: usize, d: usize) -> usize {
-        self.r(i, j, d) * self.v(i, j, d)
+    fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        Some(self.r(i, j, d)? * self.v(i, j, d)?)
     }
 
     fn partial_orientation(&self) -> Vec<Sign> {
@@ -228,7 +224,7 @@ pub trait DSym {
                 if d > 1 {
                     write!(f, " ")?;
                 }
-                write!(f, "{}", self.m(i, i + 1, d))?;
+                write!(f, "{}", self.m(i, i + 1, d).unwrap_or(0))?;
             }
         }
         write!(f, ">")?;

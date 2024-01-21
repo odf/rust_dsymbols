@@ -304,7 +304,7 @@ fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
         for i in 0..cov.dim() {
             for d in cov.orbit_reps_2d(i, i + 1) {
                 let e = (d - 1) % ds.size() + 1;
-                let vd = ds.m(i, i + 1, e) / cov.r(i, i + 1, d);
+                let vd = ds.m(i, i + 1, e)? / cov.r(i, i + 1, d)?;
                 cov.set_v(i, d, vd);
             }
         }
