@@ -23,12 +23,12 @@ pub fn collect_orbits(ds: &SimpleDSet)
                 let mut is_chain = false;
 
                 loop {
-                    let ei = ds.get_unchecked(i, e);
+                    let ei = ds.op_unchecked(i, e);
                     is_chain |= ei == e;
                     orbit_index[i][ei] = orbit_nr;
                     seen[ei] = true;
 
-                    e = ds.get_unchecked(i + 1, ei);
+                    e = ds.op_unchecked(i + 1, ei);
                     is_chain |= e == ei;
                     orbit_index[i][e] = orbit_nr;
                     seen[e] = true;
@@ -101,8 +101,8 @@ impl DSet for PartialDSym {
         self.dset.dim()
     }
 
-    fn get(&self, i: usize, d: usize) -> Option<usize> {
-        self.dset.get(i, d)
+    fn op(&self, i: usize, d: usize) -> Option<usize> {
+        self.dset.op(i, d)
     }
 
     fn is_complete(&self) -> bool {
@@ -124,7 +124,7 @@ impl DSym for PartialDSym {
             Some(self.orbit_rs[self.orbit_index[i][d]])
         } else if j == i - 1 {
             Some(self.orbit_rs[self.orbit_index[j][d]])
-        } else if self.get(i, d) == self.get(j, d) {
+        } else if self.op(i, d) == self.op(j, d) {
             Some(1)
         } else {
             Some(2)
@@ -140,7 +140,7 @@ impl DSym for PartialDSym {
             Some(self.orbit_vs[self.orbit_index[i][d]])
         } else if j == i - 1 {
             Some(self.orbit_vs[self.orbit_index[j][d]])
-        } else if self.get(i, d) == self.get(j, d) {
+        } else if self.op(i, d) == self.op(j, d) {
             Some(2)
         } else {
             Some(1)
@@ -191,7 +191,7 @@ impl FromStr for PartialDSym {
                 let mut k = 0;
 
                 for d in 1..=spec.size {
-                    if dset.get_unchecked(i, d) == 0 {
+                    if dset.op_unchecked(i, d) == 0 {
                         let &di = op_i.get(k)
                             .ok_or("incomplete op spec".to_string())?;
                         dset.set(i, d, di);
@@ -264,7 +264,7 @@ impl SimpleDSym {
 
             for d in 1..=self.size() {
                 for i in 0..=self.dim() {
-                    let e = self.dset.get_unchecked(i, d);
+                    let e = self.dset.op_unchecked(i, d);
                     if e >= d {
                         result.push(e as u8);
                     }
@@ -299,8 +299,8 @@ impl DSet for SimpleDSym {
         self.dset.dim()
     }
 
-    fn get(&self, i: usize, d: usize) -> Option<usize> {
-        self.dset.get(i, d)
+    fn op(&self, i: usize, d: usize) -> Option<usize> {
+        self.dset.op(i, d)
     }
 
     fn is_complete(&self) -> bool {
@@ -323,7 +323,7 @@ impl DSym for SimpleDSym {
             Some(self.orbit_rs[self.orbit_index[i][d]])
         } else if j == i - 1 {
             Some(self.orbit_rs[self.orbit_index[j][d]])
-        } else if self.get(i, d) == self.get(j, d) {
+        } else if self.op(i, d) == self.op(j, d) {
             Some(1)
         } else {
             Some(2)
@@ -339,7 +339,7 @@ impl DSym for SimpleDSym {
             Some(self.orbit_vs[self.orbit_index[i][d]])
         } else if j == i - 1 {
             Some(self.orbit_vs[self.orbit_index[j][d]])
-        } else if self.get(i, d) == self.get(j, d) {
+        } else if self.op(i, d) == self.op(j, d) {
             Some(2)
         } else {
             Some(1)
@@ -404,9 +404,9 @@ fn test_parse_from_string() {
 
     assert_eq!(dsym.dim(), 3);
     assert_eq!(dsym.size(), 2);
-    assert_eq!(dsym.get(0, 0), None);
-    assert_eq!(dsym.get(0, 3), None);
-    assert_eq!(dsym.get(4, 1), None);
+    assert_eq!(dsym.op(0, 0), None);
+    assert_eq!(dsym.op(0, 3), None);
+    assert_eq!(dsym.op(4, 1), None);
     assert!(dsym.is_complete());
     assert!(!dsym.is_loopless());
     assert!(dsym.is_weakly_oriented());

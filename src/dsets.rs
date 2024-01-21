@@ -15,7 +15,7 @@ use Sign::*;
 pub trait DSet {
     fn size(&self) -> usize;
     fn dim(&self) -> usize;
-    fn get(&self, _i: usize, _d: usize) -> Option<usize>;
+    fn op(&self, _i: usize, _d: usize) -> Option<usize>;
 
     fn set_count(&self) -> usize { 1 }
     fn symbol_count(&self) -> usize { 1 }
@@ -41,7 +41,7 @@ pub trait DSet {
 
         while let Some(d) = queue.pop_front() {
             for i in 0..=self.dim() {
-                if let Some(di) = self.get(i, d) {
+                if let Some(di) = self.op(i, d) {
                     if sgn[di] == ZERO {
                         sgn[di] = if sgn[d] == PLUS { MINUS } else { PLUS };
                         queue.push_back(di);
@@ -57,7 +57,7 @@ pub trait DSet {
     fn is_complete(&self) -> bool {
         (0..=self.dim()).all(|i|
             (1..=self.size()).all(|d|
-                self.get(i, d).is_some()
+                self.op(i, d).is_some()
             )
         )
     }
@@ -66,14 +66,14 @@ pub trait DSet {
     fn is_loopless(&self) -> bool {
         (0..=self.dim()).all(|i|
             (1..=self.size()).all(|d|
-                self.get(i, d) != Some(d)
+                self.op(i, d) != Some(d)
             )
         )
     }
 
 
     fn orientations_match(&self, i: usize, d: usize, ori: &Vec<Sign>) -> bool {
-        if let Some(di) = self.get(i, d) {
+        if let Some(di) = self.op(i, d) {
             di == d || ori[d] == ZERO || ori[di] != ori[d]
         } else {
             true
@@ -110,7 +110,7 @@ pub trait DSet {
                 let mut k = i;
 
                 loop {
-                    e = self.get(k, e).unwrap_or(e);
+                    e = self.op(k, e).unwrap_or(e);
                     k = i + j - k;
                     seen[e] = true;
 
@@ -136,8 +136,8 @@ pub trait DSet {
 
         while let Some((d, e)) = queue.pop_front() {
             for i in 0..=self.dim() {
-                if let Some(di) = self.get(i, d) {
-                    if let Some(ei) = other.get(i, e) {
+                if let Some(di) = self.op(i, d) {
+                    if let Some(ei) = other.op(i, e) {
                         if m[di] == 0 {
                             m[di] = ei;
                             queue.push_back((di, ei));
@@ -182,7 +182,7 @@ pub trait DSet {
                 write!(f, ",")?;
             }
             for d in 1..=self.size() {
-                let e = self.get(i, d).unwrap_or(0);
+                let e = self.op(i, d).unwrap_or(0);
                 if e == 0 || e >= d {
                     if d > 1 {
                         write!(f, " ")?;
@@ -236,8 +236,8 @@ impl PartialDSet {
         assert!(1 <= d && d <= self.size);
         assert!(1 <= e && e <= self.size);
 
-        let di = self.get_unchecked(i, d);
-        let ei = self.get_unchecked(i, e);
+        let di = self.op_unchecked(i, d);
+        let ei = self.op_unchecked(i, e);
 
         if di != 0 {
             assert_eq!(di, e);
@@ -258,7 +258,7 @@ impl PartialDSet {
         self.op.append(&mut vec![0 as usize; count * (self.dim() + 1)]);
     }
 
-    pub fn get_unchecked(&self, i: usize, d: usize) -> usize {
+    pub fn op_unchecked(&self, i: usize, d: usize) -> usize {
         self.op[self.idx(i, d)]
     }
 }
@@ -272,11 +272,11 @@ impl DSet for PartialDSet {
         self.dim
     }
 
-    fn get(&self, i: usize, d: usize) -> Option<usize> {
+    fn op(&self, i: usize, d: usize) -> Option<usize> {
         if i > self.dim || d < 1 || d > self.size {
             None
         } else {
-            match self.get_unchecked(i, d) {
+            match self.op_unchecked(i, d) {
                 0 => None,
                 di => Some(di)
             }
@@ -286,7 +286,7 @@ impl DSet for PartialDSet {
     fn is_complete(&self) -> bool {
         (0..=self.dim()).all(|i|
             (1..=self.size()).all(|d|
-                self.get_unchecked(i, d) != 0
+                self.op_unchecked(i, d) != 0
             )
         )
     }
@@ -324,7 +324,7 @@ impl SimpleDSet {
         SimpleDSet { size, dim, op, counter }
     }
 
-    pub fn get_unchecked(&self, i: usize, d: usize) -> usize {
+    pub fn op_unchecked(&self, i: usize, d: usize) -> usize {
         self.op[self.idx(i, d)]
     }
 }
@@ -342,11 +342,11 @@ impl DSet for SimpleDSet {
         self.dim
     }
 
-    fn get(&self, i: usize, d: usize) -> Option<usize> {
+    fn op(&self, i: usize, d: usize) -> Option<usize> {
         if i > self.dim || d < 1 || d > self.size {
             None
         } else {
-            Some(self.get_unchecked(i, d))
+            Some(self.op_unchecked(i, d))
         }
     }
 
@@ -381,7 +381,7 @@ fn oriented_cover<T>(ds: &T) -> Option<PartialDSet>
 
         for i in 0..=ds.dim() {
             for d in 1..=ds.size() {
-                if let Some(di) = ds.get(i, d) {
+                if let Some(di) = ds.op(i, d) {
                     if ori[di] != ori[d] {
                         cov.set(i, d, di);
                         cov.set(i, d + sz, di + sz);
@@ -440,8 +440,8 @@ mod partial_dset_tests {
 
         assert_eq!(dset.dim(), 1);
         assert_eq!(dset.size(), 1);
-        assert_eq!(dset.get(0, 0), None);
-        assert_eq!(dset.get(0, 1), None);
+        assert_eq!(dset.op(0, 0), None);
+        assert_eq!(dset.op(0, 1), None);
         assert!(!dset.is_complete());
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -455,9 +455,9 @@ mod partial_dset_tests {
     fn minimal_partial_dset() {
         let dset = build_dset(1, 1, HashMap::from([((0, 1), 1), ((1, 1), 1)]));
 
-        assert_eq!(dset.get(0, 0), None);
-        assert_eq!(dset.get(0, 2), None);
-        assert_eq!(dset.get(2, 1), None);
+        assert_eq!(dset.op(0, 0), None);
+        assert_eq!(dset.op(0, 2), None);
+        assert_eq!(dset.op(2, 1), None);
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -482,7 +482,7 @@ mod partial_dset_tests {
             ])
         );
 
-        assert_eq!(dset.get(0, 0), None);
+        assert_eq!(dset.op(0, 0), None);
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -507,7 +507,7 @@ mod partial_dset_tests {
             ])
         );
 
-        assert_eq!(dset.get(0, 0), None);
+        assert_eq!(dset.op(0, 0), None);
         assert!(dset.is_complete());
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -541,9 +541,9 @@ mod simple_dset_tests {
     fn minimal_simple_dset() {
         let dset = build_dset(1, 1, HashMap::from([((0, 1), 1), ((1, 1), 1)]));
 
-        assert_eq!(dset.get(0, 0), None);
-        assert_eq!(dset.get(0, 2), None);
-        assert_eq!(dset.get(2, 1), None);
+        assert_eq!(dset.op(0, 0), None);
+        assert_eq!(dset.op(0, 2), None);
+        assert_eq!(dset.op(2, 1), None);
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -568,7 +568,7 @@ mod simple_dset_tests {
             ])
         );
 
-        assert_eq!(dset.get(0, 0), None);
+        assert_eq!(dset.op(0, 0), None);
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -593,7 +593,7 @@ mod simple_dset_tests {
             ])
         );
 
-        assert_eq!(dset.get(0, 0), None);
+        assert_eq!(dset.op(0, 0), None);
         assert!(dset.is_complete());
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());

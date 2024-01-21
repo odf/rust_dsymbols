@@ -165,8 +165,8 @@ impl DSymBackTracking {
         let mut corners = vec![];
 
         for d in ds.orbit_reps_2d(0, 2) {
-            let d0 = ds.get_unchecked(0, d);
-            let d2 = ds.get_unchecked(2, d);
+            let d0 = ds.op_unchecked(0, d);
+            let d2 = ds.op_unchecked(2, d);
 
             if d0 == d && d2 == d {
                 corners.push(2)

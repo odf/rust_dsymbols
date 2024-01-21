@@ -48,7 +48,7 @@ impl BackTracking for DSetBackTracking {
             let max_e = (ds.size() + 1).min(self.max_size);
 
             for e in d..=max_e {
-                if e > ds.size() || ds.get_unchecked(i, e) == 0 {
+                if e > ds.size() || ds.op_unchecked(i, e) == 0 {
                     let mut dset = ds.clone();
                     let mut is_remap_start = state.is_remap_start.clone();
 
@@ -114,14 +114,14 @@ fn next_undefined(ds: &PartialDSet, i0: usize, d0: usize)
     -> Option<(usize, usize)>
 {
     for i in i0..=ds.dim() {
-        if ds.get_unchecked(i, d0) == 0 {
+        if ds.op_unchecked(i, d0) == 0 {
             return Some((i, d0));
         }
     }
 
     for d in (d0 + 1)..=ds.size() {
         for i in 0..=ds.dim() {
-            if ds.get_unchecked(i, d) == 0 {
+            if ds.op_unchecked(i, d) == 0 {
                 return Some((i, d));
             }
         }
@@ -173,7 +173,7 @@ fn scan_single_direction(
     let mut e = d;
 
     for k in 0..limit {
-        let en = ds.get_unchecked(w[k], e);
+        let en = ds.op_unchecked(w[k], e);
         if en != 0 {
             e = en;
         } else {
@@ -222,7 +222,7 @@ fn compare_renumbered_from(
 
     for d in 1..=ds.size() {
         for i in 0..=ds.dim() {
-            let ei = ds.get_unchecked(i, new2old[d]);
+            let ei = ds.op_unchecked(i, new2old[d]);
 
             if ei == 0 {
                 return 0;
@@ -233,7 +233,7 @@ fn compare_renumbered_from(
                     next += 1;
                 }
 
-                let di = ds.get_unchecked(i, d);
+                let di = ds.op_unchecked(i, d);
 
                 if di == 0 {
                     return 0;
