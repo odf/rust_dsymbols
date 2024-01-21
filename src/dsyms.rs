@@ -50,7 +50,7 @@ pub fn collect_orbits(ds: &SimpleDSet)
 }
 
 
-trait DSym : DSet {
+pub trait DSym : DSet {
     fn r(&self, i: usize, j: usize, d: usize) -> Option<usize>;
     fn v(&self, i: usize, j: usize, d: usize) -> Option<usize>;
 }
