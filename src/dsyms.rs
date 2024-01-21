@@ -50,6 +50,12 @@ pub fn collect_orbits(ds: &SimpleDSet)
 }
 
 
+trait DSym : DSet {
+    fn r(&self, i: usize, j: usize, d: usize) -> Option<usize>;
+    fn v(&self, i: usize, j: usize, d: usize) -> Option<usize>;
+}
+
+
 #[derive(Clone)]
 pub struct PartialDSym {
     dset: SimpleDSet,
@@ -82,7 +88,7 @@ impl PartialDSym {
     }
 }
 
-impl DSym for PartialDSym {
+impl DSet for PartialDSym {
     fn set_count(&self) -> usize {
         self.dset.set_count()
     }
@@ -99,16 +105,46 @@ impl DSym for PartialDSym {
         self.dset.get(i, d)
     }
 
-    fn get_r(&self, i: usize, d: usize) -> usize {
-        self.orbit_rs[self.orbit_index[i][d]]
-    }
-
-    fn get_v(&self, i: usize, d: usize) -> usize {
-        self.orbit_vs[self.orbit_index[i][d]]
-    }
-
     fn is_complete(&self) -> bool {
         self.dset.is_complete() && self.orbit_vs.iter().all(|&v| v > 0)
+    }
+
+    fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        Some(self.r(i, j, d)? * self.v(i, j, d)?)
+    }
+}
+
+impl DSym for PartialDSym {
+    fn r(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
+            None
+        } else if j == i {
+            Some(1)
+        } else if j == i + 1 {
+            Some(self.orbit_rs[self.orbit_index[i][d]])
+        } else if j == i - 1 {
+            Some(self.orbit_rs[self.orbit_index[j][d]])
+        } else if self.get(i, d) == self.get(j, d) {
+            Some(1)
+        } else {
+            Some(2)
+        }
+    }
+
+    fn v(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
+            None
+        } else if j == i {
+            Some(1)
+        } else if j == i + 1 {
+            Some(self.orbit_vs[self.orbit_index[i][d]])
+        } else if j == i - 1 {
+            Some(self.orbit_vs[self.orbit_index[j][d]])
+        } else if self.get(i, d) == self.get(j, d) {
+            Some(2)
+        } else {
+            Some(1)
+        }
     }
 }
 
@@ -129,7 +165,7 @@ impl From<PartialDSet> for PartialDSym {
 
 impl fmt::Display for PartialDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DSym::fmt(self, f)
+        DSet::fmt(self, f)
     }
 }
 
@@ -175,13 +211,14 @@ impl FromStr for PartialDSym {
                 let mut k = 0;
 
                 for d in 1..=spec.size {
-                    if dsym.get_v(i, d) == 0 {
+                    if dsym.v(i, i + 1, d) == Some(0) {
                         let &m = ms_i.get(k)
                             .ok_or("incomplete degree spec".to_string())?;
-                        if m % dsym.get_r(i, d) != 0 {
+                        let r = dsym.r(i, i + 1, d).unwrap(); 
+                        if m % r != 0 {
                             return Err("illegal degree value".into());
                         }
-                        dsym.set_v(i, d, m / dsym.get_r(i, d));
+                        dsym.set_v(i, d, m / r);
                         k += 1;
                     }
                 }
@@ -245,7 +282,7 @@ impl SimpleDSym {
     }
 }
 
-impl DSym for SimpleDSym {
+impl DSet for SimpleDSym {
     fn set_count(&self) -> usize {
         self.dset.set_count()
     }
@@ -266,17 +303,47 @@ impl DSym for SimpleDSym {
         self.dset.get(i, d)
     }
 
-    fn get_r(&self, i: usize, d: usize) -> usize {
-        self.orbit_rs[self.orbit_index[i][d]]
-    }
-
-    fn get_v(&self, i: usize, d: usize) -> usize {
-        self.orbit_vs[self.orbit_index[i][d]]
-    }
-
     fn is_complete(&self) -> bool {
         // checked on creation
         true
+    }
+
+    fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        Some(self.r(i, j, d)? * self.v(i, j, d)?)
+    }
+}
+
+impl DSym for SimpleDSym {
+    fn r(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
+            None
+        } else if j == i {
+            Some(1)
+        } else if j == i + 1 {
+            Some(self.orbit_rs[self.orbit_index[i][d]])
+        } else if j == i - 1 {
+            Some(self.orbit_rs[self.orbit_index[j][d]])
+        } else if self.get(i, d) == self.get(j, d) {
+            Some(1)
+        } else {
+            Some(2)
+        }
+    }
+
+    fn v(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
+            None
+        } else if j == i {
+            Some(1)
+        } else if j == i + 1 {
+            Some(self.orbit_vs[self.orbit_index[i][d]])
+        } else if j == i - 1 {
+            Some(self.orbit_vs[self.orbit_index[j][d]])
+        } else if self.get(i, d) == self.get(j, d) {
+            Some(2)
+        } else {
+            Some(1)
+        }
     }
 }
 
@@ -288,13 +355,13 @@ impl From<PartialDSym> for SimpleDSym {
 
 impl fmt::Display for SimpleDSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DSym::fmt(self, f)
+        DSet::fmt(self, f)
     }
 }
 
 
 fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
-    where T: DSym
+    where T: DSet
 {
     if ds.is_oriented() {
         None
