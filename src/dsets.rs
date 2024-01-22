@@ -125,6 +125,11 @@ pub trait DSet {
     }
 
 
+    fn degrees_match(&self, d: usize, e: usize) -> bool {
+        (0..self.dim()).all(|i| self.m(i, i + 1, d) == self.m(i, i + 1, e))
+    }
+
+
     fn morphism(&self, other: &dyn DSet, img0: usize)
         -> Option<Vec<usize>>
     {
@@ -138,7 +143,7 @@ pub trait DSet {
             for i in 0..=self.dim() {
                 if let Some(di) = self.op(i, d) {
                     if let Some(ei) = other.op(i, e) {
-                        if m[di] == 0 {
+                        if m[di] == 0 && self.degrees_match(d, e) {
                             m[di] = ei;
                             queue.push_back((di, ei));
                         } else if m[di] != ei {

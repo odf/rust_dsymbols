@@ -412,7 +412,7 @@ fn test_parse_from_string() {
     assert!(dsym.is_weakly_oriented());
     assert!(!dsym.is_oriented());
     assert_eq!(dsym.to_string(), s);
-    assert_eq!(dsym.automorphisms().len(), 2); // TODO counting for D-set here
+    assert_eq!(dsym.automorphisms().len(), 1);
     assert_eq!(
         dsym.oriented_cover().and_then(|dso| Some(dso.to_string())),
         Some("<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>".to_string())
