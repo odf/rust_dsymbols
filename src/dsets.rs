@@ -107,14 +107,14 @@ pub trait DSet {
                 seen[d] = true;
 
                 let mut e = d;
-                let mut k = i;
 
                 loop {
-                    e = self.op(k, e).unwrap_or(e);
-                    k = i + j - k;
+                    let ei = self.op(i, e).unwrap_or(e);
+                    seen[ei] = true;
+                    e = self.op(j, ei).unwrap_or(ei);
                     seen[e] = true;
 
-                    if e == d && k == i {
+                    if e == d {
                         break;
                     }
                 }
