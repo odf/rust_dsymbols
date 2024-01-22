@@ -1,4 +1,5 @@
 pub mod backtrack;
+pub mod partitions;
 pub mod dsets;
 pub mod dset_generators;
 pub mod dsyms;

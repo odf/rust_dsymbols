@@ -411,6 +411,7 @@ fn test_parse_from_string() {
     assert!(!dsym.is_loopless());
     assert!(dsym.is_weakly_oriented());
     assert!(!dsym.is_oriented());
+    assert!(dsym.is_minimal());
     assert_eq!(dsym.to_string(), s);
     assert_eq!(dsym.automorphisms().len(), 1);
     assert_eq!(dsym.dset.automorphisms().len(), 2);
@@ -418,4 +419,13 @@ fn test_parse_from_string() {
         dsym.oriented_cover().and_then(|dso| Some(dso.to_string())),
         Some("<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>".to_string())
     )
+}
+
+
+#[test]
+fn test_is_minimal() {
+    let is_minimal = |s: &str| s.parse::<PartialDSym>().unwrap().is_minimal();
+
+    assert!(is_minimal("<1.1:3:2 3,1 3,1 2 3:3,4 6>"));
+    assert!(!is_minimal("<1.1:3:2 3,1 3,1 2 3:3,6 6>"));
 }

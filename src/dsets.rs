@@ -11,6 +11,8 @@ pub enum Sign {
 
 use Sign::*;
 
+use crate::partitions::Partition;
+
 
 pub trait DSet {
     fn size(&self) -> usize;
@@ -170,6 +172,44 @@ pub trait DSet {
         }
 
         result
+    }
+
+
+    fn fold(&self, p0: &Partition<usize>, d: usize, e: usize)
+        -> Option<Partition<usize>>
+    {
+        if d == 0 || e == 0 || !self.degrees_match(d, e) {
+            None
+        } else {
+            let mut queue = VecDeque::from([(d, e)]);
+            let mut p = p0.clone();
+
+            while let Some((d, e)) = queue.pop_front() {
+                if p.find(&d) != p.find(&e) {
+                    p.unite(&d, &e);
+
+                    for i in 0..=self.dim() {
+                        if let Some(di) = self.op(i, d) {
+                            if let Some(ei) = self.op(i, e) {
+                                if self.degrees_match(di, ei) {
+                                    queue.push_back((di, ei));
+                                } else {
+                                    return None;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Some(p)
+        }
+    }
+
+
+    fn is_minimal(&self) -> bool {
+        let p = Partition::new();
+        (2..=self.size()).all(|d| self.fold(&p, 1, d).is_none())
     }
 
 
@@ -451,6 +491,7 @@ mod partial_dset_tests {
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(dset.is_oriented());
+        assert!(dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:1 1:0,0:0>");
         assert_eq!(dset.automorphisms().len(), 1);
         assert!(dset.oriented_cover().is_none());
@@ -467,6 +508,7 @@ mod partial_dset_tests {
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(!dset.is_oriented());
+        assert!(dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:1 1:1,1:0>");
         assert_eq!(dset.automorphisms().len(), 1);
         assert_eq!(
@@ -492,6 +534,7 @@ mod partial_dset_tests {
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(!dset.is_oriented());
+        assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:3:2 3,1 3,2 3:0,0>");
         assert_eq!(dset.automorphisms().len(), 1);
         assert_eq!(
@@ -517,6 +560,7 @@ mod partial_dset_tests {
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(dset.is_oriented());
+        assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:4:2 4,4 3,2 4:0,0>");
         assert_eq!(dset.automorphisms().len(), 4);
         assert!(dset.oriented_cover().is_none());
@@ -553,6 +597,7 @@ mod simple_dset_tests {
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(!dset.is_oriented());
+        assert!(dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:1 1:1,1:0>");
         assert_eq!(dset.automorphisms().len(), 1);
         assert_eq!(
@@ -578,6 +623,7 @@ mod simple_dset_tests {
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(!dset.is_oriented());
+        assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:3:2 3,1 3,2 3:0,0>");
         assert_eq!(dset.automorphisms().len(), 1);
         assert_eq!(
@@ -603,6 +649,7 @@ mod simple_dset_tests {
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
         assert!(dset.is_oriented());
+        assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:4:2 4,4 3,2 4:0,0>");
         assert_eq!(dset.automorphisms().len(), 4);
         assert!(dset.oriented_cover().is_none());
