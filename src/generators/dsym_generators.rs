@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use crate::backtrack::BackTrackIterator;
-use crate::backtrack::BackTracking;
+use crate::util::backtrack::BackTrackIterator;
+use crate::util::backtrack::BackTracking;
 use crate::dsets::*;
 use crate::dsyms::*;
 

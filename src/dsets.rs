@@ -11,7 +11,7 @@ pub enum Sign {
 
 use Sign::*;
 
-use crate::partitions::Partition;
+use crate::util::partitions::Partition;
 
 
 pub trait DSet {

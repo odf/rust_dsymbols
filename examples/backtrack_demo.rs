@@ -1,5 +1,5 @@
-use rust_dsymbols::backtrack::BackTrackIterator;
-use rust_dsymbols::backtrack::BackTracking;
+use rust_dsymbols::util::backtrack::BackTrackIterator;
+use rust_dsymbols::util::backtrack::BackTracking;
 
 
 struct PartitionState {

@@ -1,7 +1,7 @@
 use std::io::{Write, stdout};
 
-use rust_dsymbols::dset_generators::DSets;
-use rust_dsymbols::dsym_generators::{DSyms, Geometries};
+use rust_dsymbols::generators::dset_generators::DSets;
+use rust_dsymbols::generators::dsym_generators::{DSyms, Geometries};
 
 
 fn main() {

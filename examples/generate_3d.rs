@@ -1,4 +1,4 @@
-use rust_dsymbols::dset_generators::DSets;
+use rust_dsymbols::generators::dset_generators::DSets;
 
 
 fn main() {
