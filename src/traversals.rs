@@ -74,7 +74,7 @@ impl<'a, T: DSet> Iterator for Traversal<'a, T> {
 
 
 #[cfg(test)]
-mod partial_dset_tests {
+mod traversal_tests {
     use crate::dsyms::PartialDSym;
 
     use super::*;
