@@ -256,30 +256,35 @@ pub trait DSet {
 }
 
 
-pub struct Traversal<'a, T: DSet> {
+pub struct Traversal<'a, T, I>
+    where T: DSet, I: Iterator<Item=usize>
+{
     ds: &'a T,
     indices: Vec<usize>,
-    seeds_left: VecDeque<usize>,
+    seeds: I,
     seen: HashSet<(usize, Option<usize>)>,
     todo: BTreeMap<usize, VecDeque<usize>>,
 }
 
 
-impl<'a, T: DSet> Traversal<'a, T> {
-    pub fn new(ds: &'a T, indices: &[usize], seeds: &[usize]) -> Self {
+impl<'a, T, I> Traversal<'a, T, I>
+    where T: DSet, I: Iterator<Item=usize>
+{
+    pub fn new(ds: &'a T, indices: &[usize], seeds: I) -> Self {
         let indices: Vec<_> = indices.into();
-        let seeds_left = Vec::from(seeds).into();
         let seen = HashSet::new();
         let todo: BTreeMap<_, _> = indices.iter()
             .map(|&i| (i, VecDeque::new()))
             .collect();
 
-        Self { ds, indices, seeds_left, seen, todo }
+        Self { ds, indices, seeds, seen, todo }
     }
 }
 
 
-impl<'a, T: DSet> Iterator for Traversal<'a, T> {
+impl<'a, T, I> Iterator for Traversal<'a, T, I>
+    where T: DSet, I: Iterator<Item=usize>
+{
     type Item = (usize, Option<usize>, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -291,7 +296,7 @@ impl<'a, T: DSet> Iterator for Traversal<'a, T> {
             let maybe_d = if let Some(i) = maybe_i {
                 self.todo.get_mut(&i).and_then(|q| q.pop_front())
             } else {
-                self.seeds_left.pop_front()
+                self.seeds.next()
             };
 
             if let Some(d) = maybe_d {
@@ -533,6 +538,8 @@ impl OrientedCover<SimpleDSet> for SimpleDSet {
 
 #[cfg(test)]
 mod traversal_tests {
+    use std::iter;
+
     use crate::dsyms::PartialDSym;
 
     use super::*;
@@ -543,7 +550,8 @@ mod traversal_tests {
         let dsym: PartialDSym = s.parse().unwrap();
 
         assert_eq!(
-            Traversal::new(&dsym, &[0, 1, 2], &[1]).collect::<Vec<_>>(),
+            Traversal::new(&dsym, &[0, 1, 2], iter::once(1))
+                .collect::<Vec<_>>(),
             vec![
                 (1, None, 1),
                 (1, Some(0), 2),
@@ -566,7 +574,8 @@ mod traversal_tests {
         );
 
         assert_eq!(
-            Traversal::new(&dsym, &[0, 2], &[1, 2, 3]).collect::<Vec<_>>(),
+            Traversal::new(&dsym, &[0, 2], [1, 2, 3].into_iter())
+                .collect::<Vec<_>>(),
             vec![
                 (1, None, 1),
                 (1, Some(0), 2), (1, Some(2), 1),  (2, Some(2), 2),
