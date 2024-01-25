@@ -47,6 +47,23 @@ pub trait DSet: Sized {
         self.traversal(&indices[..], seeds)
     }
 
+    fn partial_orientation(&self) -> Vec<Sign> {
+        let mut sgn = vec![ZERO; self.size() + 1];
+
+        for (maybe_i, d, di) in self.full_traversal() {
+            if sgn[di] == ZERO {
+                sgn[di] = if maybe_i.is_none() {
+                    PLUS
+                } else if sgn[d] == PLUS {
+                    MINUS
+                } else {
+                    PLUS
+                }
+            }
+        }
+        sgn
+    }
+
     fn orbit(&self, indices: &[usize], seed: usize) -> HashSet<usize> {
         let seeds = [seed].into_iter();
         Traversal::new(self, indices, seeds).map(|(_, _, d)| d).collect()
@@ -56,27 +73,6 @@ pub trait DSet: Sized {
         let indices: Vec<_> = (0..=self.dim()).collect();
         let seeds = [seed].into_iter();
         Traversal::new(self, &indices[..], seeds).map(|(_, _, d)| d).collect()
-    }
-
-    fn partial_orientation(&self) -> Vec<Sign> {
-        let mut sgn = vec![ZERO; self.size() + 1];
-        let mut queue = VecDeque::new();
-
-        sgn[1] = Sign::PLUS;
-        queue.push_back(1);
-
-        while let Some(d) = queue.pop_front() {
-            for i in 0..=self.dim() {
-                if let Some(di) = self.op(i, d) {
-                    if sgn[di] == ZERO {
-                        sgn[di] = if sgn[d] == PLUS { MINUS } else { PLUS };
-                        queue.push_back(di);
-                    }
-                }
-            }
-        }
-
-        sgn
     }
 
 
@@ -326,7 +322,7 @@ impl<'a, T, I> Iterator for Traversal<'a, T, I>
             if let Some(d) = maybe_d {
                 if !self.seen.contains(&(d, maybe_i)) {
                     let di = if let Some(i) = maybe_i {
-                        self.ds.op(i, d).unwrap()
+                        self.ds.op(i, d).unwrap_or(d)
                     } else {
                         d
                     };
