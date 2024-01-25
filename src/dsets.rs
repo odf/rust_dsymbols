@@ -285,7 +285,7 @@ impl<'a, T, I> Traversal<'a, T, I>
 impl<'a, T, I> Iterator for Traversal<'a, T, I>
     where T: DSet, I: Iterator<Item=usize>
 {
-    type Item = (usize, Option<usize>, usize);
+    type Item = (Option<usize>, usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -321,7 +321,7 @@ impl<'a, T, I> Iterator for Traversal<'a, T, I>
                     self.seen.insert((di, maybe_i));
                     self.seen.insert((d, maybe_i));
 
-                    return Some((d, maybe_i, di))
+                    return Some((maybe_i, d, di))
                 }
             } else {
                 return None
@@ -553,23 +553,23 @@ mod traversal_tests {
             Traversal::new(&dsym, &[0, 1, 2], iter::once(1))
                 .collect::<Vec<_>>(),
             vec![
-                (1, None, 1),
-                (1, Some(0), 2),
-                (2, Some(1), 3),
-                (3, Some(0), 4),
-                (4, Some(1), 5),
-                (5, Some(0), 6),
-                (6, Some(1), 7),
-                (7, Some(0), 8),
-                (8, Some(1), 1),
-                (1, Some(2), 1),
-                (2, Some(2), 2),
-                (3, Some(2), 3),
-                (4, Some(2), 4),
-                (5, Some(2), 5),
-                (6, Some(2), 6),
-                (7, Some(2), 7),
-                (8, Some(2), 8)            
+                (None, 1, 1),
+                (Some(0), 1, 2),
+                (Some(1), 2, 3),
+                (Some(0), 3, 4),
+                (Some(1), 4, 5),
+                (Some(0), 5, 6),
+                (Some(1), 6, 7),
+                (Some(0), 7, 8),
+                (Some(1), 8, 1),
+                (Some(2), 1, 1),
+                (Some(2), 2, 2),
+                (Some(2), 3, 3),
+                (Some(2), 4, 4),
+                (Some(2), 5, 5),
+                (Some(2), 6, 6),
+                (Some(2), 7, 7),
+                (Some(2), 8, 8)
             ]
         );
 
@@ -577,10 +577,10 @@ mod traversal_tests {
             Traversal::new(&dsym, &[0, 2], [1, 2, 3].into_iter())
                 .collect::<Vec<_>>(),
             vec![
-                (1, None, 1),
-                (1, Some(0), 2), (1, Some(2), 1),  (2, Some(2), 2),
-                (3, None, 3),
-                (3, Some(0), 4), (3, Some(2), 3),  (4, Some(2), 4),
+                (None, 1, 1),
+                (Some(0), 1, 2), (Some(2), 1, 1),  (Some(2), 2, 2),
+                (None, 3, 3),
+                (Some(0), 3, 4), (Some(2), 3, 3),  (Some(2), 4, 4),
             ]
         );
     }
