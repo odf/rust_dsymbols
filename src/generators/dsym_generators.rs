@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::str::FromStr;
 
 use crate::util::backtrack::BackTrackIterator;
@@ -196,10 +197,33 @@ impl DSymBackTracking {
         );
         let back = degree_list_as_string(corners);
         let cross = String::from(
-            if self.dset.is_weakly_oriented() { "" } else { "x" }
+            if self.is_weakly_oriented() { "" } else { "x" }
         );
 
         [ front, middle, back, cross ].join("")
+    }
+
+    fn is_weakly_oriented(&self) -> bool {
+        let mut sgn = vec![0; self.dset.size() + 1];
+        let mut queue = VecDeque::new();
+
+        sgn[1] = 1;
+        queue.push_back(1);
+
+        while let Some(d) = queue.pop_front() {
+            for i in 0..=self.dset.dim() {
+                if let Some(di) = self.dset.op(i, d) {
+                    if sgn[di] == 0 {
+                        sgn[di] = -sgn[d];
+                        queue.push_back(di);
+                    } else if di != d && sgn[di] != -sgn[d] {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
     }
 }
 
