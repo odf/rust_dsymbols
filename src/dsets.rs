@@ -50,15 +50,9 @@ pub trait DSet: Sized {
     fn partial_orientation(&self) -> Vec<Sign> {
         let mut sgn = vec![ZERO; self.size() + 1];
 
-        for (maybe_i, d, di) in self.full_traversal() {
+        for (_, d, di) in self.full_traversal() {
             if sgn[di] == ZERO {
-                sgn[di] = if maybe_i.is_none() {
-                    PLUS
-                } else if sgn[d] == PLUS {
-                    MINUS
-                } else {
-                    PLUS
-                }
+                sgn[di] = if sgn[d] == PLUS { MINUS } else { PLUS }
             }
         }
         sgn
