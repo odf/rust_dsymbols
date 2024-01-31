@@ -60,11 +60,11 @@ pub trait DSet: Sized {
         where I: Iterator<Item=usize>
     {
         let seeds = [seed].into_iter();
-        Traversal::new(self, indices, seeds).map(|(_, _, d)| d).collect()
+        self.traversal(indices, seeds).map(|(_, _, d)| d).collect()
     }
 
     fn full_orbit(&self, seed: usize) -> HashSet<usize> {
-        Traversal::new(self, 0..=self.dim(), [seed].into_iter())
+        self.traversal(0..=self.dim(), [seed].into_iter())
             .map(|(_, _, d)| d)
             .collect()
     }
