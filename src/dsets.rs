@@ -82,6 +82,15 @@ pub trait DSet: Sized {
         result
     }
 
+    fn is_connected(&self) -> bool {
+        for (i, d, _) in self.full_traversal() {
+            if i.is_none() && d > 1 {
+                return false;
+            }
+        }
+        true
+    }
+
     fn is_complete(&self) -> bool {
         (0..=self.dim()).all(|i|
             (1..=self.size()).all(|d|
@@ -692,6 +701,7 @@ mod partial_dset_tests {
         assert_eq!(dset.size(), 1);
         assert_eq!(dset.op(0, 0), None);
         assert_eq!(dset.op(0, 1), None);
+        assert!(dset.is_connected());
         assert!(!dset.is_complete());
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -709,6 +719,7 @@ mod partial_dset_tests {
         assert_eq!(dset.op(0, 0), None);
         assert_eq!(dset.op(0, 2), None);
         assert_eq!(dset.op(2, 1), None);
+        assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -719,6 +730,34 @@ mod partial_dset_tests {
         assert_eq!(
             dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
             Some("<1.1:2 1:2,2:0>".to_string())
+        )
+    }
+
+    #[test]
+    fn disconnected_partial_dset() {
+        let dset = build_dset(
+            2,
+            1,
+            HashMap::from([
+                ((0, 1), 1), ((1, 1), 1),
+                ((0, 2), 2), ((1, 2), 2),
+            ])
+        );
+
+        assert_eq!(dset.op(0, 0), None);
+        assert_eq!(dset.op(0, 2), Some(2));
+        assert_eq!(dset.op(2, 1), None);
+        assert!(!dset.is_connected());
+        assert!(dset.is_complete());
+        assert!(!dset.is_loopless());
+        assert!(dset.is_weakly_oriented());
+        assert!(!dset.is_oriented());
+        assert!(!dset.is_minimal());
+        assert_eq!(dset.to_string(), "<1.1:2 1:1 2,1 2:0 0>");
+        assert_eq!(dset.automorphisms().len(), 2);
+        assert_eq!(
+            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
+            Some("<1.1:4 1:3 4,3 4:0 0>".to_string())
         )
     }
 
@@ -735,6 +774,7 @@ mod partial_dset_tests {
         );
 
         assert_eq!(dset.op(0, 0), None);
+        assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -761,6 +801,7 @@ mod partial_dset_tests {
         );
 
         assert_eq!(dset.op(0, 0), None);
+        assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -798,6 +839,7 @@ mod simple_dset_tests {
         assert_eq!(dset.op(0, 0), None);
         assert_eq!(dset.op(0, 2), None);
         assert_eq!(dset.op(2, 1), None);
+        assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -824,6 +866,7 @@ mod simple_dset_tests {
         );
 
         assert_eq!(dset.op(0, 0), None);
+        assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
         assert!(dset.is_weakly_oriented());
@@ -850,6 +893,7 @@ mod simple_dset_tests {
         );
 
         assert_eq!(dset.op(0, 0), None);
+        assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(dset.is_loopless());
         assert!(dset.is_weakly_oriented());
