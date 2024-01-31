@@ -69,6 +69,18 @@ pub trait DSet: Sized {
             .collect()
     }
 
+    fn orbit_reps<I1, I2>(&self, indices: I1, seeds: I2) -> Vec<usize>
+        where I1: Iterator<Item=usize>, I2: Iterator<Item=usize>
+    {   let mut result = vec![];
+
+        for (i, d, _) in self.traversal(indices, seeds) {
+            if i.is_none() {
+                result.push(d);
+            }
+        }
+
+        result
+    }
 
     fn is_complete(&self) -> bool {
         (0..=self.dim()).all(|i|
@@ -640,6 +652,16 @@ mod traversal_tests {
         let dsym: PartialDSym = s.parse().unwrap();
 
         assert_eq!(dsym.full_orbit(1), HashSet::from([1, 2, 3, 4, 5, 6]));
+    }
+
+    #[test]
+    fn test_orbit_reps() {
+        let s = "<1.1:6:4 6 5,5 4 6,4 6 5:3,6>";
+        let dsym: PartialDSym = s.parse().unwrap();
+
+        assert_eq!(dsym.orbit_reps([0, 1].into_iter(), 1..=6), vec![1]);
+        assert_eq!(dsym.orbit_reps([0, 2].into_iter(), 1..=6), vec![1, 2, 3]);
+        assert_eq!(dsym.orbit_reps([1, 2].into_iter(), 1..=6), vec![1]);
     }
 }
 
