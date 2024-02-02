@@ -56,6 +56,75 @@ pub trait DSym : DSet {
 }
 
 
+pub struct TraversalCode<'a, T: DSym> {
+    ds: &'a T,
+    traversal: Traversal<'a, T, std::array::IntoIter<usize, 1>>,
+    next_element: usize,
+    element_map: Vec<usize>,
+    buffer: Vec<isize>,
+}
+
+
+impl<'a, T: DSym> TraversalCode<'a, T> {
+    pub fn new(ds: &'a T, seed: usize) -> Self {
+        Self {
+            ds,
+            traversal: ds.traversal(0..=ds.dim(), [seed].into_iter()),
+            next_element: 1,
+            element_map: vec![0; ds.size() + 1],
+            buffer: vec![],
+        }
+    }
+
+    fn advance(&mut self) -> bool {
+        if let Some((maybe_i, di, d)) = self.traversal.next() {
+            if self.element_map[d] == 0 {
+                self.element_map[d] = self.next_element;
+            }
+
+            if let Some(i) = maybe_i {
+                self.buffer.push(i as isize);
+                self.buffer.push(self.element_map[di] as isize);
+                self.buffer.push(self.element_map[d] as isize);
+            } else {
+                self.buffer.push(-1);
+                self.buffer.push(self.element_map[di] as isize);
+            }
+
+            if self.element_map[d] == self.next_element {
+                self.next_element += 1;
+
+                for i in 0..self.ds.dim() {
+                    self.buffer.push(self.ds.v(i, i + 1, d).unwrap() as isize);
+                }
+            }
+
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn get(&mut self, i: usize) -> Option<isize> {
+        while self.buffer.len() < i && self.advance() {
+        }
+        self.buffer.get(i).cloned()
+    }
+
+    pub fn get_code(&mut self) -> Vec<isize> {
+        while self.advance() {
+        }
+        self.buffer.clone()
+    }
+
+    pub fn get_map(&mut self) -> Vec<usize> {
+        while self.advance() {
+        }
+        self.element_map.clone()
+    }
+}
+
+
 #[derive(Clone)]
 pub struct PartialDSym {
     dset: SimpleDSet,
@@ -430,4 +499,62 @@ fn test_is_minimal() {
     assert!(!is_minimal("<1.1:3:2 3,1 3,1 2 3:3,6 6>"));
     assert!(is_minimal("<1.1:8:2 4 6 8,8 3 5 7,1 2 3 4 5 6 7 8:4,4 6 8 4>"));
     assert!(!is_minimal("<1.1:8:2 4 6 8,8 3 5 7,1 2 3 4 5 6 7 8:4,4 6 8 6>"));
+}
+
+
+#[test]
+fn test_traversal_code() {
+    let s = "<1.1:3:1 2 3,3 2,2 3:6 4,3>";
+    let dsym : PartialDSym = s.parse().unwrap();
+
+    assert_eq!(
+        TraversalCode::new(&dsym, 1).get_code(),
+        &[
+            -1, 1, 3, 1,
+            0, 1, 1,
+            1, 1, 2, 3, 1,
+            0, 2, 2,
+            2, 1, 3, 4, 1,
+            0, 3, 3,
+            1, 3, 3,
+            2, 2, 2,
+        ]
+    );
+    assert_eq!(
+        TraversalCode::new(&dsym, 2).get_code(),
+        &[
+            -1, 1, 4, 1,
+            0, 1, 1,
+            1, 1, 1,
+            2, 1, 2, 3, 1,
+            0, 2, 2,
+            1, 2, 3, 3, 1,
+            0, 3, 3,
+            2, 3, 3,
+        ]
+    );
+    assert_eq!(
+        TraversalCode::new(&dsym, 3).get_code(),
+        &[
+            -1, 1, 3, 1,
+            0, 1, 1,
+            1, 1, 2, 3, 1,
+            0, 2, 2,
+            2, 1, 1,
+            2, 2, 3, 4, 1,
+            0, 3, 3,
+            1, 3, 3,
+        ]
+    );
+}
+
+
+#[test]
+fn test_traversal_map() {
+    let s = "<1.1:3:1 2 3,3 2,2 3:6 4,3>";
+    let dsym : PartialDSym = s.parse().unwrap();
+
+    assert_eq!(TraversalCode::new(&dsym, 1).get_map(), &[0, 1, 3, 2]);
+    assert_eq!(TraversalCode::new(&dsym, 2).get_map(), &[0, 2, 1, 3]);
+    assert_eq!(TraversalCode::new(&dsym, 3).get_map(), &[0, 2, 3, 1]);
 }
