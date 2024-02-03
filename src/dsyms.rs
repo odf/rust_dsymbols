@@ -50,6 +50,34 @@ pub fn collect_orbits(ds: &SimpleDSet)
 }
 
 
+fn minimal_traversal_code<'a, T: DSym>(ds: &'a T) -> TraversalCode<'a, T> {
+    let mut best = TraversalCode::new(ds, 1);
+
+    for d in 2..=ds.size() {
+        let mut trav = TraversalCode::new(ds, d);
+        let mut dif = 0;
+
+        for i in 0.. {
+            dif = 0;
+            if let Some(next) = trav.get(i) {
+                dif = next - best.get(i).unwrap();
+                if dif != 0 {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        if dif < 0 {
+            best = trav;
+        }
+    }
+
+    best
+}
+
+
 pub trait DSym : DSet {
     fn r(&self, i: usize, j: usize, d: usize) -> Option<usize>;
     fn v(&self, i: usize, j: usize, d: usize) -> Option<usize>;
@@ -106,7 +134,7 @@ impl<'a, T: DSym> TraversalCode<'a, T> {
     }
 
     pub fn get(&mut self, i: usize) -> Option<isize> {
-        while self.buffer.len() < i && self.advance() {
+        while self.buffer.len() <= i && self.advance() {
         }
         self.buffer.get(i).cloned()
     }
@@ -535,6 +563,27 @@ fn test_traversal_code() {
     );
     assert_eq!(
         TraversalCode::new(&dsym, 3).get_code(),
+        &[
+            -1, 1, 3, 1,
+            0, 1, 1,
+            1, 1, 2, 3, 1,
+            0, 2, 2,
+            2, 1, 1,
+            2, 2, 3, 4, 1,
+            0, 3, 3,
+            1, 3, 3,
+        ]
+    );
+}
+
+
+#[test]
+fn test_minimal_traversal_code() {
+    let s = "<1.1:3:1 2 3,3 2,2 3:6 4,3>";
+    let dsym : PartialDSym = s.parse().unwrap();
+
+    assert_eq!(
+        minimal_traversal_code(&dsym).get_code(),
         &[
             -1, 1, 3, 1,
             0, 1, 1,
