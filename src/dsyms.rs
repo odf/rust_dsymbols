@@ -462,43 +462,6 @@ impl fmt::Display for SimpleDSym {
 }
 
 
-fn oriented_cover<T>(ds: &T, setcov: &SimpleDSet) -> Option<PartialDSym>
-    where T: DSet
-{
-    if ds.is_oriented() {
-        None
-    } else {
-        let mut cov: PartialDSym = setcov.clone().into();
-
-        for i in 0..cov.dim() {
-            for d in cov.orbit_reps_2d(i, i + 1) {
-                let e = (d - 1) % ds.size() + 1;
-                let vd = ds.m(i, i + 1, e)? / cov.r(i, i + 1, d)?;
-                cov.set_v(i, d, vd);
-            }
-        }
-
-        Some(cov)
-    }
-}
-
-
-impl OrientedCover<PartialDSym> for PartialDSym {
-    fn oriented_cover(&self) -> Option<PartialDSym> {
-        self.dset.oriented_cover()
-            .and_then(|setcov| oriented_cover(self, &setcov))
-    }
-}
-
-impl OrientedCover<SimpleDSym> for SimpleDSym {
-    fn oriented_cover(&self) -> Option<SimpleDSym> {
-        self.dset.oriented_cover()
-            .and_then(|setcov| oriented_cover(self, &setcov))
-            .map(Into::into)
-    }
-}
-
-
 #[test]
 fn test_parse_from_string() {
     let s = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
@@ -517,10 +480,6 @@ fn test_parse_from_string() {
     assert_eq!(dsym.to_string(), s);
     assert_eq!(dsym.automorphisms().len(), 1);
     assert_eq!(dsym.dset.automorphisms().len(), 2);
-    assert_eq!(
-        dsym.oriented_cover().and_then(|dso| Some(dso.to_string())),
-        Some("<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>".to_string())
-    )
 }
 
 

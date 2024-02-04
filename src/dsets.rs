@@ -525,53 +525,6 @@ impl fmt::Display for SimpleDSet {
 }
 
 
-fn oriented_cover<T>(ds: &T) -> Option<PartialDSet>
-    where T: DSet
-{
-    if ds.is_oriented() {
-        None
-    } else {
-        let sz = ds.size();
-        let ori = ds.partial_orientation();
-        let mut cov = PartialDSet::new(2 * ds.size(), ds.dim());
-
-        for i in 0..=ds.dim() {
-            for d in 1..=ds.size() {
-                if let Some(di) = ds.op(i, d) {
-                    if ori[di] != ori[d] {
-                        cov.set(i, d, di);
-                        cov.set(i, d + sz, di + sz);
-                    } else {
-                        cov.set(i, d, di + sz);
-                        cov.set(i, d + sz, di);
-                    }
-                }
-            }
-        }
-
-        Some(cov)
-    }
-}
-
-
-pub trait OrientedCover<T> {
-    fn oriented_cover(&self) -> Option<T>;
-}
-
-
-impl OrientedCover<PartialDSet> for PartialDSet {
-    fn oriented_cover(&self) -> Option<PartialDSet> {
-        oriented_cover(self)
-    }
-}
-
-impl OrientedCover<SimpleDSet> for SimpleDSet {
-    fn oriented_cover(&self) -> Option<SimpleDSet> {
-        oriented_cover(self).map(Into::into)
-    }
-}
-
-
 #[cfg(test)]
 mod traversal_tests {
     use std::iter;
@@ -709,7 +662,6 @@ mod partial_dset_tests {
         assert!(dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:1 1:0,0:0>");
         assert_eq!(dset.automorphisms().len(), 1);
-        assert!(dset.oriented_cover().is_none());
     }
 
     #[test]
@@ -727,10 +679,6 @@ mod partial_dset_tests {
         assert!(dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:1 1:1,1:0>");
         assert_eq!(dset.automorphisms().len(), 1);
-        assert_eq!(
-            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
-            Some("<1.1:2 1:2,2:0>".to_string())
-        )
     }
 
     #[test]
@@ -755,10 +703,6 @@ mod partial_dset_tests {
         assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:2 1:1 2,1 2:0 0>");
         assert_eq!(dset.automorphisms().len(), 2);
-        assert_eq!(
-            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
-            Some("<1.1:4 1:3 4,3 4:0 0>".to_string())
-        )
     }
 
     #[test]
@@ -782,10 +726,6 @@ mod partial_dset_tests {
         assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:3:2 3,1 3,2 3:0,0>");
         assert_eq!(dset.automorphisms().len(), 1);
-        assert_eq!(
-            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
-            Some("<1.1:6:2 6 5,4 3 6,2 6 5:0,0>".to_string())
-        )
     }
 
     #[test]
@@ -809,7 +749,6 @@ mod partial_dset_tests {
         assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:4:2 4,4 3,2 4:0,0>");
         assert_eq!(dset.automorphisms().len(), 4);
-        assert!(dset.oriented_cover().is_none());
     }
 }
 
@@ -847,10 +786,6 @@ mod simple_dset_tests {
         assert!(dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:1 1:1,1:0>");
         assert_eq!(dset.automorphisms().len(), 1);
-        assert_eq!(
-            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
-            Some("<1.1:2 1:2,2:0>".to_string())
-        )
     }
 
     #[test]
@@ -874,10 +809,6 @@ mod simple_dset_tests {
         assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:3:2 3,1 3,2 3:0,0>");
         assert_eq!(dset.automorphisms().len(), 1);
-        assert_eq!(
-            dset.oriented_cover().and_then(|dso| Some(dso.to_string())),
-            Some("<1.1:6:2 6 5,4 3 6,2 6 5:0,0>".to_string())
-        )
     }
 
     #[test]
@@ -901,6 +832,5 @@ mod simple_dset_tests {
         assert!(!dset.is_minimal());
         assert_eq!(dset.to_string(), "<1.1:4:2 4,4 3,2 4:0,0>");
         assert_eq!(dset.automorphisms().len(), 4);
-        assert!(dset.oriented_cover().is_none());
     }
 }
