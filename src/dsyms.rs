@@ -55,26 +55,31 @@ fn minimal_traversal_code<'a, T: DSym>(ds: &'a T) -> TraversalCode<'a, T> {
 
     for d in 2..=ds.size() {
         let mut trav = TraversalCode::new(ds, d);
-        let mut dif = 0;
-
-        for i in 0.. {
-            dif = 0;
-            if let Some(next) = trav.get(i) {
-                dif = next - best.get(i).unwrap();
-                if dif != 0 {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-
-        if dif < 0 {
+        if compare_codes(&mut trav, &mut best) < 0 {
             best = trav;
         }
     }
 
     best
+}
+
+
+fn compare_codes<T: DSym>(
+    trav: &mut TraversalCode<'_, T>,
+    best: &mut TraversalCode<'_, T>
+) -> isize
+{
+    for i in 0.. {
+        if let Some(next) = trav.get(i) {
+            let dif = next - best.get(i).unwrap();
+            if dif != 0 {
+                return dif;
+            }
+        } else {
+            return 0;
+        }
+    }
+    0
 }
 
 
