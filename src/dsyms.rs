@@ -50,7 +50,7 @@ pub fn collect_orbits(ds: &SimpleDSet)
 }
 
 
-fn minimal_traversal_code<'a, T: DSym>(ds: &'a T) -> TraversalCode<'a, T> {
+pub fn minimal_traversal_code<'a, T: DSym>(ds: &'a T) -> TraversalCode<'a, T> {
     let mut best = TraversalCode::new(ds, 1);
 
     for d in 2..=ds.size() {
