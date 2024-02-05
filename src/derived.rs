@@ -2,31 +2,40 @@ use crate::dsets::*;
 use crate::dsyms::*;
 
 
+fn set_cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSet
+    where
+        T: DSet,
+        F: Fn(usize, usize, usize) -> usize
+{
+    let sz = ds.size();
+    let src = |d: usize| (d - 1) % sz + 1;
+    let sheet = |d: usize| (d - src(d)) / sz;
+
+    let mut cov = PartialDSet::new(nr_sheets * sz, ds.dim());
+
+    for i in 0..=cov.dim() {
+        for d in 1..=cov.size() {
+            if let Some(di) = ds.op(i, src(d)) {
+                cov.set(i, d, sz * sheet_map(sheet(d), i, src(d)) + di);
+            }
+        }
+    }
+
+    cov
+}
+
+
 fn oriented_set_cover<T>(ds: &T) -> Option<PartialDSet>
     where T: DSet
 {
     if ds.is_oriented() {
         None
     } else {
-        let sz = ds.size();
         let ori = ds.partial_orientation();
-        let mut cov = PartialDSet::new(2 * ds.size(), ds.dim());
-
-        for i in 0..=ds.dim() {
-            for d in 1..=ds.size() {
-                if let Some(di) = ds.op(i, d) {
-                    if ori[di] != ori[d] {
-                        cov.set(i, d, di);
-                        cov.set(i, d + sz, di + sz);
-                    } else {
-                        cov.set(i, d, di + sz);
-                        cov.set(i, d + sz, di);
-                    }
-                }
-            }
-        }
-
-        Some(cov)
+        let sheet_map = |k, i, d| {
+            if ori[d] == ori[ds.op(i, d).unwrap()] { k ^ 1 } else { k }
+        };
+        Some(set_cover(ds, 2, sheet_map))
     }
 }
 
