@@ -40,23 +40,38 @@ fn oriented_set_cover<T>(ds: &T) -> Option<PartialDSet>
 }
 
 
+fn cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSym
+    where
+        T: DSym,
+        F: Fn(usize, usize, usize) -> usize
+{
+    let mut cov: PartialDSym = set_cover(ds, nr_sheets, sheet_map).into();
+
+    for i in 0..=cov.dim() {
+        for d in cov.orbit_reps_2d(i, i + 1) {
+            if let Some(r) = cov.r(i, i + 1, d) {
+                if let Some(m) = ds.m(i, i + 1, (d - 1) % ds.size() + 1) {
+                    cov.set_v(i, d, m / r);
+                }
+            }
+        }
+    }
+
+    cov
+}
+
+
 fn oriented_cover<T>(ds: &T) -> Option<PartialDSym>
     where T: DSym
 {
     if ds.is_oriented() {
         None
     } else {
-        let mut cov: PartialDSym = oriented_set_cover(ds)?.into();
-
-        for i in 0..cov.dim() {
-            for d in cov.orbit_reps_2d(i, i + 1) {
-                let e = (d - 1) % ds.size() + 1;
-                let vd = ds.m(i, i + 1, e)? / cov.r(i, i + 1, d)?;
-                cov.set_v(i, d, vd);
-            }
-        }
-
-        Some(cov)
+        let ori = ds.partial_orientation();
+        let sheet_map = |k, i, d| {
+            if ori[d] == ori[ds.op(i, d).unwrap()] { k ^ 1 } else { k }
+        };
+        Some(cover(ds, 2, sheet_map))
     }
 }
 
@@ -109,7 +124,7 @@ fn test_oriented_cover() {
     );
     check_cover(
         "<1.1:6:2 4 6,6 3 5,2 5 6:3,6>",
-        "<1.1:12:2 4 6 8 10 12,6 3 5 12 9 11,2 11 12 9 10 8:3 3,6 6>",
+        "<1.1:12:2 4 6 8 10 12,6 3 5 12 9 11,2 11 12 9 10 8:3 3,6 6 >",
     );
     check_cover(
         "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
