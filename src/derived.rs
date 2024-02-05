@@ -2,6 +2,37 @@ use crate::dsets::*;
 use crate::dsyms::*;
 
 
+fn canonical<T: DSym>(ds: &T) -> PartialDSym {
+    let src2img = minimal_traversal_code(ds).get_map();
+
+    let mut img2src = vec![0; ds.size() + 1];
+    for d in 1..=ds.size() {
+        img2src[src2img[d]] = d;
+    }
+    let img2src = img2src; // shadow with immutable version
+
+    let mut dset = PartialDSet::new(ds.size(), ds.dim());
+    for i in 0..=dset.dim() {
+        for d in 1..=dset.size() {
+            if let Some(di) = ds.op(i, img2src[d]) {
+                dset.set(i, d, src2img[di]);
+            }
+        }
+    }
+
+    let mut dsym: PartialDSym = dset.into();
+    for i in 0..=dsym.dim() {
+        for d in dsym.orbit_reps_2d(i, i + 1) {
+            if let Some(v) = ds.v(i, i + 1, img2src[d]) {
+                dsym.set_v(i, i + 1, v);
+            }
+        }
+    }
+
+    dsym
+}
+
+
 fn set_cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSet
     where
         T: DSet,
