@@ -64,9 +64,9 @@ pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
 }
 
 
-fn set_cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSet
+pub fn cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSym
     where
-        T: DSet,
+        T: DSym,
         F: Fn(usize, usize, usize) -> usize
 {
     let sz = ds.size();
@@ -74,38 +74,14 @@ fn set_cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSet
     let op = |i, d| ds.op(i, src(d))
         .map(|di| sz * sheet_map((d - src(d)) / sz, i, src(d)) + di);
 
-    build_set(nr_sheets * sz, ds.dim(), op)
-}
-
-
-fn oriented_set_cover<T>(ds: &T) -> Option<PartialDSet>
-    where T: DSet
-{
-    if ds.is_oriented() {
-        None
-    } else {
-        let ori = ds.partial_orientation();
-        let sheet_map = |k, i, d| {
-            if ori[d] == ori[ds.op(i, d).unwrap()] { k ^ 1 } else { k }
-        };
-        Some(set_cover(ds, 2, sheet_map))
-    }
-}
-
-
-fn cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSym
-    where
-        T: DSym,
-        F: Fn(usize, usize, usize) -> usize
-{
     build_sym_given_ms(
-        set_cover(ds, nr_sheets, sheet_map),
+        build_set(nr_sheets * sz, ds.dim(), op),
         |i, d| ds.m(i, i + 1, (d - 1) % ds.size() + 1)
     )
 }
 
 
-fn oriented_cover<T>(ds: &T) -> Option<PartialDSym>
+pub fn oriented_cover<T>(ds: &T) -> Option<PartialDSym>
     where T: DSym
 {
     if ds.is_oriented() {
@@ -120,43 +96,12 @@ fn oriented_cover<T>(ds: &T) -> Option<PartialDSym>
 }
 
 
-pub trait OrientedCover<T> {
-    fn oriented_cover(&self) -> Option<T>;
-}
-
-
-impl OrientedCover<PartialDSet> for PartialDSet {
-    fn oriented_cover(&self) -> Option<PartialDSet> {
-        oriented_set_cover(self)
-    }
-}
-
-impl OrientedCover<SimpleDSet> for SimpleDSet {
-    fn oriented_cover(&self) -> Option<SimpleDSet> {
-        oriented_set_cover(self).map(Into::into)
-    }
-}
-
-
-impl OrientedCover<PartialDSym> for PartialDSym {
-    fn oriented_cover(&self) -> Option<PartialDSym> {
-        oriented_cover(self)
-    }
-}
-
-impl OrientedCover<SimpleDSym> for SimpleDSym {
-    fn oriented_cover(&self) -> Option<SimpleDSym> {
-        oriented_cover(self).map(Into::into)
-    }
-}
-
-
 #[test]
 fn test_oriented_cover() {
     let check_cover = |src: &str, cov: &str| {
         assert_eq!(
             src.parse::<PartialDSym>()
-                .map(|ds| ds.oriented_cover().unwrap_or(ds)),
+                .map(|ds| oriented_cover(&ds).unwrap_or(ds)),
             cov.parse::<PartialDSym>(),
         );
     };
