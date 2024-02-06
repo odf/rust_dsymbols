@@ -64,6 +64,16 @@ pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
 }
 
 
+pub fn dual<T: DSym>(ds: &T) -> PartialDSym {
+    let n = ds.dim();
+
+    build_sym_given_vs(
+        build_set(ds.size(), n, |i, d| ds.op(n - i, d)),
+        |i, d| ds.v(n - i - 1, n - i, d)
+    )
+}
+
+
 pub fn cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSym
     where
         T: DSym,
@@ -98,11 +108,11 @@ pub fn oriented_cover<T>(ds: &T) -> Option<PartialDSym>
 
 #[test]
 fn test_oriented_cover() {
-    let check_cover = |src: &str, cov: &str| {
+    let check_cover = |src: &str, out: &str| {
         assert_eq!(
             src.parse::<PartialDSym>()
                 .map(|ds| oriented_cover(&ds).unwrap_or(ds)),
-            cov.parse::<PartialDSym>(),
+            out.parse::<PartialDSym>(),
         );
     };
 
@@ -127,10 +137,10 @@ fn test_oriented_cover() {
 
 #[test]
 fn test_canonical() {
-    let check_canonical = |src: &str, canon: &str| {
+    let check_canonical = |src: &str, out: &str| {
         assert_eq!(
             src.parse::<PartialDSym>().map(|ds| canonical(&ds)),
-            canon.parse::<PartialDSym>()
+            out.parse::<PartialDSym>()
         );
     };
 
@@ -154,4 +164,36 @@ fn test_canonical() {
         9 10 21 22 17 18 13 14 20 19 24 23:
         4 8,3 3 3 3>",
     )
+}
+
+
+#[test]
+fn test_dual() {
+    let check_dual = |src: &str, out: &str| {
+        assert_eq!(
+            src.parse::<PartialDSym>().map(|ds| dual(&ds)),
+            out.parse::<PartialDSym>()
+        );
+    };
+
+    check_dual(
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+        "<1.1:3:2 3,3 2,1 2 3:3,6 4>",
+    );
+    check_dual(
+        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+    );
+    check_dual(
+        "<1.1:24:
+        2 4 6 8 10 12 14 16 18 20 22 24,
+        16 3 5 7 9 11 13 15 24 19 21 23,
+        10 9 20 19 14 13 22 21 24 23 18 17:
+        8 4,3 3 3 3>",
+        "<1.1:24:
+        10 9 20 19 14 13 22 21 24 23 18 17,
+        16 3 5 7 9 11 13 15 24 19 21 23,
+        2 4 6 8 10 12 14 16 18 20 22 24:
+        3 3 3 3,8 4>",
+    );
 }
