@@ -2,6 +2,33 @@ use crate::dsets::*;
 use crate::dsyms::*;
 
 
+pub fn build<F1, F2>(size: usize, dim: usize, op: F1, v: F2) -> PartialDSym
+    where
+        F1: Fn(usize, usize) -> Option<usize>,
+        F2: Fn(usize, usize) -> Option<usize>
+{
+    let mut dset = PartialDSet::new(size, dim);
+    for i in 0..=dset.dim() {
+        for d in 1..=dset.size() {
+            if let Some(di) = op(i, d) {
+                dset.set(i, d, di);
+            }
+        }
+    }
+
+    let mut dsym: PartialDSym = dset.into();
+    for i in 0..dsym.dim() {
+        for d in dsym.orbit_reps_2d(i, i + 1) {
+            if let Some(v) = v(i, d) {
+                dsym.set_v(i, d, v);
+            }
+        }
+    }
+
+    dsym
+}
+
+
 pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     let src2img = minimal_traversal_code(ds).get_map();
 
@@ -11,25 +38,12 @@ pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     }
     let img2src = img2src; // shadow with immutable version
 
-    let mut dset = PartialDSet::new(ds.size(), ds.dim());
-    for i in 0..=dset.dim() {
-        for d in 1..=dset.size() {
-            if let Some(di) = ds.op(i, img2src[d]) {
-                dset.set(i, d, src2img[di]);
-            }
-        }
-    }
-
-    let mut dsym: PartialDSym = dset.into();
-    for i in 0..=dsym.dim() {
-        for d in dsym.orbit_reps_2d(i, i + 1) {
-            if let Some(v) = ds.v(i, i + 1, img2src[d]) {
-                dsym.set_v(i, d, v);
-            }
-        }
-    }
-
-    dsym
+    build(
+        ds.size(),
+        ds.dim(),
+        |i, d| ds.op(i, img2src[d]).map(|e| src2img[e]),
+        |i, d| ds.v(i, i + 1, img2src[d]),
+    )
 }
 
 
