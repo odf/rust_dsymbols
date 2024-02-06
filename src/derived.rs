@@ -32,15 +32,6 @@ fn build_sym_from_set<F>(dset: PartialDSet, v: F) -> PartialDSym
 }
 
 
-pub fn build_sym<F1, F2>(size: usize, dim: usize, op: F1, v: F2) -> PartialDSym
-    where
-        F1: Fn(usize, usize) -> Option<usize>,
-        F2: Fn(usize, usize) -> Option<usize>
-{
-    build_sym_from_set(build_set(size, dim, op), v)
-}
-
-
 pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     let src2img = minimal_traversal_code(ds).get_map();
 
@@ -48,14 +39,11 @@ pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     for d in 1..=ds.size() {
         img2src[src2img[d]] = d;
     }
-    let img2src = img2src; // shadow with immutable version
 
-    build_sym(
-        ds.size(),
-        ds.dim(),
-        |i, d| ds.op(i, img2src[d]).map(|e| src2img[e]),
-        |i, d| ds.v(i, i + 1, img2src[d]),
-    )
+    let op = |i, d| ds.op(i, img2src[d]).map(|e| src2img[e]);
+    let v = |i, d| ds.v(i, i + 1, img2src[d]);
+
+    build_sym_from_set(build_set(ds.size(), ds.dim(), op), v)
 }
 
 
