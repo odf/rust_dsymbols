@@ -455,7 +455,7 @@ impl fmt::Display for PartialDSet {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct SimpleDSet {
     size: usize,
     dim: usize,

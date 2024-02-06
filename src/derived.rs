@@ -174,15 +174,29 @@ fn test_oriented_cover() {
 fn test_canonical() {
     let check_canonical = |src: &str, canon: &str| {
         assert_eq!(
-            src.parse::<PartialDSym>().ok()
-                .map(|ds| canonical(&ds).to_string())
-                .unwrap(),
-            canon
+            src.parse::<PartialDSym>().ok().map(|ds| canonical(&ds)),
+            canon.parse::<PartialDSym>().ok()
         );
     };
 
     check_canonical(
         "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
-        "<1.1:3:1 2 3,2 3,1 3:6 4,3>"
+        "<1.1:3:1 2 3,2 3,1 3:6 4,3>",
     );
+    check_canonical(
+        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+        "<1.1:2 3:2,1 2,1 2,2:6,2 3,6>",
+    );
+    check_canonical(
+        "<1.1:24:
+        2 4 6 8 10 12 14 16 18 20 22 24,
+        16 3 5 7 9 11 13 15 24 19 21 23,
+        10 9 20 19 14 13 22 21 24 23 18 17:
+        8 4,3 3 3 3>",
+        "<1.1:24:
+        2 4 6 8 10 12 14 16 18 20 22 24,
+        8 3 5 7 24 11 13 15 17 19 21 23,
+        9 10 21 22 17 18 13 14 20 19 24 23:
+        4 8,3 3 3 3>",
+    )
 }

@@ -158,7 +158,7 @@ impl<'a, T: DSym> TraversalCode<'a, T> {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct PartialDSym {
     dset: SimpleDSet,
     orbit_index: Vec<Vec<usize>>,
