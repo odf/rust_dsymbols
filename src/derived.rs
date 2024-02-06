@@ -17,7 +17,7 @@ fn build_set<F>(size: usize, dim: usize, op: F) -> PartialDSet
 }
 
 
-fn build_sym_from_set<F>(dset: PartialDSet, v: F) -> PartialDSym
+fn build_sym_given_vs<F>(dset: PartialDSet, v: F) -> PartialDSym
     where F: Fn(usize, usize) -> Option<usize>
 {
     let mut dsym: PartialDSym = dset.into();
@@ -25,6 +25,23 @@ fn build_sym_from_set<F>(dset: PartialDSet, v: F) -> PartialDSym
         for d in dsym.orbit_reps_2d(i, i + 1) {
             if let Some(v) = v(i, d) {
                 dsym.set_v(i, d, v);
+            }
+        }
+    }
+    dsym
+}
+
+
+fn build_sym_given_ms<F>(dset: PartialDSet, m: F) -> PartialDSym
+    where F: Fn(usize, usize) -> Option<usize>
+{
+    let mut dsym: PartialDSym = dset.into();
+    for i in 0..dsym.dim() {
+        for d in dsym.orbit_reps_2d(i, i + 1) {
+            if let Some(r) = dsym.r(i, i + 1, d) {
+                if let Some(m) = m(i, d) {
+                    dsym.set_v(i, d, m / r);
+                }
             }
         }
     }
@@ -43,7 +60,7 @@ pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     let op = |i, d| ds.op(i, img2src[d]).map(|e| src2img[e]);
     let v = |i, d| ds.v(i, i + 1, img2src[d]);
 
-    build_sym_from_set(build_set(ds.size(), ds.dim(), op), v)
+    build_sym_given_vs(build_set(ds.size(), ds.dim(), op), v)
 }
 
 
@@ -81,19 +98,10 @@ fn cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSym
         T: DSym,
         F: Fn(usize, usize, usize) -> usize
 {
-    let mut cov: PartialDSym = set_cover(ds, nr_sheets, sheet_map).into();
-
-    for i in 0..=cov.dim() {
-        for d in cov.orbit_reps_2d(i, i + 1) {
-            if let Some(r) = cov.r(i, i + 1, d) {
-                if let Some(m) = ds.m(i, i + 1, (d - 1) % ds.size() + 1) {
-                    cov.set_v(i, d, m / r);
-                }
-            }
-        }
-    }
-
-    cov
+    build_sym_given_ms(
+        set_cover(ds, nr_sheets, sheet_map),
+        |i, d| ds.m(i, i + 1, (d - 1) % ds.size() + 1)
+    )
 }
 
 
@@ -170,8 +178,6 @@ fn test_oriented_cover() {
         "<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>"
     );
 }
-
-
 
 
 #[test]
