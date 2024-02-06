@@ -2,10 +2,8 @@ use crate::dsets::*;
 use crate::dsyms::*;
 
 
-pub fn build<F1, F2>(size: usize, dim: usize, op: F1, v: F2) -> PartialDSym
-    where
-        F1: Fn(usize, usize) -> Option<usize>,
-        F2: Fn(usize, usize) -> Option<usize>
+fn build_set<F>(size: usize, dim: usize, op: F) -> PartialDSet
+    where F: Fn(usize, usize) -> Option<usize>
 {
     let mut dset = PartialDSet::new(size, dim);
     for i in 0..=dset.dim() {
@@ -15,7 +13,13 @@ pub fn build<F1, F2>(size: usize, dim: usize, op: F1, v: F2) -> PartialDSym
             }
         }
     }
+    dset
+}
 
+
+fn build_sym_from_set<F>(dset: PartialDSet, v: F) -> PartialDSym
+    where F: Fn(usize, usize) -> Option<usize>
+{
     let mut dsym: PartialDSym = dset.into();
     for i in 0..dsym.dim() {
         for d in dsym.orbit_reps_2d(i, i + 1) {
@@ -24,8 +28,16 @@ pub fn build<F1, F2>(size: usize, dim: usize, op: F1, v: F2) -> PartialDSym
             }
         }
     }
-
     dsym
+}
+
+
+pub fn build_sym<F1, F2>(size: usize, dim: usize, op: F1, v: F2) -> PartialDSym
+    where
+        F1: Fn(usize, usize) -> Option<usize>,
+        F2: Fn(usize, usize) -> Option<usize>
+{
+    build_sym_from_set(build_set(size, dim, op), v)
 }
 
 
@@ -38,7 +50,7 @@ pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     }
     let img2src = img2src; // shadow with immutable version
 
-    build(
+    build_sym(
         ds.size(),
         ds.dim(),
         |i, d| ds.op(i, img2src[d]).map(|e| src2img[e]),
