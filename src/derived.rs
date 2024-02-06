@@ -2,7 +2,7 @@ use crate::dsets::*;
 use crate::dsyms::*;
 
 
-fn canonical<T: DSym>(ds: &T) -> PartialDSym {
+pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     let src2img = minimal_traversal_code(ds).get_map();
 
     let mut img2src = vec![0; ds.size() + 1];
@@ -24,7 +24,7 @@ fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     for i in 0..=dsym.dim() {
         for d in dsym.orbit_reps_2d(i, i + 1) {
             if let Some(v) = ds.v(i, i + 1, img2src[d]) {
-                dsym.set_v(i, i + 1, v);
+                dsym.set_v(i, d, v);
             }
         }
     }
@@ -164,5 +164,25 @@ fn test_oriented_cover() {
     check_cover(
         "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
         "<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>"
+    );
+}
+
+
+
+
+#[test]
+fn test_canonical() {
+    let check_canonical = |src: &str, canon: &str| {
+        assert_eq!(
+            src.parse::<PartialDSym>().ok()
+                .map(|ds| canonical(&ds).to_string())
+                .unwrap(),
+            canon
+        );
+    };
+
+    check_canonical(
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+        "<1.1:3:1 2 3,2 3,1 3:6 4,3>"
     );
 }
