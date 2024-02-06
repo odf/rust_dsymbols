@@ -1,5 +1,5 @@
 use nom::branch::alt;
-use nom::character::complete::{char, digit1, space1, space0};
+use nom::character::complete::{char, digit1, multispace0, multispace1};
 use nom::multi::separated_list1;
 use nom::sequence::{separated_pair, tuple};
 use nom::IResult;
@@ -26,15 +26,15 @@ pub fn parse_dsymbol(input: &str) -> Result<(&str, DSymSpec), String>
 fn dsymbol(input: &str) -> IResult<&str, DSymSpec> {
     map(
         tuple((
-            tuple((space0, char('<'), space0)),
+            tuple((ws0, char('<'), ws0)),
             counts,
-            tuple((space0, char(':'), space0)),
+            tuple((ws0, char(':'), ws0)),
             extents,
-            tuple((space0, char(':'), space0)),
+            tuple((ws0, char(':'), ws0)),
             int_lists,
-            tuple((space0, char(':'), space0)),
+            tuple((ws0, char(':'), ws0)),
             int_lists,
-            tuple((space0, char('>'), space0)),
+            tuple((ws0, char('>'), ws0)),
         )),
         |(_, (set_count, sym_count), _, (size, dim), _, op_spec, _, m_spec, _)|
         {
@@ -51,24 +51,34 @@ fn counts(input: &str) -> IResult<&str, (usize, usize)> {
 
 fn extents(input: &str) -> IResult<&str, (usize, usize)> {
     alt((
-        separated_pair(integer, space1, integer),
+        separated_pair(integer, ws1, integer),
         map(integer, |n| (n, 2))
     ))(input)
 }
 
 
 fn int_lists(input: &str) -> IResult<&str, Vec<Vec<usize>>> {
-    separated_list1(tuple((space0, char(','), space0)), int_list)(input)
+    separated_list1(tuple((ws0, char(','), ws0)), int_list)(input)
 }
 
 
 fn int_list(input: &str) -> IResult<&str, Vec<usize>> {
-    separated_list1(space1, integer)(input)
+    separated_list1(ws1, integer)(input)
 }
 
 
 fn integer(input: &str) -> IResult<&str, usize> {
     map_opt(digit1, |digits: &str| digits.parse().ok())(input)
+}
+
+
+fn ws0(input: &str) -> IResult<&str, &str> {
+    multispace0(input)
+}
+
+
+fn ws1(input: &str) -> IResult<&str, &str> {
+    multispace1(input)
 }
 
 
@@ -124,6 +134,26 @@ fn test_parse_incomplete_dsymbol() {
 fn test_parse_with_extra_spaces() {
     assert_eq!(
         dsymbol(" < 10.8: 2 3:1 2 , 1 2,  1 2  ,2 :3 3 , 3   4,4 >  "),
+        Ok(("", DSymSpec {
+            set_count: 10,
+            sym_count: 8,
+            size: 2,
+            dim: 3,
+            op_spec: vec![vec![1, 2], vec![1, 2], vec![1, 2], vec![2]],
+            m_spec: vec![vec![3, 3], vec![3, 4], vec![4]],
+        }))
+    );
+}
+
+
+#[test]
+fn test_parse_multiline() {
+    assert_eq!(
+        dsymbol(
+            "<10.8:2 3:
+            1 2,1 2,1 2,2
+            :3 3,3 4,4>"
+        ),
         Ok(("", DSymSpec {
             set_count: 10,
             sym_count: 8,
