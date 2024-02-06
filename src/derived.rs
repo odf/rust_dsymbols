@@ -66,19 +66,10 @@ fn set_cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSet
 {
     let sz = ds.size();
     let src = |d: usize| (d - 1) % sz + 1;
-    let sheet = |d: usize| (d - src(d)) / sz;
+    let op = |i, d| ds.op(i, src(d))
+        .map(|di| sz * sheet_map((d - src(d)) / sz, i, src(d)) + di);
 
-    let mut cov = PartialDSet::new(nr_sheets * sz, ds.dim());
-
-    for i in 0..=cov.dim() {
-        for d in 1..=cov.size() {
-            if let Some(di) = ds.op(i, src(d)) {
-                cov.set(i, d, sz * sheet_map(sheet(d), i, src(d)) + di);
-            }
-        }
-    }
-
-    cov
+    build_set(nr_sheets * sz, ds.dim(), op)
 }
 
 
