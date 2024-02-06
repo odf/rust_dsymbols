@@ -142,10 +142,9 @@ impl OrientedCover<SimpleDSym> for SimpleDSym {
 fn test_oriented_cover() {
     let check_cover = |src: &str, cov: &str| {
         assert_eq!(
-            src.parse::<PartialDSym>().ok().and_then(|ds|
-                Some(ds.oriented_cover().unwrap_or(ds).to_string())
-            ).unwrap(),
-            cov
+            src.parse::<PartialDSym>()
+                .map(|ds| ds.oriented_cover().unwrap_or(ds)),
+            cov.parse::<PartialDSym>(),
         );
     };
 
@@ -174,8 +173,8 @@ fn test_oriented_cover() {
 fn test_canonical() {
     let check_canonical = |src: &str, canon: &str| {
         assert_eq!(
-            src.parse::<PartialDSym>().ok().map(|ds| canonical(&ds)),
-            canon.parse::<PartialDSym>().ok()
+            src.parse::<PartialDSym>().map(|ds| canonical(&ds)),
+            canon.parse::<PartialDSym>()
         );
     };
 
