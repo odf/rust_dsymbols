@@ -291,7 +291,7 @@ impl BackTracking for DSymBackTracking {
             );
 
         if good {
-            Some(PartialDSym::build(
+            Some(PartialDSym::from_fields(
                 self.dset.clone(),
                 self.orbit_index.clone(),
                 self.orbit_rs.clone(),

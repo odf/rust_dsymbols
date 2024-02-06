@@ -174,7 +174,7 @@ impl PartialDSym {
         PartialDSym { dset: dset.clone(), orbit_index, orbit_rs, orbit_vs }
     }
 
-    pub fn build(
+    pub fn from_fields(
         dset: SimpleDSet,
         orbit_index: Vec<Vec<usize>>,
         orbit_rs: Vec<usize>,
