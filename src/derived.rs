@@ -17,7 +17,7 @@ fn build_set<F>(size: usize, dim: usize, op: F) -> PartialDSet
 }
 
 
-fn build_sym_given_vs<F>(dset: PartialDSet, v: F) -> PartialDSym
+fn build_sym_using_vs<F>(dset: PartialDSet, v: F) -> PartialDSym
     where F: Fn(usize, usize) -> Option<usize>
 {
     let mut dsym: PartialDSym = dset.into();
@@ -32,7 +32,7 @@ fn build_sym_given_vs<F>(dset: PartialDSet, v: F) -> PartialDSym
 }
 
 
-fn build_sym_given_ms<F>(dset: PartialDSet, m: F) -> PartialDSym
+fn build_sym_using_ms<F>(dset: PartialDSet, m: F) -> PartialDSym
     where F: Fn(usize, usize) -> Option<usize>
 {
     let mut dsym: PartialDSym = dset.into();
@@ -60,16 +60,44 @@ pub fn canonical<T: DSym>(ds: &T) -> PartialDSym {
     let op = |i, d| ds.op(i, img2src[d]).map(|e| src2img[e]);
     let v = |i, d| ds.v(i, i + 1, img2src[d]);
 
-    build_sym_given_vs(build_set(ds.size(), ds.dim(), op), v)
+    build_sym_using_vs(build_set(ds.size(), ds.dim(), op), v)
 }
 
 
 pub fn dual<T: DSym>(ds: &T) -> PartialDSym {
     let n = ds.dim();
 
-    build_sym_given_vs(
+    build_sym_using_vs(
         build_set(ds.size(), n, |i, d| ds.op(n - i, d)),
         |i, d| ds.v(n - i - 1, n - i, d)
+    )
+}
+
+
+pub fn subsymbol<T, I>(ds: &T, indices: I, seed: usize) -> PartialDSym
+    where T: DSym, I: Iterator<Item=usize>
+{
+    let indices: Vec<_> = indices.collect();
+    let elements = ds.orbit(indices.iter().cloned(), seed);
+
+    let mut src2img = vec![0; ds.size() + 1];
+    let mut img2src = vec![0; ds.size() + 1];
+    let mut next = 1;
+    for d in 1..=ds.size() {
+        if elements.contains(&d) {
+            src2img[d] = next;
+            img2src[next] = d;
+            next += 1;
+        }
+    }
+
+    build_sym_using_vs(
+        build_set(
+            elements.len(),
+            indices.len() - 1,
+            |i, d| ds.op(indices[i], img2src[d]).map(|e| src2img[e])
+        ),
+        |i, d| ds.v(indices[i], indices[i + 1], img2src[d])
     )
 }
 
@@ -84,7 +112,7 @@ pub fn cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSym
     let op = |i, d| ds.op(i, src(d))
         .map(|di| sz * sheet_map((d - src(d)) / sz, i, src(d)) + di);
 
-    build_sym_given_ms(
+    build_sym_using_ms(
         build_set(nr_sheets * sz, ds.dim(), op),
         |i, d| ds.m(i, i + 1, (d - 1) % ds.size() + 1)
     )
@@ -196,4 +224,33 @@ fn test_dual() {
         2 4 6 8 10 12 14 16 18 20 22 24:
         3 3 3 3,8 4>",
     );
+}
+
+
+#[test]
+fn test_subsymbol() {
+    let check_subsymbol = |src: &str, idcs: &[usize], seed, out: &str| {
+        assert_eq!(
+            src.parse::<PartialDSym>()
+                .map(|ds| subsymbol(&ds, idcs.iter().cloned(), seed)),
+            out.parse::<PartialDSym>()
+        );
+    };
+
+    check_subsymbol(
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", &[0, 1], 1,
+        "<1.1:2 1:1 2,2:6>"
+    );
+    check_subsymbol(
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", &[0, 1], 2,
+        "<1.1:1 1:1,1:4>"
+    );
+    check_subsymbol(
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", &[1, 2], 1,
+        "<1.1:3 1:3 2,2 3:3>"
+    );
+    check_subsymbol(
+        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", &[0, 1, 2], 1,
+        "<1.1:2:2,1 2,1 2:6,3 2>"
+    )
 }
