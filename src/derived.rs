@@ -1,5 +1,6 @@
 use crate::dsets::*;
 use crate::dsyms::*;
+use crate::util::partitions::Partition;
 
 
 fn build_set<F>(size: usize, dim: usize, op: F) -> PartialDSet
@@ -134,6 +135,41 @@ pub fn oriented_cover<T>(ds: &T) -> Option<PartialDSym>
 }
 
 
+pub fn minimal_image<T>(ds: &T) -> Option<PartialDSym>
+    where T: DSym
+{
+    if ds.is_minimal() {
+        None
+    } else {
+        let p = (2..=ds.size())
+            .fold(Partition::new(), |p, d| ds.fold(&p, 1, d).unwrap_or(p));
+
+        let mut src2img = vec![0; ds.size() + 1];
+        let mut img2src = vec![0; ds.size() + 1];
+        let mut next = 1;
+        for d in 1..=ds.size() {
+            let e = p.find(&d);
+            if src2img[e] == 0 {
+                src2img[e] = next;
+                img2src[next] = e;
+                next += 1;
+            }
+            src2img[d] = src2img[e];
+        }
+
+
+        Some(build_sym_using_ms(
+            build_set(
+                next - 1,
+                ds.dim(),
+                |i, d| ds.op(i, img2src[d]).map(|e| src2img[e])
+            ),
+            |i, d| ds.m(i, i + 1, img2src[d])
+        ))
+    }
+}
+
+
 #[test]
 fn test_oriented_cover() {
     let check_cover = |src: &str, out: &str| {
@@ -253,4 +289,37 @@ fn test_subsymbol() {
         "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", &[0, 1, 2], 1,
         "<1.1:2:2,1 2,1 2:6,3 2>"
     )
+}
+
+
+#[test]
+fn test_minimal() {
+    let check_minimal = |src: &str, out: &str| {
+        assert_eq!(
+            src.parse::<PartialDSym>()
+                .map(|ds| minimal_image(&ds).unwrap_or(ds)),
+            out.parse::<PartialDSym>()
+        );
+    };
+
+    check_minimal(
+        "<1.1:24:
+        2 4 6 8 10 12 14 16 18 20 22 24,
+        16 3 5 7 9 11 13 15 24 19 21 23,
+        10 9 20 19 14 13 22 21 24 23 18 17:
+        8 4,3 3 3 3>",
+        "<1.1:3:1 2 3,2 3,1 3:8 4,3>",
+    );
+    check_minimal(
+        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+    );
+    check_minimal(
+        "<1.1:3:1 2 3,3 2,2 3:6 6,3>",
+        "<1.1:1:1,1,1:6,3>",
+    );
+    check_minimal(
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+    );
 }
