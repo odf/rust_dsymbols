@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::ops::Mul;
 
 
@@ -87,6 +88,33 @@ impl Mul<FreeWord> for FreeWord {
 }
 
 
+impl PartialOrd for &FreeWord {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+
+impl Ord for &FreeWord {
+    fn cmp(&self, other: &Self) -> Ordering {
+        for i in 0..(self.w.len().min(other.w.len())) {
+            let x = self.w[i];
+            let y = other.w[i];
+
+            if x != y {
+                if x > 0 && y > 0 {
+                    return x.cmp(&y);
+                } else {
+                    return y.cmp(&x);
+                }
+            }
+        }
+
+        self.w.len().cmp(&other.w.len())
+    }
+}
+
+
 impl From<&[isize]> for FreeWord {
     fn from(value: &[isize]) -> Self {
         Self { w: normalized(&[value]) }
@@ -153,4 +181,17 @@ fn test_freeword_commutator() {
         FreeWord::new(&[1, 2]).commutator(&FreeWord::new(&[3, 2])),
         FreeWord::new(&[1, 2, 3, -1, -2, -3])
     )
+}
+
+
+#[test]
+fn test_freeword_cmp() {
+    assert!(&FreeWord::empty() == &FreeWord::new(&[]));
+    assert!(&FreeWord::empty() < &FreeWord::new(&[1]));
+    assert!(&FreeWord::new(&[2]) > &FreeWord::new(&[1]));
+    assert!(&FreeWord::new(&[1]) < &FreeWord::new(&[-1]));
+    assert!(&FreeWord::new(&[-1]) > &FreeWord::new(&[2]));
+    assert!(&FreeWord::new(&[-1]) < &FreeWord::new(&[-2]));
+    assert!(&FreeWord::new(&[1, 2, 3, -1]) < &FreeWord::new(&[1, 2, 3, -2]));
+    assert!(&FreeWord::new(&[1, 2, 3]) < &FreeWord::new(&[1, 2, 3, -2]));
 }
