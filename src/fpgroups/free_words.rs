@@ -1,4 +1,4 @@
-use std::iter as iter;
+use std::ops::Mul;
 
 
 fn normalized(ws: &[&[isize]]) -> Vec<isize> {
@@ -41,11 +41,44 @@ impl FreeWord {
         if m < 0 {
             self.inverse().raised_to(-m)
         } else {
-            let w: Vec<_> = iter::repeat(&self.w[..])
-                .take(m as usize)
-                .collect();
-            Self::new(&normalized(&w))
+            (0..m).fold(FreeWord::empty(), |a, _| a * self)
         }
+    }
+}
+
+
+impl Mul<&FreeWord> for &FreeWord {
+    type Output = FreeWord;
+
+    fn mul(self, rhs: &FreeWord) -> Self::Output {
+        FreeWord::new(&normalized(&[&self.w, &rhs.w]))
+    }
+}
+
+
+impl Mul<FreeWord> for &FreeWord {
+    type Output = FreeWord;
+
+    fn mul(self, rhs: FreeWord) -> Self::Output {
+        self * &rhs
+    }
+}
+
+
+impl Mul<&FreeWord> for FreeWord {
+    type Output = FreeWord;
+
+    fn mul(self, rhs: &FreeWord) -> Self::Output {
+        &self * rhs
+    }
+}
+
+
+impl Mul<FreeWord> for FreeWord {
+    type Output = FreeWord;
+
+    fn mul(self, rhs: FreeWord) -> Self::Output {
+        &self * &rhs
     }
 }
 
@@ -97,5 +130,14 @@ fn test_freeword_raise_to() {
     assert_eq!(
         FreeWord::new(&[1, 2, 1, -2, -1]).raised_to(3),
         FreeWord::new(&[1, 2, 1, 1, 1, -2, -1])
+    );
+}
+
+
+#[test]
+fn test_freeword_mul() {
+    assert_eq!(
+        FreeWord::new(&[1, 2, 3]) * FreeWord::new(&[-3, -2, 1]),
+        FreeWord::new(&[1, 1])
     );
 }
