@@ -44,6 +44,10 @@ impl FreeWord {
             (0..m).fold(FreeWord::empty(), |a, _| a * self)
         }
     }
+
+    pub fn commutator(&self, other: &FreeWord) -> Self {
+        self * other * self.inverse() * other.inverse()
+    }
 }
 
 
@@ -140,4 +144,13 @@ fn test_freeword_mul() {
         FreeWord::new(&[1, 2, 3]) * FreeWord::new(&[-3, -2, 1]),
         FreeWord::new(&[1, 1])
     );
+}
+
+
+#[test]
+fn test_freeword_commutator() {
+    assert_eq!(
+        FreeWord::new(&[1, 2]).commutator(&FreeWord::new(&[3, 2])),
+        FreeWord::new(&[1, 2, 3, -1, -2, -3])
+    )
 }
