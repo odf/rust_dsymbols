@@ -1,4 +1,5 @@
 pub mod util;
+pub mod fpgroups;
 pub mod dsets;
 pub mod dsyms;
 pub mod derived;
