@@ -49,6 +49,13 @@ impl FreeWord {
     pub fn commutator(&self, other: &FreeWord) -> Self {
         self * other * self.inverse() * other.inverse()
     }
+
+    pub fn rotated(&self, i: isize) -> Self {
+        let n = self.w.len() as isize;
+        let i = (n - i.rem_euclid(n)) as usize;
+        let w_iter = self.w[i..].iter().chain(self.w[..i].iter()).cloned();
+        Self::new(&w_iter.collect::<Vec<_>>())
+    }
 }
 
 
@@ -194,4 +201,25 @@ fn test_freeword_cmp() {
     assert!(&FreeWord::new(&[-1]) < &FreeWord::new(&[-2]));
     assert!(&FreeWord::new(&[1, 2, 3, -1]) < &FreeWord::new(&[1, 2, 3, -2]));
     assert!(&FreeWord::new(&[1, 2, 3]) < &FreeWord::new(&[1, 2, 3, -2]));
+}
+
+
+#[test]
+fn test_freeword_rotated() {
+    assert_eq!(
+        FreeWord::new(&[1, 2, 3]).rotated(0),
+        FreeWord::new(&[1, 2, 3])
+    );
+    assert_eq!(
+        FreeWord::new(&[1, 2, 3]).rotated(2),
+        FreeWord::new(&[2, 3, 1])
+    );
+    assert_eq!(
+        FreeWord::new(&[1, 2, 3]).rotated(-5),
+        FreeWord::new(&[3, 1, 2])
+    );
+    assert_eq!(
+        FreeWord::new(&[1, 2, -1]).rotated(1),
+        FreeWord::new(&[2])
+    );
 }
