@@ -3,16 +3,14 @@ use std::collections::BTreeSet;
 use std::ops::Mul;
 
 
-fn normalized(ws: &[&[isize]]) -> Vec<isize> {
+fn normalized(w: &[isize]) -> Vec<isize> {
     let mut buffer = vec![];
 
-    for &w in ws {
-        for &x in w {
-            if buffer.last().is_some_and(|y| x == -y) {
-                buffer.pop();
-            } else if x != 0 {
-                buffer.push(x);
-            }
+    for &x in w {
+        if buffer.last().is_some_and(|y| x == -y) {
+            buffer.pop();
+        } else if x != 0 {
+            buffer.push(x);
         }
     }
 
@@ -28,7 +26,7 @@ pub struct FreeWord {
 
 impl FreeWord {
     pub fn new(w: &[isize]) -> Self {
-        Self { w: normalized(&[w]) }
+        Self { w: normalized(w) }
     }
 
     pub fn empty() -> Self {
@@ -54,8 +52,7 @@ impl FreeWord {
     pub fn rotated(&self, i: isize) -> Self {
         let n = self.w.len() as isize;
         let i = (n - i.rem_euclid(n)) as usize;
-        let w_iter = self.w[i..].iter().chain(self.w[..i].iter()).cloned();
-        Self::new(&w_iter.collect::<Vec<_>>())
+        Self::new(&self.w[i..]) * Self::new(&self.w[..i])
     }
 }
 
@@ -64,7 +61,9 @@ impl Mul<&FreeWord> for &FreeWord {
     type Output = FreeWord;
 
     fn mul(self, rhs: &FreeWord) -> Self::Output {
-        FreeWord::new(&normalized(&[&self.w, &rhs.w]))
+        FreeWord::new(
+            &self.w.iter().chain(rhs.w.iter()).cloned().collect::<Vec<_>>()
+        )
     }
 }
 
@@ -183,11 +182,11 @@ impl From<Vec<isize>> for Relator {
 
 
 #[test]
-fn test_freeword_normalized() {
-    assert_eq!(normalized(&[&[]]), &[]);
-    assert_eq!(normalized(&[&[1, 2]]), &[1, 2]);
-    assert_eq!(normalized(&[&[1, 2], &[-2, -1]]), &[]);
-    assert_eq!(normalized(&[&[1, 2, -2], &[1, 2]]), &[1, 1, 2]);
+fn test_freeword_new() {
+    assert_eq!(FreeWord::new(&[]).w, &[]);
+    assert_eq!(FreeWord::new(&[1, 2]).w, &[1, 2]);
+    assert_eq!(FreeWord::new(&[1, 2, -2, -1]).w, &[]);
+    assert_eq!(FreeWord::new(&[1, 2, -2, 1, 2]).w, &[1, 1, 2]);
 }
 
 
