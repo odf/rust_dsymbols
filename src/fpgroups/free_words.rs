@@ -123,16 +123,9 @@ impl Ord for FreeWord {
 }
 
 
-impl From<&[isize]> for FreeWord {
-    fn from(value: &[isize]) -> Self {
-        Self { w: normalized(&[value]) }
-    }
-}
-
-
 impl From<Vec<isize>> for FreeWord {
     fn from(value: Vec<isize>) -> Self {
-        (&value[..]).into()
+        Self::new(&value)
     }
 }
 
@@ -171,6 +164,20 @@ impl Relator {
 
     pub fn permutations(&self) -> BTreeSet<FreeWord> {
         relator_permutations(&self.fw).iter().cloned().collect()
+    }
+}
+
+
+impl From<FreeWord> for Relator {
+    fn from(value: FreeWord) -> Self {
+        Self::new(&value)
+    }
+}
+
+
+impl From<Vec<isize>> for Relator {
+    fn from(value: Vec<isize>) -> Self {
+        FreeWord::from(value).into()
     }
 }
 
@@ -324,4 +331,12 @@ fn test_relator_permutations() {
             FreeWord::new(&[-2, -1, -2, -1]),
         ]
     );
+}
+
+
+#[test]
+fn test_relator_from() {
+    let rel: Relator = vec![1, 2, 3].into();
+    assert_eq!(rel, vec![1, 2, 3].into());
+    assert_eq!(rel.fw, vec![1, 2, 3].into());
 }
