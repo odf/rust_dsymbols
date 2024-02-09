@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::ops::Mul;
 
 
@@ -95,14 +96,14 @@ impl Mul<FreeWord> for FreeWord {
 }
 
 
-impl PartialOrd for &FreeWord {
+impl PartialOrd for FreeWord {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(&other))
     }
 }
 
 
-impl Ord for &FreeWord {
+impl Ord for FreeWord {
     fn cmp(&self, other: &Self) -> Ordering {
         for i in 0..(self.w.len().min(other.w.len())) {
             let x = self.w[i];
@@ -137,14 +138,18 @@ impl From<Vec<isize>> for FreeWord {
 
 
 fn relator_permutations(fw: &FreeWord) -> Vec<FreeWord> {
-    let mut result = vec![];
+    if fw.w.len() == 0 {
+        vec![fw.clone()]
+    } else {
+        let mut result = vec![];
 
-    for i in 0..fw.w.len() {
-        let w = fw.rotated(i as isize);
-        result.push(w.inverse());
-        result.push(w);
+        for i in 0..fw.w.len() {
+            let w = fw.rotated(i as isize);
+            result.push(w.inverse());
+            result.push(w);
+        }
+        result
     }
-    result
 }
 
 
@@ -162,6 +167,10 @@ pub struct Relator {
 impl Relator {
     pub fn new(fw: &FreeWord) -> Self {
         Self { fw: relator_representative(fw) }
+    }
+
+    pub fn permutations(&self) -> BTreeSet<FreeWord> {
+        relator_permutations(&self.fw).iter().cloned().collect()
     }
 }
 
@@ -258,6 +267,10 @@ fn test_freeword_rotated() {
 #[test]
 fn test_relator_representative() {
     assert_eq!(
+        relator_representative(&FreeWord::new(&[])),
+        FreeWord::new(&[])
+    );
+    assert_eq!(
         relator_representative(&FreeWord::new(&[3, 2, 1])),
         FreeWord::new(&[1, 3, 2])
     );
@@ -276,6 +289,39 @@ fn test_relator_representative() {
 fn test_relator_new() {
     assert_eq!(
         Relator::new(&FreeWord::new(&[3, 2, 1])).fw,
-        FreeWord::new(&[1, 3, 2])
+        relator_representative(&FreeWord::new(&[3, 2, 1]))
+    );
+}
+
+
+#[test]
+fn test_relator_permutations() {
+    let perms = |w| {
+        Relator::new(&FreeWord::new(w))
+            .permutations().iter()
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+
+    assert_eq!(perms(&[]), vec![FreeWord::new(&[])]);
+    assert_eq!(perms(&[1]), vec![FreeWord::new(&[1]), FreeWord::new(&[-1])]);
+
+    assert_eq!(
+        perms(&[1, 2]),
+        vec![
+            FreeWord::new(&[1, 2]),
+            FreeWord::new(&[2, 1]),
+            FreeWord::new(&[-1, -2]),
+            FreeWord::new(&[-2, -1]),
+        ]
+    );
+    assert_eq!(
+        perms(&[1, 2, 1, 2]),
+        vec![
+            FreeWord::new(&[1, 2, 1, 2]),
+            FreeWord::new(&[2, 1, 2, 1]),
+            FreeWord::new(&[-1, -2, -1, -2]),
+            FreeWord::new(&[-2, -1, -2, -1]),
+        ]
     );
 }
