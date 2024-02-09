@@ -19,7 +19,7 @@ fn normalized(ws: &[&[isize]]) -> Vec<isize> {
 }
 
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FreeWord {
     w: Vec<isize>
 }
@@ -136,6 +136,36 @@ impl From<Vec<isize>> for FreeWord {
 }
 
 
+fn relator_permutations(fw: &FreeWord) -> Vec<FreeWord> {
+    let mut result = vec![];
+
+    for i in 0..fw.w.len() {
+        let w = fw.rotated(i as isize);
+        result.push(w.inverse());
+        result.push(w);
+    }
+    result
+}
+
+
+fn relator_representative(fw: &FreeWord) -> FreeWord {
+    relator_permutations(fw).iter().min().unwrap().clone()
+}
+
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Relator {
+    fw: FreeWord
+}
+
+
+impl Relator {
+    pub fn new(fw: &FreeWord) -> Self {
+        Self { fw: relator_representative(fw) }
+    }
+}
+
+
 #[test]
 fn test_freeword_normalized() {
     assert_eq!(normalized(&[&[]]), &[]);
@@ -221,5 +251,31 @@ fn test_freeword_rotated() {
     assert_eq!(
         FreeWord::new(&[1, 2, -1]).rotated(1),
         FreeWord::new(&[2])
+    );
+}
+
+
+#[test]
+fn test_relator_representative() {
+    assert_eq!(
+        relator_representative(&FreeWord::new(&[3, 2, 1])),
+        FreeWord::new(&[1, 3, 2])
+    );
+    assert_eq!(
+        relator_representative(&FreeWord::new(&[3, 2, -1])),
+        FreeWord::new(&[1, -2, -3])
+    );
+    assert_eq!(
+        relator_representative(&FreeWord::new(&[3, -1, 2, -1])),
+        FreeWord::new(&[1, -2, 1, -3])
+    );
+}
+
+
+#[test]
+fn test_relator_new() {
+    assert_eq!(
+        Relator::new(&FreeWord::new(&[3, 2, 1])).fw,
+        FreeWord::new(&[1, 3, 2])
     );
 }
