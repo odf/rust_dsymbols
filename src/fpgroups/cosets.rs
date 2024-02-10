@@ -1,6 +1,8 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 
 use crate::util::partitions::Partition;
+
+use super::free_words::{FreeWord, Relator};
 
 
 #[derive(Clone)]
@@ -48,7 +50,7 @@ impl CosetTable {
         assert!(d > 0);
         assert!(g >= -n && g <= n);
 
-        while c < self.len() {
+        while c > self.len() {
             self.table.push(vec![0; 2 * self.nr_gens + 1]);
         }
         self.table[c][(g + n) as usize] = d;
@@ -63,7 +65,7 @@ impl CosetTable {
         self.part.find(&c)
     }
 
-    fn identify(&mut self, a: usize, b: usize) {
+    fn merge(&mut self, a: usize, b: usize) {
         let mut queue: VecDeque<(usize, usize)> = VecDeque::from([(a, b)]);
 
         while let Some((a, b)) = queue.pop_back() {
@@ -113,4 +115,83 @@ impl CosetTable {
 
         result
     }
+}
+
+
+fn scan(table: &CosetTable, w: &FreeWord, start: usize, limit: usize)
+    -> (usize, usize)
+{
+    let mut row = start;
+
+    for index in 0..limit {
+        let next = table.get(row, w[index]);
+        if next == 0 {
+            return (row, index);
+        } else {
+            row = next
+        }
+    }
+    (row, limit)
+}
+
+
+fn scan_both_ways(table: &CosetTable, w: &FreeWord, start: usize)
+    -> (usize, usize, usize, isize)
+{
+    let n = w.len();
+    let (head, i) = scan(table, w, start, n);
+    let (tail, j) = scan(table, &w.inverse(), start, n - i);
+    (head, tail, n - i - j, w[i])
+}
+
+
+fn scan_and_connect(table: &mut CosetTable, w: &FreeWord, start: usize) {
+    let (head, tail, gap, c) = scan_both_ways(table, w, start);
+
+    if gap == 1 {
+        table.join(head, tail, c);
+    } else if gap == 0 && head != tail {
+        table.merge(head, tail);
+    }
+}
+
+
+pub fn coset_table(
+    nr_gens: usize, relators: &Vec<Relator>, subgroup_gens: &Vec<FreeWord>
+) -> Vec<HashMap<isize, isize>>
+{
+    let mut rels = BTreeSet::new();
+    for rel in relators {
+        rels.extend(rel.permutations());
+    }
+    let rels = rels;
+
+    let mut table = CosetTable::new(nr_gens);
+    let mut i = 0;
+
+    while i < table.len() {
+        i += 1;
+        if i != table.canon(i) {
+            continue;
+        }
+
+        for g in table.all_gens() {
+            if table.get(i, g) == 0 {
+                let n = table.len();
+                assert!(n < 100_000, "Reached coset table limit of 100_000");
+
+                table.join(i, n, g);
+                for w in &rels {
+                    scan_and_connect(&mut table, w, n);
+                }
+
+                for w in subgroup_gens {
+                    let c = table.canon(0);
+                    scan_and_connect(&mut table, w, c);
+                }
+            }
+        }
+    }
+
+    table.compact()
 }
