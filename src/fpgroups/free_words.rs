@@ -122,6 +122,13 @@ impl Ord for FreeWord {
 }
 
 
+impl<const N: usize> From<[isize; N]> for FreeWord {
+    fn from(value: [isize; N]) -> Self {
+        Self::new(&value)
+    }
+}
+
+
 impl From<Vec<isize>> for FreeWord {
     fn from(value: Vec<isize>) -> Self {
         Self::new(&value)
@@ -182,11 +189,11 @@ impl From<Vec<isize>> for Relator {
 
 
 #[test]
-fn test_freeword_new() {
+fn test_freeword_creation() {
     assert_eq!(FreeWord::new(&[]).w, &[]);
     assert_eq!(FreeWord::new(&[1, 2]).w, &[1, 2]);
-    assert_eq!(FreeWord::new(&[1, 2, -2, -1]).w, &[]);
-    assert_eq!(FreeWord::new(&[1, 2, -2, 1, 2]).w, &[1, 1, 2]);
+    assert_eq!(FreeWord::from(vec![1, 2, -2, -1]).w, &[]);
+    assert_eq!(FreeWord::from([1, 2, -2, 1, 2]).w, &[1, 1, 2]);
 }
 
 
