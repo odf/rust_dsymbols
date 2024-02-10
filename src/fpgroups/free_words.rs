@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
-use std::ops::Mul;
+use std::ops::{Index, Mul};
 
 
 fn normalized(w: &[isize]) -> Vec<isize> {
@@ -53,6 +53,15 @@ impl FreeWord {
         let n = self.w.len() as isize;
         let i = (n - i.rem_euclid(n)) as usize;
         Self::new(&self.w[i..]) * Self::new(&self.w[..i])
+    }
+}
+
+
+impl Index<usize> for FreeWord {
+    type Output = isize;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.w[index]
     }
 }
 
@@ -194,6 +203,12 @@ fn test_freeword_creation() {
     assert_eq!(FreeWord::new(&[1, 2]).w, &[1, 2]);
     assert_eq!(FreeWord::from(vec![1, 2, -2, -1]).w, &[]);
     assert_eq!(FreeWord::from([1, 2, -2, 1, 2]).w, &[1, 1, 2]);
+}
+
+
+#[test]
+fn test_freeword_index() {
+    assert_eq!(FreeWord::from([1, 2, 3])[1], 2);
 }
 
 
