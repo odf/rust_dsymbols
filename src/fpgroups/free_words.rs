@@ -33,6 +33,10 @@ impl FreeWord {
         Self::new(&[])
     }
 
+    pub fn len(&self) -> usize {
+        self.w.len()
+    }
+
     pub fn inverse(&self) -> Self {
         Self::new(&self.w.iter().rev().map(|x| -x).collect::<Vec<_>>())
     }
@@ -203,6 +207,12 @@ fn test_freeword_creation() {
     assert_eq!(FreeWord::new(&[1, 2]).w, &[1, 2]);
     assert_eq!(FreeWord::from(vec![1, 2, -2, -1]).w, &[]);
     assert_eq!(FreeWord::from([1, 2, -2, 1, 2]).w, &[1, 1, 2]);
+}
+
+
+#[test]
+fn test_freeword_len() {
+    assert_eq!(FreeWord::from([1, 2, 3, -3, 1]).len(), 3);
 }
 
 
