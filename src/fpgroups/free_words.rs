@@ -201,6 +201,13 @@ impl From<Vec<isize>> for Relator {
 }
 
 
+impl<const N: usize> From<[isize; N]> for Relator {
+    fn from(value: [isize; N]) -> Self {
+        FreeWord::from(value).into()
+    }
+}
+
+
 #[test]
 fn test_freeword_creation() {
     assert_eq!(FreeWord::new(&[]).w, &[]);
