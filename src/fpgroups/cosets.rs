@@ -79,12 +79,16 @@ impl CosetTable {
                     let ag = self.get(a, g);
                     let bg = self.get(b, g);
                     if ag == 0 {
-                        self.set(a, g, bg);
+                        if bg != 0 {
+                            self.set(a, g, bg);
+                        }
                     } else {
                         if bg != 0 && self.canon(ag) != self.canon(bg) {
                             queue.push_front((ag, bg));
                         }
-                        self.set(b, g, ag);
+                        if ag != 0 {
+                            self.set(b, g, ag);
+                        }
                     }
                 }
             }
@@ -104,7 +108,7 @@ impl CosetTable {
 
         let mut result = vec![];
         for k in 1..=self.len() {
-            if to_idx[k] != 0 {
+            if self.canon(k) == k {
                 let mut row = HashMap::new();
                 for g in self.all_gens() {
                     row.insert(g, to_idx[self.canon(self.get(k, g))]);
@@ -141,7 +145,7 @@ fn scan_both_ways(table: &CosetTable, w: &FreeWord, start: usize)
     let n = w.len();
     let (head, i) = scan(table, w, start, n);
     let (tail, j) = scan(table, &w.inverse(), start, n - i);
-    (head, tail, n - i - j, w[i])
+    (head, tail, n - i - j, if i < n { w[i] } else { 0 })
 }
 
 
@@ -177,7 +181,7 @@ pub fn coset_table(
 
         for g in table.all_gens() {
             if table.get(i, g) == 0 {
-                let n = table.len();
+                let n = table.len() + 1;
                 assert!(n < 100_000, "Reached coset table limit of 100_000");
 
                 table.join(i, n, g);
@@ -186,7 +190,7 @@ pub fn coset_table(
                 }
 
                 for w in subgroup_gens {
-                    let c = table.canon(0);
+                    let c = table.canon(1);
                     scan_and_connect(&mut table, w, c);
                 }
             }
@@ -194,4 +198,71 @@ pub fn coset_table(
     }
 
     table.compact()
+}
+
+
+#[test]
+fn test_coset_table() {
+    assert_eq!(
+        coset_table(
+            2,
+            &vec![
+                Relator::from([1, 1]),
+                Relator::from([2, 2]),
+                Relator::from([1, 2, 1, 2])
+            ],
+            &vec![]
+        ),
+        vec![
+            HashMap::from([(1, 1), (2, 2), (-1, 1), (-2, 2)]),
+            HashMap::from([(1, 0), (2, 3), (-1, 0), (-2, 3)]),
+            HashMap::from([(1, 3), (2, 0), (-1, 3), (-2, 0)]),
+            HashMap::from([(1, 2), (2, 1), (-1, 2), (-2, 1)]),
+        ]
+    );
+    assert_eq!(
+        coset_table(
+            2,
+            &vec![
+                Relator::from([1, 1]),
+                Relator::from([2, 2]),
+                Relator::from([1, 2, 1, 2])
+            ],
+            &vec![FreeWord::from([1])]
+        ),
+        vec![
+            HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
+            HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
+        ]
+    );
+    assert_eq!(
+        coset_table(
+            2,
+            &vec![
+                Relator::from([1, 1]),
+                Relator::from([2, 2]),
+                Relator::from([1, 2, 1, 2])
+            ],
+            &vec![FreeWord::from([2])]
+        ),
+        vec![
+            HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
+            HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
+        ]
+    );
+    assert_eq!(
+        coset_table(
+            3,
+            &vec![
+                Relator::from([1, 1]),
+                Relator::from([2, 2]),
+                Relator::from([3, 3]),
+                Relator::from([1, 2, 1, 2, 1, 2]),
+                Relator::from([1, 3, 1, 3]),
+                Relator::from([3, 2, 3, 2, 3, 2]),
+            ],
+            &vec![FreeWord::from([1, 2])]
+        ).len(),
+        8
+    );
 }
