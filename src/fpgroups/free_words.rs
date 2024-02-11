@@ -142,6 +142,13 @@ impl<const N: usize> From<[isize; N]> for FreeWord {
 }
 
 
+impl From<&[isize]> for FreeWord {
+    fn from(value: &[isize]) -> Self {
+        Self::new(value)
+    }
+}
+
+
 impl From<Vec<isize>> for FreeWord {
     fn from(value: Vec<isize>) -> Self {
         Self::new(&value)
@@ -203,6 +210,13 @@ impl From<Vec<isize>> for Relator {
 
 impl<const N: usize> From<[isize; N]> for Relator {
     fn from(value: [isize; N]) -> Self {
+        FreeWord::from(value).into()
+    }
+}
+
+
+impl From<&[isize]> for Relator {
+    fn from(value: &[isize]) -> Self {
         FreeWord::from(value).into()
     }
 }
