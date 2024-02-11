@@ -28,7 +28,7 @@ impl CosetTable {
         tmp.iter().cloned().chain(tmp.iter().map(|g| -g)).collect()
     }
 
-    fn len(&self) -> usize {
+    fn nr_rows(&self) -> usize {
         // don't count the initial dummy row
         self.table.len() - 1
     }
@@ -36,7 +36,7 @@ impl CosetTable {
     fn get(&self, c: usize, g: isize) -> usize {
         let n = self.nr_gens as isize;
 
-        if c == 0 || c > self.len() || g < -n || g > n {
+        if c == 0 || c > self.nr_rows() || g < -n || g > n {
             // using 0 instead of None since this is not user-facing code
             0
         } else {
@@ -51,7 +51,7 @@ impl CosetTable {
         assert!(d > 0);
         assert!(g >= -n && g <= n);
 
-        while c > self.len() {
+        while c > self.nr_rows() {
             self.table.push(vec![0; 2 * self.nr_gens + 1]);
         }
         self.table[c][(g + n) as usize] = d;
@@ -97,9 +97,9 @@ impl CosetTable {
     }
 
     fn compact(&self) -> Vec<HashMap<isize, isize>> {
-        let mut to_idx = vec![0; self.len() + 1];
+        let mut to_idx = vec![0; self.nr_rows() + 1];
         let mut i = 0;
-        for k in 1..=self.len() {
+        for k in 1..=self.nr_rows() {
             if self.canon(k) == k {
                 to_idx[k] = i;
                 i += 1;
@@ -108,7 +108,7 @@ impl CosetTable {
         let to_idx = to_idx;
 
         let mut result = vec![];
-        for k in 1..=self.len() {
+        for k in 1..=self.nr_rows() {
             if self.canon(k) == k {
                 let mut row = HashMap::new();
                 for g in self.all_gens() {
@@ -187,7 +187,7 @@ pub fn coset_table(
     let mut table = CosetTable::new(nr_gens);
     let mut i = 0;
 
-    while i < table.len() {
+    while i < table.nr_rows() {
         i += 1;
         if i != table.canon(i) {
             continue;
@@ -195,7 +195,7 @@ pub fn coset_table(
 
         for g in table.all_gens() {
             if table.get(i, g) == 0 {
-                let n = table.len() + 1;
+                let n = table.nr_rows() + 1;
                 assert!(n < 100_000, "Reached coset table limit of 100_000");
 
                 table.join(i, n, g);
@@ -262,6 +262,21 @@ fn test_coset_table() {
         vec![
             HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
             HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
+        ]
+    );
+    assert_eq!(
+        coset_table(
+            2,
+            &vec![
+                Relator::from([1, 1]),
+                Relator::from([2, 2]),
+                Relator::from([1, 2, 1, 2])
+            ],
+            &vec![FreeWord::from([1]), FreeWord::from([2])]
+        ),
+        vec![
+            HashMap::from([(1, 0), (2, 0), (-1, 0), (-2, 0)]),
+            HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
         ]
     );
     assert_eq!(
