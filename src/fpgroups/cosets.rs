@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::{BTreeSet, HashMap, VecDeque};
 
 use crate::util::partitions::Partition;
@@ -118,6 +119,19 @@ impl CosetTable {
         }
 
         result
+    }
+}
+
+
+impl fmt::Display for CosetTable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for c in 1..=self.nr_rows() {
+            for g in self.all_gens() {
+                write!(f, "{} -> {}, ", g, self.get(c, g))?;
+            }
+            write!(f, "({})\n", self.part.find(&c))?;
+        }
+        Ok(())
     }
 }
 
