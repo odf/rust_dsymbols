@@ -198,7 +198,9 @@ pub fn coset_table(
 
                 table.join(i, n, g);
                 for w in &rels {
-                    scan_and_connect(&mut table, w, n);
+                    if w[0] == g {
+                        scan_and_connect(&mut table, w, i);
+                    }
                 }
 
                 for w in subgroup_gens {
