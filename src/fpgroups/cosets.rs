@@ -41,7 +41,7 @@ impl CosetTable {
             0
         } else {
             // generator inverses are negative numbers, so offset second index
-            self.table[c][(g + n) as usize]
+            self.canon(self.table[c][(g + n) as usize])
         }
     }
 
@@ -79,17 +79,15 @@ impl CosetTable {
                 for g in self.all_gens() {
                     let ag = self.get(a, g);
                     let bg = self.get(b, g);
-                    if ag == 0 {
-                        if bg != 0 {
-                            self.set(a, g, bg);
-                        }
-                    } else {
-                        if bg != 0 && self.canon(ag) != self.canon(bg) {
-                            queue.push_front((ag, bg));
-                        }
-                        if ag != 0 {
-                            self.set(b, g, ag);
-                        }
+
+                    if ag != 0 && bg != 0 {
+                        queue.push_front((ag, bg));
+                    }
+
+                    if ag == 0 && bg != 0 {
+                        self.set(a, g, bg);
+                    } else if ag != 0 {
+                        self.set(b, g, ag);
                     }
                 }
             }
@@ -189,11 +187,11 @@ pub fn coset_table(
 
     while i < table.nr_rows() {
         i += 1;
-        if i != table.canon(i) {
-            continue;
-        }
 
         for g in table.all_gens() {
+            if i != table.canon(i) {
+                break;
+            }
             if table.get(i, g) == 0 {
                 let n = table.nr_rows() + 1;
                 assert!(n < 100_000, "Reached coset table limit of 100_000");
@@ -276,7 +274,6 @@ fn test_coset_table() {
         ),
         vec![
             HashMap::from([(1, 0), (2, 0), (-1, 0), (-2, 0)]),
-            HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
         ]
     );
     assert_eq!(
