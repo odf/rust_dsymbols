@@ -215,82 +215,61 @@ pub fn coset_table(
 }
 
 
-#[test]
-fn test_coset_table() {
-    assert_eq!(
+#[cfg(test)]
+mod coset_tests {
+    use super::*;
+
+    fn make_table(nr_gens: usize, rels: &[&[isize]], subgens: &[&[isize]])
+        -> Vec<HashMap<isize, isize>>
+    {
         coset_table(
-            2,
-            &vec![
-                Relator::from([1, 1]),
-                Relator::from([2, 2]),
-                Relator::from([1, 2, 1, 2])
-            ],
-            &vec![]
-        ),
-        vec![
-            HashMap::from([(1, 1), (2, 2), (-1, 1), (-2, 2)]),
-            HashMap::from([(1, 0), (2, 3), (-1, 0), (-2, 3)]),
-            HashMap::from([(1, 3), (2, 0), (-1, 3), (-2, 0)]),
-            HashMap::from([(1, 2), (2, 1), (-1, 2), (-2, 1)]),
-        ]
-    );
-    assert_eq!(
-        coset_table(
-            2,
-            &vec![
-                Relator::from([1, 1]),
-                Relator::from([2, 2]),
-                Relator::from([1, 2, 1, 2])
-            ],
-            &vec![FreeWord::from([1])]
-        ),
-        vec![
-            HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
-            HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
-        ]
-    );
-    assert_eq!(
-        coset_table(
-            2,
-            &vec![
-                Relator::from([1, 1]),
-                Relator::from([2, 2]),
-                Relator::from([1, 2, 1, 2])
-            ],
-            &vec![FreeWord::from([2])]
-        ),
-        vec![
-            HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
-            HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
-        ]
-    );
-    assert_eq!(
-        coset_table(
-            2,
-            &vec![
-                Relator::from([1, 1]),
-                Relator::from([2, 2]),
-                Relator::from([1, 2, 1, 2])
-            ],
-            &vec![FreeWord::from([1]), FreeWord::from([2])]
-        ),
-        vec![
-            HashMap::from([(1, 0), (2, 0), (-1, 0), (-2, 0)]),
-        ]
-    );
-    assert_eq!(
-        coset_table(
-            3,
-            &vec![
-                Relator::from([1, 1]),
-                Relator::from([2, 2]),
-                Relator::from([3, 3]),
-                Relator::from([1, 2, 1, 2, 1, 2]),
-                Relator::from([1, 3, 1, 3]),
-                Relator::from([3, 2, 3, 2, 3, 2]),
-            ],
-            &vec![FreeWord::from([1, 2])]
-        ).len(),
-        8
-    );
+            nr_gens,
+            &rels.iter().map(|r| Relator::from(*r)).collect(),
+            &subgens.iter().map(|g| FreeWord::from(*g)).collect(),
+        )
+    }
+
+    #[test]
+    fn test_coset_table() {
+        assert_eq!(
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[]),
+            vec![
+                HashMap::from([(1, 1), (2, 2), (-1, 1), (-2, 2)]),
+                HashMap::from([(1, 0), (2, 3), (-1, 0), (-2, 3)]),
+                HashMap::from([(1, 3), (2, 0), (-1, 3), (-2, 0)]),
+                HashMap::from([(1, 2), (2, 1), (-1, 2), (-2, 1)]),
+            ]
+        );
+        assert_eq!(
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1]]),
+            vec![
+                HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
+                HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
+            ]
+        );
+        assert_eq!(
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[2]]),
+            vec![
+                HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
+                HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
+            ]
+        );
+        assert_eq!(
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1], &[2]]),
+            vec![
+                HashMap::from([(1, 0), (2, 0), (-1, 0), (-2, 0)]),
+            ]
+        );
+        assert_eq!(
+            make_table(
+                3,
+                &[
+                    &[1, 1], &[2, 2], &[3, 3],
+                    &[1, 2, 1, 2, 1, 2], &[1, 3, 1, 3], &[3, 2, 3, 2, 3, 2]
+                ],
+                &[&[1, 2]]
+            ).len(),
+            8
+        );
+    }
 }
