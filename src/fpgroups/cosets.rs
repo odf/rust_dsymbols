@@ -6,15 +6,18 @@ use crate::util::partitions::Partition;
 use super::free_words::{FreeWord, Relator};
 
 
+type CosetTable = Vec<HashMap<isize, usize>>;
+
+
 #[derive(Clone)]
-struct CosetTable {
+struct DynamicCosetTable {
     nr_gens: usize,
     table: Vec<Vec<usize>>,
     part: Partition<usize>
 }
 
 
-impl CosetTable {
+impl DynamicCosetTable {
     fn new(nr_gens: usize) -> Self {
         Self {
             nr_gens,
@@ -94,7 +97,7 @@ impl CosetTable {
         }
     }
 
-    fn compact(&self) -> Vec<HashMap<isize, usize>> {
+    fn compact(&self) -> CosetTable {
         let mut to_idx = vec![0; self.nr_rows() + 1];
         let mut i = 0;
         for k in 1..=self.nr_rows() {
@@ -121,7 +124,7 @@ impl CosetTable {
 }
 
 
-impl fmt::Display for CosetTable {
+impl fmt::Display for DynamicCosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for c in 1..=self.nr_rows() {
             for g in self.all_gens() {
@@ -134,7 +137,7 @@ impl fmt::Display for CosetTable {
 }
 
 
-fn scan(table: &CosetTable, w: &FreeWord, start: usize, limit: usize)
+fn scan(table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize)
     -> (usize, usize)
 {
     let mut row = start;
@@ -151,7 +154,7 @@ fn scan(table: &CosetTable, w: &FreeWord, start: usize, limit: usize)
 }
 
 
-fn scan_both_ways(table: &CosetTable, w: &FreeWord, start: usize)
+fn scan_both_ways(table: &DynamicCosetTable, w: &FreeWord, start: usize)
     -> (usize, usize, usize, isize)
 {
     let n = w.len();
@@ -161,7 +164,7 @@ fn scan_both_ways(table: &CosetTable, w: &FreeWord, start: usize)
 }
 
 
-fn scan_and_connect(table: &mut CosetTable, w: &FreeWord, start: usize) {
+fn scan_and_connect(table: &mut DynamicCosetTable, w: &FreeWord, start: usize) {
     let (head, tail, gap, c) = scan_both_ways(table, w, start);
 
     if gap == 1 {
@@ -174,7 +177,7 @@ fn scan_and_connect(table: &mut CosetTable, w: &FreeWord, start: usize) {
 
 pub fn coset_table(
     nr_gens: usize, relators: &Vec<Relator>, subgroup_gens: &Vec<FreeWord>
-) -> Vec<HashMap<isize, usize>>
+) -> CosetTable
 {
     let mut rels = BTreeSet::new();
     for rel in relators {
@@ -182,7 +185,7 @@ pub fn coset_table(
     }
     let rels = rels;
 
-    let mut table = CosetTable::new(nr_gens);
+    let mut table = DynamicCosetTable::new(nr_gens);
     let mut i = 0;
 
     while i < table.nr_rows() {
@@ -215,7 +218,7 @@ pub fn coset_table(
 }
 
 
-pub fn coset_representative(table: &Vec<HashMap<isize, usize>>)
+pub fn coset_representative(table: &CosetTable)
     -> Vec<FreeWord>
 {
     let mut queue = VecDeque::from([0 as usize]);
@@ -242,7 +245,7 @@ mod coset_tests {
     use super::*;
 
     fn make_table(nr_gens: usize, rels: &[&[isize]], subgens: &[&[isize]])
-        -> Vec<HashMap<isize, usize>>
+        -> CosetTable
     {
         coset_table(
             nr_gens,
