@@ -12,7 +12,8 @@ type CosetTable = Vec<HashMap<isize, usize>>;
 #[derive(Clone)]
 struct DynamicCosetTable {
     nr_gens: usize,
-    table: Vec<Vec<usize>>,
+    nr_rows: usize,
+    table: HashMap<(usize, isize), usize>,
     part: Partition<usize>
 }
 
@@ -21,7 +22,8 @@ impl DynamicCosetTable {
     fn new(nr_gens: usize) -> Self {
         Self {
             nr_gens,
-            table: vec![vec![], vec![0; 2 * nr_gens + 1]],
+            nr_rows: 1,
+            table: HashMap::new(),
             part: Partition::new(),
         }
     }
@@ -32,20 +34,11 @@ impl DynamicCosetTable {
     }
 
     fn nr_rows(&self) -> usize {
-        // don't count the initial dummy row
-        self.table.len() - 1
+        self.nr_rows
     }
 
-    fn get(&self, c: usize, g: isize) -> usize {
-        let n = self.nr_gens as isize;
-
-        if c == 0 || c > self.nr_rows() || g < -n || g > n {
-            // using 0 instead of None since this is not user-facing code
-            0
-        } else {
-            // generator inverses are negative numbers, so offset second index
-            self.canon(self.table[c][(g + n) as usize])
-        }
+    fn get(&self, c: usize, g: isize) -> Option<&usize> {
+        self.table.get(&(c, g))
     }
 
     fn set(&mut self, c: usize, g: isize, d: usize) {
@@ -54,10 +47,8 @@ impl DynamicCosetTable {
         assert!(d > 0);
         assert!(g >= -n && g <= n);
 
-        while c > self.nr_rows() {
-            self.table.push(vec![0; 2 * self.nr_gens + 1]);
-        }
-        self.table[c][(g + n) as usize] = d;
+        self.nr_rows = self.nr_rows.max(c).max(d);
+        self.table.insert((c, g), d);
     }
 
     fn join(&mut self, c: usize, d: usize, g: isize) {
@@ -80,17 +71,13 @@ impl DynamicCosetTable {
                 self.part.unite(&a, &b);
 
                 for g in self.all_gens() {
-                    let ag = self.get(a, g);
-                    let bg = self.get(b, g);
-
-                    if ag != 0 && bg != 0 {
-                        queue.push_back((ag, bg));
-                    }
-
-                    if ag == 0 && bg != 0 {
-                        self.set(a, g, bg);
-                    } else if ag != 0 {
+                    if let Some(&ag) = self.get(a, g) {
                         self.set(b, g, ag);
+                        if let Some(&bg) = self.get(b, g) {
+                            queue.push_back((ag, bg));
+                        }
+                    } else if let Some(&bg) = self.get(b, g) {
+                        self.set(a, g, bg);
                     }
                 }
             }
@@ -113,7 +100,10 @@ impl DynamicCosetTable {
             if self.canon(k) == k {
                 let mut row = HashMap::new();
                 for g in self.all_gens() {
-                    row.insert(g, to_idx[self.canon(self.get(k, g))]);
+                    row.insert(
+                        g,
+                        to_idx[self.canon(*self.get(k, g).unwrap())]
+                    );
                 }
                 result.push(row);
             }
@@ -128,7 +118,7 @@ impl fmt::Display for DynamicCosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for c in 1..=self.nr_rows() {
             for g in self.all_gens() {
-                write!(f, "{} -> {}, ", g, self.get(c, g))?;
+                write!(f, "{} -> {}, ", g, self.get(c, g).unwrap())?;
             }
             write!(f, "({})\n", self.part.find(&c))?;
         }
@@ -143,11 +133,10 @@ fn scan(table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize)
     let mut row = start;
 
     for index in 0..limit {
-        let next = table.get(row, w[index]);
-        if next == 0 {
-            return (row, index);
+        if let Some(&next) = table.get(row, w[index]) {
+            row = next;
         } else {
-            row = next
+            return (row, index);
         }
     }
     (row, limit)
@@ -195,7 +184,7 @@ pub fn coset_table(
             if i != table.canon(i) {
                 break;
             }
-            if table.get(i, g) == 0 {
+            if table.get(i, g).is_none() {
                 let n = table.nr_rows() + 1;
                 assert!(n < 100_000, "Reached coset table limit of 100_000");
 
