@@ -243,6 +243,15 @@ fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
 }
 
 
+pub fn core_table(base: &CosetTable) -> CosetTable {
+    let nr_gens = *base[0].keys().max().unwrap() as usize;
+    let img = |es: &Vec<usize>, g| es.iter().map(|&e| base[e][&g]).collect();
+    let start = &(0..base.len()).collect();
+
+    induced_table(nr_gens, img, start)
+}
+
+
 #[cfg(test)]
 mod coset_tests {
     use super::*;
@@ -331,6 +340,21 @@ mod coset_tests {
                 &[&[1, 2]]
             )).len(),
             8
+        );
+    }
+
+    #[test]
+    fn test_core_table() {
+        assert_eq!(
+            core_table(&make_table(
+                3,
+                &[
+                    &[1, 1], &[2, 2], &[3, 3],
+                    &[1, 2, 1, 2, 1, 2], &[1, 3, 1, 3], &[3, 2, 3, 2, 3, 2]
+                ],
+                &[&[1, 2]]
+            )).len(),
+            24
         );
     }
 }
