@@ -215,6 +215,28 @@ pub fn coset_table(
 }
 
 
+pub fn coset_representative(table: &Vec<HashMap<isize, usize>>)
+    -> Vec<FreeWord>
+{
+    let mut queue = VecDeque::from([0 as usize]);
+    let mut result = vec![None; table.len()];
+    result[0] = Some(FreeWord::empty());
+
+    while let Some(i) = queue.pop_front() {
+        let w = result[i].clone().unwrap();
+
+        for (&g, &k) in table[i].iter() {
+            if result[k].is_none() {
+                result[k] = Some(&w * FreeWord::from([g]));
+                queue.push_back(k);
+            }
+        }
+    }
+
+    result.iter().flatten().cloned().collect()
+}
+
+
 #[cfg(test)]
 mod coset_tests {
     use super::*;
@@ -269,6 +291,27 @@ mod coset_tests {
                 ],
                 &[&[1, 2]]
             ).len(),
+            8
+        );
+    }
+
+    #[test]
+    fn test_coset_representatives() {
+        assert_eq!(
+            coset_representative(
+                &make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[])
+            ).len(),
+            4
+        );
+        assert_eq!(
+            coset_representative(&make_table(
+                3,
+                &[
+                    &[1, 1], &[2, 2], &[3, 3],
+                    &[1, 2, 1, 2, 1, 2], &[1, 3, 1, 3], &[3, 2, 3, 2, 3, 2]
+                ],
+                &[&[1, 2]]
+            )).len(),
             8
         );
     }
