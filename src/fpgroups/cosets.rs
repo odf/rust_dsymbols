@@ -304,6 +304,18 @@ mod coset_tests {
             4
         );
         assert_eq!(
+            coset_representative(
+                &make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1]])
+            ).len(),
+            2
+        );
+        assert_eq!(
+            coset_representative(&make_table(
+                2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1], &[2]]
+            )).len(),
+            1
+        );
+        assert_eq!(
             coset_representative(&make_table(
                 3,
                 &[
