@@ -12,7 +12,7 @@ type CosetTable = Vec<HashMap<isize, usize>>;
 #[derive(Clone)]
 struct DynamicCosetTable {
     nr_gens: usize,
-    nr_rows: usize,
+    top_row: usize,
     table: HashMap<(usize, isize), usize>,
     part: Partition<usize>
 }
@@ -22,7 +22,7 @@ impl DynamicCosetTable {
     fn new(nr_gens: usize) -> Self {
         Self {
             nr_gens,
-            nr_rows: 1,
+            top_row: 1,
             table: HashMap::new(),
             part: Partition::new(),
         }
@@ -33,8 +33,8 @@ impl DynamicCosetTable {
         tmp.iter().cloned().chain(tmp.iter().map(|g| -g)).collect()
     }
 
-    fn nr_rows(&self) -> usize {
-        self.nr_rows
+    fn top_row(&self) -> usize {
+        self.top_row
     }
 
     fn get(&self, c: usize, g: isize) -> Option<&usize> {
@@ -47,7 +47,7 @@ impl DynamicCosetTable {
         assert!(d > 0);
         assert!(g >= -n && g <= n);
 
-        self.nr_rows = self.nr_rows.max(c).max(d);
+        self.top_row = self.top_row.max(c).max(d);
         self.table.insert((c, g), d);
     }
 
@@ -85,9 +85,9 @@ impl DynamicCosetTable {
     }
 
     fn compact(&self) -> CosetTable {
-        let mut to_idx = vec![0; self.nr_rows() + 1];
+        let mut to_idx = vec![0; self.top_row() + 1];
         let mut i = 0;
-        for k in 1..=self.nr_rows() {
+        for k in 1..=self.top_row() {
             if self.canon(k) == k {
                 to_idx[k] = i;
                 i += 1;
@@ -96,7 +96,7 @@ impl DynamicCosetTable {
         let to_idx = to_idx;
 
         let mut result = vec![];
-        for k in 1..=self.nr_rows() {
+        for k in 1..=self.top_row() {
             if self.canon(k) == k {
                 let mut row = HashMap::new();
                 for g in self.all_gens() {
@@ -116,7 +116,7 @@ impl DynamicCosetTable {
 
 impl fmt::Display for DynamicCosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for c in 1..=self.nr_rows() {
+        for c in 1..=self.top_row() {
             for g in self.all_gens() {
                 write!(f, "{} -> {}, ", g, self.get(c, g).unwrap())?;
             }
@@ -177,7 +177,7 @@ pub fn coset_table(
     let mut table = DynamicCosetTable::new(nr_gens);
     let mut i = 0;
 
-    while i < table.nr_rows() {
+    while i < table.top_row() {
         i += 1;
 
         for g in table.all_gens() {
@@ -185,7 +185,7 @@ pub fn coset_table(
                 break;
             }
             if table.get(i, g).is_none() {
-                let n = table.nr_rows() + 1;
+                let n = table.top_row() + 1;
                 assert!(n < 100_000, "Reached coset table limit of 100_000");
 
                 table.join(i, n, g);
@@ -239,11 +239,11 @@ fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
     let mut n2o = HashMap::from([(1, start.clone())]);
     let mut i = 0;
 
-    while i < table.nr_rows() {
+    while i < table.top_row() {
         i += 1;
         for g in table.all_gens() {
             let k = img(&n2o[&i], g);
-            let n = *o2n.entry(k.clone()).or_insert(table.nr_rows() + 1);
+            let n = *o2n.entry(k.clone()).or_insert(table.top_row() + 1);
             n2o.insert(n, k);
             table.join(i, n, g);
         }
