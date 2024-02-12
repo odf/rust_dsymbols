@@ -22,7 +22,7 @@ impl DynamicCosetTable {
     fn new(nr_gens: usize) -> Self {
         Self {
             nr_gens,
-            top_row: 1,
+            top_row: 0,
             table: HashMap::new(),
             part: Partition::new(),
         }
@@ -43,8 +43,6 @@ impl DynamicCosetTable {
 
     fn set(&mut self, c: usize, g: isize, d: usize) {
         let n = self.nr_gens as isize;
-        assert!(c > 0);
-        assert!(d > 0);
         assert!(g >= -n && g <= n);
 
         self.top_row = self.top_row.max(c).max(d);
@@ -87,7 +85,7 @@ impl DynamicCosetTable {
     fn compact(&self) -> CosetTable {
         let mut to_idx = vec![0; self.top_row() + 1];
         let mut i = 0;
-        for k in 1..=self.top_row() {
+        for k in 0..=self.top_row() {
             if self.canon(k) == k {
                 to_idx[k] = i;
                 i += 1;
@@ -96,7 +94,7 @@ impl DynamicCosetTable {
         let to_idx = to_idx;
 
         let mut result = vec![];
-        for k in 1..=self.top_row() {
+        for k in 0..=self.top_row() {
             if self.canon(k) == k {
                 let mut row = HashMap::new();
                 for g in self.all_gens() {
@@ -116,7 +114,7 @@ impl DynamicCosetTable {
 
 impl fmt::Display for DynamicCosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for c in 1..=self.top_row() {
+        for c in 0..=self.top_row() {
             for g in self.all_gens() {
                 write!(f, "{} -> {}, ", g, self.get(c, g).unwrap())?;
             }
@@ -175,10 +173,11 @@ pub fn coset_table(
     let rels = rels;
 
     let mut table = DynamicCosetTable::new(nr_gens);
-    let mut i = 0;
 
-    while i < table.top_row() {
-        i += 1;
+    for i in 0.. {
+        if i > table.top_row() {
+            break;
+        }
 
         for g in table.all_gens() {
             if i != table.canon(i) {
@@ -194,7 +193,6 @@ pub fn coset_table(
                         scan_and_connect(&mut table, w, i);
                     }
                 }
-
                 for w in subgroup_gens {
                     let c = table.canon(1);
                     scan_and_connect(&mut table, w, c);
@@ -235,12 +233,13 @@ fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
         F: Fn(&T, isize) -> T
 {
     let mut table = DynamicCosetTable::new(nr_gens);
-    let mut o2n = HashMap::from([(start.clone(), 1)]);
-    let mut n2o = HashMap::from([(1, start.clone())]);
-    let mut i = 0;
+    let mut o2n = HashMap::from([(start.clone(), 0)]);
+    let mut n2o = HashMap::from([(0, start.clone())]);
 
-    while i < table.top_row() {
-        i += 1;
+    for i in 0.. {
+        if i > table.top_row() {
+            break;
+        }
         for g in table.all_gens() {
             let k = img(&n2o[&i], g);
             let n = *o2n.entry(k.clone()).or_insert(table.top_row() + 1);
