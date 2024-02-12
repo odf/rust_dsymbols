@@ -240,6 +240,30 @@ pub fn coset_representative(table: &CosetTable)
 }
 
 
+fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
+    where
+        T: Clone + Eq + std::hash::Hash,
+        F: Fn(&T, isize) -> T
+{
+    let mut table = DynamicCosetTable::new(nr_gens);
+    let mut o2n = HashMap::from([(start.clone(), 1)]);
+    let mut n2o = HashMap::from([(1, start.clone())]);
+    let mut i = 0;
+
+    while i < table.nr_rows() {
+        i += 1;
+        for g in table.all_gens() {
+            let k = img(&n2o[&i], g);
+            let n = *o2n.entry(k.clone()).or_insert(table.nr_rows() + 1);
+            n2o.insert(n, k);
+            table.join(i, n, g);
+        }
+    }
+
+    table.compact()
+}
+
+
 #[cfg(test)]
 mod coset_tests {
     use super::*;
