@@ -69,7 +69,7 @@ impl CosetTable {
     fn merge(&mut self, a: usize, b: usize) {
         let mut queue: VecDeque<(usize, usize)> = VecDeque::from([(a, b)]);
 
-        while let Some((a, b)) = queue.pop_back() {
+        while let Some((a, b)) = queue.pop_front() {
             let a = self.canon(a);
             let b = self.canon(b);
 
@@ -81,7 +81,7 @@ impl CosetTable {
                     let bg = self.get(b, g);
 
                     if ag != 0 && bg != 0 {
-                        queue.push_front((ag, bg));
+                        queue.push_back((ag, bg));
                     }
 
                     if ag == 0 && bg != 0 {
