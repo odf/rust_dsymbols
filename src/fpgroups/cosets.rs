@@ -94,7 +94,7 @@ impl CosetTable {
         }
     }
 
-    fn compact(&self) -> Vec<HashMap<isize, isize>> {
+    fn compact(&self) -> Vec<HashMap<isize, usize>> {
         let mut to_idx = vec![0; self.nr_rows() + 1];
         let mut i = 0;
         for k in 1..=self.nr_rows() {
@@ -174,7 +174,7 @@ fn scan_and_connect(table: &mut CosetTable, w: &FreeWord, start: usize) {
 
 pub fn coset_table(
     nr_gens: usize, relators: &Vec<Relator>, subgroup_gens: &Vec<FreeWord>
-) -> Vec<HashMap<isize, isize>>
+) -> Vec<HashMap<isize, usize>>
 {
     let mut rels = BTreeSet::new();
     for rel in relators {
@@ -220,7 +220,7 @@ mod coset_tests {
     use super::*;
 
     fn make_table(nr_gens: usize, rels: &[&[isize]], subgens: &[&[isize]])
-        -> Vec<HashMap<isize, isize>>
+        -> Vec<HashMap<isize, usize>>
     {
         coset_table(
             nr_gens,
