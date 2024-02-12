@@ -1,5 +1,5 @@
 use core::fmt;
-use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 
 use crate::util::partitions::Partition;
 
@@ -37,8 +37,8 @@ impl DynamicCosetTable {
         self.top_row
     }
 
-    fn get(&self, c: usize, g: isize) -> Option<&usize> {
-        self.table.get(&(c, g))
+    fn get(&self, c: usize, g: isize) -> Option<usize> {
+        self.table.get(&(c, g)).map(|&d| self.canon(d))
     }
 
     fn set(&mut self, c: usize, g: isize, d: usize) {
@@ -69,12 +69,12 @@ impl DynamicCosetTable {
                 self.part.unite(&a, &b);
 
                 for g in self.all_gens() {
-                    if let Some(&ag) = self.get(a, g) {
+                    if let Some(ag) = self.get(a, g) {
                         self.set(b, g, ag);
-                        if let Some(&bg) = self.get(b, g) {
+                        if let Some(bg) = self.get(b, g) {
                             queue.push_back((ag, bg));
                         }
-                    } else if let Some(&bg) = self.get(b, g) {
+                    } else if let Some(bg) = self.get(b, g) {
                         self.set(a, g, bg);
                     }
                 }
@@ -83,28 +83,19 @@ impl DynamicCosetTable {
     }
 
     fn compact(&self) -> CosetTable {
-        let mut to_idx = vec![0; self.top_row() + 1];
-        let mut i = 0;
-        for k in 0..=self.top_row() {
-            if self.canon(k) == k {
-                to_idx[k] = i;
-                i += 1;
-            }
-        }
-        let to_idx = to_idx;
+        let to_idx: BTreeMap<_, _> = (0..=self.top_row())
+            .filter(|&k| self.canon(k) == k)
+            .enumerate()
+            .map(|(i, k)| (k, i))
+            .collect();
 
         let mut result = vec![];
-        for k in 0..=self.top_row() {
-            if self.canon(k) == k {
-                let mut row = HashMap::new();
-                for g in self.all_gens() {
-                    row.insert(
-                        g,
-                        to_idx[self.canon(*self.get(k, g).unwrap())]
-                    );
-                }
-                result.push(row);
+        for &k in to_idx.keys() {
+            let mut row = HashMap::new();
+            for g in self.all_gens() {
+                row.insert(g, to_idx[&self.get(k, g).unwrap()]);
             }
+            result.push(row);
         }
 
         result
@@ -131,7 +122,7 @@ fn scan(table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize)
     let mut row = start;
 
     for index in 0..limit {
-        if let Some(&next) = table.get(row, w[index]) {
+        if let Some(next) = table.get(row, w[index]) {
             row = next;
         } else {
             return (row, index);
