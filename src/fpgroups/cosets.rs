@@ -537,4 +537,22 @@ mod coset_tests {
             24
         );
     }
+
+    #[test]
+    fn test_enumerator() {
+        assert_eq!(
+            coset_tables(
+                2,
+                vec![
+                    Relator::from([1, 1]),
+                    Relator::from([2, 2]),
+                    Relator::from([1, 2, 1, 2]),
+                ],
+                8
+            )
+                .map(|t| t.len())
+                .collect::<Vec<_>>(),
+            vec![1, 2, 2, 2, 4]
+        );
+    }
 }
