@@ -116,6 +116,15 @@ impl fmt::Display for DynamicCosetTable {
 }
 
 
+fn extended_relator_set(relators: &Vec<Relator>) -> BTreeSet<FreeWord> {
+    let mut rels = BTreeSet::new();
+    for rel in relators {
+        rels.extend(rel.permutations());
+    }
+    rels
+}
+
+
 fn scan(table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize)
     -> (usize, usize)
 {
@@ -159,12 +168,7 @@ pub fn coset_table(
     nr_gens: usize, relators: &Vec<Relator>, subgroup_gens: &Vec<FreeWord>
 ) -> CosetTable
 {
-    let mut rels = BTreeSet::new();
-    for rel in relators {
-        rels.extend(rel.permutations());
-    }
-    let rels = rels;
-
+    let rels = extended_relator_set(relators);
     let mut table = DynamicCosetTable::new(nr_gens);
 
     for i in 0.. {
