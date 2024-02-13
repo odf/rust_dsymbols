@@ -1,6 +1,8 @@
 use core::fmt;
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::path::Iter;
 
+use crate::util::backtrack::{BackTrackIterator, BackTracking};
 use crate::util::partitions::Partition;
 
 use super::free_words::{FreeWord, Relator};
@@ -358,6 +360,75 @@ fn is_canonical(table: &DynamicCosetTable) -> bool {
         }
     }
     true
+}
+
+
+struct CosetTableBacktracking {
+    nr_gens: usize,
+    relators: Vec<FreeWord>,
+    max_rows: usize,
+}
+
+
+impl BackTracking for CosetTableBacktracking {
+    type State = DynamicCosetTable;
+    type Item = CosetTable;
+
+    fn root(&self) -> Self::State {
+        DynamicCosetTable::new(self.nr_gens)
+    }
+
+    fn extract(&self, state: &Self::State) -> Option<Self::Item> {
+        if first_free_in_table(state).is_none() {
+            Some(state.compact())
+        } else {
+            None
+        }
+    }
+
+    fn children(&self, state: &Self::State) -> Vec<Self::State> {
+        potential_children(state, &self.relators, self.max_rows)
+            .iter()
+            .cloned()
+            .filter(is_canonical)
+            .collect()
+    }
+}
+
+
+pub struct CosetTables {
+    bt: BackTrackIterator<CosetTableBacktracking>
+}
+
+
+impl CosetTables {
+    fn new(nr_gens: usize, rels: Vec<Relator>, max_rows: usize)
+        -> CosetTables
+    {
+        let relators = extended_relator_set(&rels).iter().cloned().collect();
+
+        CosetTables {
+            bt: BackTrackIterator::new(
+                CosetTableBacktracking { nr_gens, relators, max_rows }
+            )
+        }
+    }
+}
+
+
+impl Iterator for CosetTables {
+    type Item = CosetTable;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.bt.next()
+    }
+}
+
+
+pub fn coset_tables(nr_gens: usize, rels: Vec<Relator>, max_rows: usize)
+    -> CosetTables
+{
+    CosetTables::new(nr_gens, rels, max_rows)
 }
 
 
