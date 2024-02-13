@@ -142,7 +142,9 @@ fn scan_both_ways(table: &DynamicCosetTable, w: &FreeWord, start: usize)
 }
 
 
-fn scan_and_connect(table: &mut DynamicCosetTable, w: &FreeWord, start: usize) {
+fn scan_and_connect(
+    table: &mut DynamicCosetTable, w: &FreeWord, start: usize
+) {
     let (head, tail, gap, c) = scan_both_ways(table, w, start);
 
     if gap == 1 {
@@ -196,9 +198,7 @@ pub fn coset_table(
 }
 
 
-pub fn coset_representative(table: &CosetTable)
-    -> Vec<FreeWord>
-{
+pub fn coset_representative(table: &CosetTable) -> Vec<FreeWord> {
     let mut queue = VecDeque::from([0 as usize]);
     let mut result = vec![None; table.len()];
     result[0] = Some(FreeWord::empty());
