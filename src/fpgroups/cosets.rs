@@ -117,12 +117,13 @@ impl DynamicCosetTable {
 impl fmt::Display for DynamicCosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for c in 0..self.len() {
+            write!(f, "{}: ", c)?;
             for g in self.all_gens() {
-                if let Some(d) = self.get(c, g) {
+                if let Some(d) = self.table.get(&(c, g)) {
                     write!(f, "{} -> {}, ", g, d)?;
                 }
             }
-            write!(f, "({})\n", self.part.find(&c))?;
+            writeln!(f, "({})", self.canon(c))?;
         }
         Ok(())
     }
