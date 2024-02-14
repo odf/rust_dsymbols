@@ -1,6 +1,5 @@
 use core::fmt;
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
-use std::path::Iter;
 
 use crate::util::backtrack::{BackTrackIterator, BackTracking};
 use crate::util::partitions::Partition;
@@ -103,7 +102,9 @@ impl DynamicCosetTable {
         for &k in to_idx.keys() {
             let mut row = HashMap::new();
             for g in self.all_gens() {
-                row.insert(g, to_idx[&self.get(k, g).unwrap()]);
+                if let Some(c) = self.get(k, g) {
+                    row.insert(g, to_idx[&c]);
+                }
             }
             result.push(row);
         }
@@ -117,7 +118,9 @@ impl fmt::Display for DynamicCosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for c in 0..self.len() {
             for g in self.all_gens() {
-                write!(f, "{} -> {}, ", g, self.get(c, g).unwrap())?;
+                if let Some(d) = self.get(c, g) {
+                    write!(f, "{} -> {}, ", g, d)?;
+                }
             }
             write!(f, "({})\n", self.part.find(&c))?;
         }
