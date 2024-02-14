@@ -40,12 +40,15 @@ impl DynamicCosetTable {
     }
 
     fn get(&self, c: usize, g: isize) -> Option<usize> {
+        assert_eq!(c, self.canon(c));
         self.table.get(&(c, g)).map(|&d| self.canon(d))
     }
 
     fn set(&mut self, c: usize, g: isize, d: usize) {
         let n = self.nr_gens as isize;
         assert!(g >= -n && g <= n);
+        assert_eq!(c, self.canon(c));
+        assert_eq!(d, self.canon(d));
 
         self.top_row = self.top_row.max(c).max(d);
         self.table.insert((c, g), d);
@@ -68,17 +71,22 @@ impl DynamicCosetTable {
             let b = self.canon(b);
 
             if a != b {
-                self.part.unite(&a, &b);
-
                 for g in self.all_gens() {
                     if let Some(ag) = self.get(a, g) {
-                        self.set(b, g, ag);
                         if let Some(bg) = self.get(b, g) {
                             queue.push_back((ag, bg));
+                        } else {
+                            self.set(b, g, ag);
                         }
                     } else if let Some(bg) = self.get(b, g) {
                         self.set(a, g, bg);
                     }
+                }
+                self.part.unite(&a, &b);
+
+                let c = if self.canon(a) == a { b } else { a };
+                for g in self.all_gens() {
+                    self.table.remove(&(c, g));
                 }
             }
         }
@@ -189,7 +197,8 @@ pub fn coset_table(
                 table.join(i, n, g);
                 for w in &rels {
                     if w[0] == g {
-                        scan_and_connect(&mut table, w, i);
+                        let c = table.canon(i);
+                        scan_and_connect(&mut table, w, c);
                     }
                 }
                 for w in subgroup_gens {
