@@ -35,8 +35,8 @@ impl DynamicCosetTable {
         tmp.iter().cloned().chain(tmp.iter().map(|g| -g)).collect()
     }
 
-    fn top_row(&self) -> usize {
-        self.top_row
+    fn len(&self) -> usize {
+        self.top_row + 1
     }
 
     fn get(&self, c: usize, g: isize) -> Option<usize> {
@@ -85,7 +85,7 @@ impl DynamicCosetTable {
     }
 
     fn compact(&self) -> CosetTable {
-        let to_idx: BTreeMap<_, _> = (0..=self.top_row())
+        let to_idx: BTreeMap<_, _> = (0..self.len())
             .filter(|&k| self.canon(k) == k)
             .enumerate()
             .map(|(i, k)| (k, i))
@@ -107,7 +107,7 @@ impl DynamicCosetTable {
 
 impl fmt::Display for DynamicCosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for c in 0..=self.top_row() {
+        for c in 0..self.len() {
             for g in self.all_gens() {
                 write!(f, "{} -> {}, ", g, self.get(c, g).unwrap())?;
             }
@@ -174,7 +174,7 @@ pub fn coset_table(
     let mut table = DynamicCosetTable::new(nr_gens);
 
     for i in 0.. {
-        if i > table.top_row() {
+        if i >= table.len() {
             break;
         }
 
@@ -183,7 +183,7 @@ pub fn coset_table(
                 break;
             }
             if table.get(i, g).is_none() {
-                let n = table.top_row() + 1;
+                let n = table.len();
                 assert!(n < 100_000, "Reached coset table limit of 100_000");
 
                 table.join(i, n, g);
@@ -234,12 +234,12 @@ fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
     let mut n2o = HashMap::from([(0, start.clone())]);
 
     for i in 0.. {
-        if i > table.top_row() {
+        if i >= table.len() {
             break;
         }
         for g in table.all_gens() {
             let k = img(&n2o[&i], g);
-            let n = *o2n.entry(k.clone()).or_insert(table.top_row() + 1);
+            let n = *o2n.entry(k.clone()).or_insert(table.len());
             n2o.insert(n, k);
             table.join(i, n, g);
         }
@@ -259,7 +259,7 @@ pub fn core_table(base: &CosetTable) -> CosetTable {
 
 
 fn first_free_in_table(table: &DynamicCosetTable) -> Option<(usize, isize)> {
-    for k in 0..=table.top_row() {
+    for k in 0..table.len() {
         for g in table.all_gens() {
             if table.get(k, g).is_none() {
                 return Some((k, g));
@@ -300,7 +300,7 @@ fn potential_children(
     let mut result = vec![];
 
     if let Some((k, g)) = first_free_in_table(table) {
-        let limit = max_rows.min(table.top_row() + 2);
+        let limit = max_rows.min(table.len() + 1);
         for pos in k..limit {
             if table.get(pos, -g).is_none() {
                 let mut t = table.clone();
@@ -320,7 +320,7 @@ fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
     let mut n2o = HashMap::from([(0, start)]);
     let mut o2n = HashMap::from([(start, 0)]);
 
-    for row in 0..=table.top_row() {
+    for row in 0..table.len() {
         assert!(row < n2o.len(), "coset table is not transitive");
 
         for g in table.all_gens() {
@@ -354,7 +354,7 @@ fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
 
 
 fn is_canonical(table: &DynamicCosetTable) -> bool {
-    for start in 0..=table.top_row() {
+    for start in 0..table.len() {
         if compare_renumbered_from(table, start) < 0 {
             return false;
         }
