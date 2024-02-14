@@ -282,25 +282,39 @@ fn first_free_in_table(table: &DynamicCosetTable) -> Option<(usize, isize)> {
 }
 
 
-fn close_gaps_recursively(
-    rels: &Vec<FreeWord>, table: &mut DynamicCosetTable, index: usize
+fn derived_table(
+    table: &DynamicCosetTable,
+    rels: &Vec<FreeWord>,
+    from: usize,
+    to: usize,
+    g: isize
 )
-    -> bool
+    -> Option<DynamicCosetTable>
 {
-    let mut q = VecDeque::from([index]);
+    if table.get(from, g).is_some() || table.get(to, -g).is_some() {
+        return None;
+    }
+
+    let mut result = table.clone();
+    result.join(from, to, g);
+
+    let mut q = VecDeque::from([from]);
 
     while let Some(row) = q.pop_front() {
         for rel in rels {
-            let (head, tail, gap, c) = scan_both_ways(table, rel, row);
-            if gap == 1 {
-                table.join(head, tail, c);
-                q.push_back(head);
-            } else if gap == 0 && head != tail {
-                return false;
+            if rel[0] == g {
+                let (head, tail, gap, c) = scan_both_ways(&result, rel, row);
+                if gap == 1 {
+                    result.join(head, tail, c);
+                    q.push_back(head);
+                } else if gap == 0 && head != tail {
+                    return None;
+                }
             }
         }
     }
-    true
+
+    Some(result)
 }
 
 
@@ -314,12 +328,8 @@ fn potential_children(
     if let Some((k, g)) = first_free_in_table(table) {
         let limit = max_rows.min(table.len() + 1);
         for pos in k..limit {
-            if table.get(pos, -g).is_none() {
-                let mut t = table.clone();
-                t.join(k, pos, g);
-                if close_gaps_recursively(rels, &mut t, k) {
-                    result.push(t);
-                }
+            if let Some(t) = derived_table(table, rels, k, pos, g) {
+                result.push(t);
             }
         }
     }
