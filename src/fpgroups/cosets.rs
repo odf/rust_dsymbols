@@ -217,23 +217,22 @@ pub fn coset_table(
 }
 
 
-pub fn coset_representative(table: &CosetTable) -> Vec<FreeWord> {
-    let mut queue = VecDeque::from([0 as usize]);
-    let mut result = vec![None; table.len()];
-    result[0] = Some(FreeWord::empty());
+pub fn coset_representative(table: &CosetTable) -> HashMap<usize, FreeWord> {
+    let mut queue = VecDeque::from([0]);
+    let mut result = HashMap::from([(0, FreeWord::empty())]);
 
     while let Some(i) = queue.pop_front() {
-        let w = result[i].clone().unwrap();
+        let w = result[&i].clone();
 
         for (&g, &k) in table[i].iter() {
-            if result[k].is_none() {
-                result[k] = Some(&w * FreeWord::from([g]));
+            if !result.contains_key(&k) {
+                result.insert(k, &w * FreeWord::from([g]));
                 queue.push_back(k);
             }
         }
     }
 
-    result.iter().flatten().cloned().collect()
+    result
 }
 
 
