@@ -161,7 +161,7 @@ fn scan_both_ways(table: &DynamicCosetTable, w: &FreeWord, start: usize)
     let n = w.len();
     let (head, i) = scan(table, w, start, n);
     let (tail, j) = scan(table, &w.inverse(), start, n - i);
-    (head, tail, n - i - j, if i < n { w[i] } else { 0 })
+    (head, tail, n - i - j, if i < n { w[i] } else { w[0] })
 }
 
 
