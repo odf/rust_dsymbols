@@ -226,7 +226,7 @@ pub fn coset_representative(table: &CosetTable) -> HashMap<usize, FreeWord> {
 
         for (&g, &k) in table[i].iter() {
             if !result.contains_key(&k) {
-                result.insert(k, &w * FreeWord::from([g]));
+                result.insert(k, &w * g);
                 queue.push_back(k);
             }
         }

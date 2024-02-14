@@ -108,6 +108,24 @@ impl Mul<FreeWord> for FreeWord {
 }
 
 
+impl Mul<isize> for &FreeWord {
+    type Output = FreeWord;
+
+    fn mul(self, rhs: isize) -> Self::Output {
+        self * FreeWord::from([rhs])
+    }
+}
+
+
+impl Mul<isize> for FreeWord {
+    type Output = FreeWord;
+
+    fn mul(self, rhs: isize) -> Self::Output {
+        self * FreeWord::from([rhs])
+    }
+}
+
+
 impl PartialOrd for FreeWord {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(&other))
