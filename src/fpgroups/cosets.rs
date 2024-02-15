@@ -339,6 +339,7 @@ fn potential_children(
 
 
 fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
+    let n = table.len();
     let mut n2o = HashMap::from([(0, start)]);
     let mut o2n = HashMap::from([(start, 0)]);
 
@@ -346,29 +347,20 @@ fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
         assert!(row < n2o.len(), "coset table is not transitive");
 
         for g in table.all_gens() {
-            if let Some(t) = table.get(n2o[&row], g) {
+            let oval = table.get(row, g).unwrap_or(n);
+
+            let nval = if let Some(t) = table.get(n2o[&row], g) {
                 if !o2n.contains_key(&t) {
                     let n = n2o.len();
                     o2n.insert(t, n);
                     n2o.insert(n, t);
                 }
-            }
+                *o2n.get(&t).unwrap()
+            } else {
+                n
+            };
 
-            let oval = table.get(row, g);
-            let nval = table.get(n2o[&row], g)
-                .and_then(|t| o2n.get(&t)).cloned();
-
-            if oval != nval {
-                if oval.is_none() {
-                    return -1;
-                } else if nval.is_none() {
-                    return 1;
-                } else if nval.unwrap() < oval.unwrap() {
-                    return -1;
-                } else {
-                    return 1;
-                }
-            }
+            return nval as isize - oval as isize;
         }
     }
     0
