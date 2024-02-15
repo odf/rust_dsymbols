@@ -130,7 +130,7 @@ impl fmt::Display for DynamicCosetTable {
 }
 
 
-fn extended_relator_set(relators: &Vec<Relator>) -> BTreeSet<FreeWord> {
+fn expanded_relator_set(relators: &Vec<Relator>) -> BTreeSet<FreeWord> {
     let mut rels = BTreeSet::new();
     for rel in relators {
         rels.extend(rel.permutations());
@@ -182,7 +182,7 @@ pub fn coset_table(
     nr_gens: usize, relators: &Vec<Relator>, subgroup_gens: &Vec<FreeWord>
 ) -> CosetTable
 {
-    let rels = extended_relator_set(relators);
+    let rels = expanded_relator_set(relators);
     let mut table = DynamicCosetTable::new(nr_gens);
 
     for i in 0.. {
@@ -284,7 +284,7 @@ fn first_free_in_table(table: &DynamicCosetTable) -> Option<(usize, isize)> {
 
 fn derived_table(
     table: &DynamicCosetTable,
-    rels: &Vec<FreeWord>,
+    expanded_rels: &Vec<FreeWord>,
     from: usize,
     to: usize,
     g: isize
@@ -301,7 +301,7 @@ fn derived_table(
     let mut q = VecDeque::from([from]);
 
     while let Some(row) = q.pop_front() {
-        for rel in rels {
+        for rel in expanded_rels {
             if rel[0] == g {
                 let (head, tail, gap, c) = scan_both_ways(&result, rel, row);
                 if gap == 1 {
@@ -319,7 +319,7 @@ fn derived_table(
 
 
 fn potential_children(
-    table: &DynamicCosetTable, rels: &Vec<FreeWord>, max_rows: usize
+    table: &DynamicCosetTable, expanded_rels: &Vec<FreeWord>, max_rows: usize
 )
     -> Vec<DynamicCosetTable>
 {
@@ -328,7 +328,7 @@ fn potential_children(
     if let Some((k, g)) = first_free_in_table(table) {
         let limit = max_rows.min(table.len() + 1);
         for pos in k..limit {
-            if let Some(t) = derived_table(table, rels, k, pos, g) {
+            if let Some(t) = derived_table(table, expanded_rels, k, pos, g) {
                 result.push(t);
             }
         }
@@ -387,7 +387,7 @@ fn is_canonical(table: &DynamicCosetTable) -> bool {
 
 struct CosetTableBacktracking {
     nr_gens: usize,
-    relators: Vec<FreeWord>,
+    expanded_relators: Vec<FreeWord>,
     max_rows: usize,
 }
 
@@ -409,7 +409,7 @@ impl BackTracking for CosetTableBacktracking {
     }
 
     fn children(&self, state: &Self::State) -> Vec<Self::State> {
-        potential_children(state, &self.relators, self.max_rows)
+        potential_children(state, &self.expanded_relators, self.max_rows)
             .iter()
             .cloned()
             .filter(is_canonical)
@@ -427,11 +427,12 @@ impl CosetTables {
     fn new(nr_gens: usize, rels: Vec<Relator>, max_rows: usize)
         -> CosetTables
     {
-        let relators = extended_relator_set(&rels).iter().cloned().collect();
+        let expanded_relators = expanded_relator_set(&rels)
+            .iter().cloned().collect();
 
         CosetTables {
             bt: BackTrackIterator::new(
-                CosetTableBacktracking { nr_gens, relators, max_rows }
+                CosetTableBacktracking { nr_gens, expanded_relators, max_rows }
             )
         }
     }
