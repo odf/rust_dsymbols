@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::dsyms::*;
 
@@ -81,4 +81,45 @@ impl<'a, T: DSym> Boundary<'a, T> {
 
         result
     }
+}
+
+
+fn spanning_tree<T: DSym>(ds: T) -> Vec<(usize, usize)> {
+    let mut seen = HashSet::new();
+    let mut result = Vec::new();
+
+    for (maybe_i, d, di) in ds.full_traversal() {
+        if !seen.contains(&di) {
+            if let Some(i) = maybe_i {
+                result.push((d, i));
+            }
+            seen.insert(di);
+        }
+    }
+
+    result
+}
+
+
+#[test]
+fn test_spanning_tree() {
+    let tree = |s: &str| spanning_tree(s.parse::<PartialDSym>().unwrap());
+
+    assert_eq!(
+        tree("
+            <1.1:24:
+            2 4 6 8 10 12 14 16 18 20 22 24,
+            16 3 5 7 9 11 13 15 24 19 21 23,
+            10 9 20 19 14 13 22 21 24 23 18 17:
+            8 4,3 3 3 3
+            >
+        ").len(),
+        23
+    );
+    assert_eq!(tree("<1.1:3:1 2 3,1 3,2 3:4 8,3>"), vec![(1, 2), (2, 1)]);
+    assert_eq!(tree("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>"), vec![(1, 0)]);
+    assert_eq!(
+        tree("<1.1:8:2 4 6 8,8 3 5 7,1 2 3 4 5 6 7 8:4,4 6 8 4>"),
+        vec![(1, 0), (2, 1), (3, 0), (4, 1), (5, 0), (6, 1), (7, 0)]
+    );
 }
