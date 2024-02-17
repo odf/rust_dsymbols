@@ -18,7 +18,9 @@ impl<'a, T: DSym> Boundary<'a, T> {
         for d in 1..=ds.size() {
             for i in 0..=ds.dim() {
                 for j in 0..=ds.dim() {
-                    opposite.insert((d, i, j), ((d, j, i), 1));
+                    if i != j {
+                        opposite.insert((d, i, j), ((d, j, i), 1));
+                    }
                 }
             }
         }
