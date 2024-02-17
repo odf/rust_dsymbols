@@ -122,21 +122,25 @@ fn trace_word<T: DSym>(
 )
     -> FreeWord
 {
-    let mut e = d;
-    let mut result = FreeWord::empty();
+    if i == j {
+        edge_to_word.get(&(d, i)).unwrap_or(&FreeWord::empty()).clone()
+    } else {
+        let mut e = d;
+        let mut result = FreeWord::empty();
 
-    loop {
-        result *= edge_to_word.get(&(e, i)).unwrap_or(&FreeWord::empty());
-        e = ds.op(i, e).unwrap_or(e);
-        result *= edge_to_word.get(&(e, j)).unwrap_or(&FreeWord::empty());
-        e = ds.op(j, e).unwrap_or(e);
+        loop {
+            result *= edge_to_word.get(&(e, i)).unwrap_or(&FreeWord::empty());
+            e = ds.op(i, e).unwrap_or(e);
+            result *= edge_to_word.get(&(e, j)).unwrap_or(&FreeWord::empty());
+            e = ds.op(j, e).unwrap_or(e);
 
-        if e == d {
-            break;
+            if e == d {
+                break;
+            }
         }
-    }
 
-    result
+        result
+    }
 }
 
 
@@ -159,11 +163,12 @@ fn find_generators<T: DSym>(ds: &T)
                 edge_to_word.insert((d, i), FreeWord::from([gen as isize]));
                 edge_to_word.insert((di, i), FreeWord::from([-(gen as isize)]));
 
-                for (d, i, j) in bnd.glue_recursively(vec![(d, i, i)]) {
-                    let w = trace_word(ds, &edge_to_word, di, j, i);
+                for (e, i, j) in bnd.glue_recursively(vec![(d, i, i)]) {
+                    let ei = ds.op(i, e).unwrap();
+                    let w = trace_word(ds, &edge_to_word, ei, j, i);
                     if w.len() > 0 {
-                        edge_to_word.insert((d, i), w.inverse());
-                        edge_to_word.insert((di, i), w);
+                        edge_to_word.insert((e, i), w.inverse());
+                        edge_to_word.insert((ei, i), w);
                     }
                 }
             }
@@ -258,8 +263,8 @@ fn test_find_generators() {
     let find = |s: &str| find_generators(&s.parse::<PartialDSym>().unwrap());
 
     assert_eq!(
-        find("<1.1:3:1 2 3,1 3,2 3:4 8,3>").0,
-            //(
+        find("<1.1:3:1 2 3,1 3,2 3:4 8,3>"),
+            (
                 HashMap::from([
                     ((1, 0), FreeWord::from([-1])),
                     ((1, 1), FreeWord::from([-2])),
@@ -267,7 +272,7 @@ fn test_find_generators() {
                     ((3, 0), FreeWord::from([-3])),
                     ((3, 2), FreeWord::from([-2])),
                 ]),
-            //    HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
-            //)
+                HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
+            )
     );
 }
