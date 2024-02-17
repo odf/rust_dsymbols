@@ -224,7 +224,7 @@ impl DSym for PartialDSym {
             Some(1)
         } else if j == i + 1 {
             Some(self.orbit_rs[self.orbit_index[i][d]])
-        } else if j == i - 1 {
+        } else if i == j + 1 {
             Some(self.orbit_rs[self.orbit_index[j][d]])
         } else if self.op(i, d) == self.op(j, d) {
             Some(1)
@@ -240,7 +240,7 @@ impl DSym for PartialDSym {
             Some(1)
         } else if j == i + 1 {
             Some(self.orbit_vs[self.orbit_index[i][d]])
-        } else if j == i - 1 {
+        } else if i == j + 1 {
             Some(self.orbit_vs[self.orbit_index[j][d]])
         } else if self.op(i, d) == self.op(j, d) {
             Some(2)
