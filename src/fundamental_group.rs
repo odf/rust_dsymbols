@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::dsyms::*;
+use crate::fpgroups::free_words::FreeWord;
 
 
 type Edge = (usize, usize);
@@ -112,6 +113,67 @@ pub fn inner_edges<T: DSym>(ds: &T) -> Vec<Edge> {
 }
 
 
+fn trace_word<T: DSym>(
+    ds: &T,
+    edge_to_word: &HashMap<Edge, FreeWord>,
+    d: usize,
+    i: usize,
+    j: usize
+)
+    -> FreeWord
+{
+    let mut e = d;
+    let mut result = FreeWord::empty();
+
+    loop {
+        result *= edge_to_word.get(&(e, i)).unwrap_or(&FreeWord::empty());
+        e = ds.op(i, e).unwrap_or(e);
+        result *= edge_to_word.get(&(e, j)).unwrap_or(&FreeWord::empty());
+        e = ds.op(j, e).unwrap_or(e);
+
+        if e == d {
+            break;
+        }
+    }
+
+    result
+}
+
+
+fn find_generators<T: DSym>(ds: &T)
+    -> (HashMap<Edge, FreeWord>, HashMap<usize, Edge>)
+{
+    let mut edge_to_word = HashMap::new();
+    let mut gen_to_edge = HashMap::new();
+
+    let mut bnd = Boundary::new(ds);
+    bnd.glue_recursively(spanning_tree(ds));
+
+    for d in 1..=ds.size() {
+        for i in 0..=ds.dim() {
+            if (0..=ds.dim()).any(|j| bnd.opposite(d, i, j).is_some()) {
+                let di = ds.op(i, d).unwrap();
+                let gen = gen_to_edge.len() + 1;
+                gen_to_edge.insert(gen, (d, i));
+
+                edge_to_word.insert((d, i), FreeWord::from([gen as isize]));
+                edge_to_word.insert((di, i), FreeWord::from([-(gen as isize)]));
+
+                for (d, i, j) in bnd.glue_recursively(vec![(d, i, i)]) {
+                    let w = trace_word(ds, &edge_to_word, di, j, i);
+                    if w.len() > 0 {
+                        edge_to_word.insert((d, i), w.inverse());
+                        edge_to_word.insert((di, i), w);
+                    }
+                }
+            }
+        }
+    }
+
+    (edge_to_word, gen_to_edge)
+}
+
+
 #[test]
 fn test_spanning_tree() {
     let tree = |s: &str|
@@ -187,5 +249,25 @@ fn test_inner_edges() {
             (1, 0), (2, 1), (3, 0), (4, 1), (5, 0), (6, 1), (7, 0), (8, 1),
             (9, 0), (24, 1), (23, 2), (11, 1)
         ]
+    );
+}
+
+
+#[test]
+fn test_find_generators() {
+    let find = |s: &str| find_generators(&s.parse::<PartialDSym>().unwrap());
+
+    assert_eq!(
+        find("<1.1:3:1 2 3,1 3,2 3:4 8,3>").0,
+            //(
+                HashMap::from([
+                    ((1, 0), FreeWord::from([-1])),
+                    ((1, 1), FreeWord::from([-2])),
+                    ((2, 0), FreeWord::from([-1])),
+                    ((3, 0), FreeWord::from([-3])),
+                    ((3, 2), FreeWord::from([-2])),
+                ]),
+            //    HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
+            //)
     );
 }
