@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use crate::dsyms::*;
 
 
+type Edge = (usize, usize);
 type Ridge = (usize, usize, usize);
 
 struct Boundary<'a, T: DSym> {
@@ -84,7 +85,7 @@ impl<'a, T: DSym> Boundary<'a, T> {
 }
 
 
-fn spanning_tree<T: DSym>(ds: &T) -> Vec<(usize, usize)> {
+fn spanning_tree<T: DSym>(ds: &T) -> Vec<Ridge> {
     let mut seen = HashSet::new();
     let mut result = Vec::new();
 
@@ -92,7 +93,7 @@ fn spanning_tree<T: DSym>(ds: &T) -> Vec<(usize, usize)> {
     for (maybe_i, d, di) in ds.traversal(0..=ds.dim(), (1..=ds.size()).rev()) {
         if !seen.contains(&di) {
             if let Some(i) = maybe_i {
-                result.push((d, i));
+                result.push((d, i, i));
             }
             seen.insert(di);
         }
@@ -102,10 +103,8 @@ fn spanning_tree<T: DSym>(ds: &T) -> Vec<(usize, usize)> {
 }
 
 
-pub fn inner_edges<T: DSym>(ds: &T) -> Vec<(usize, usize)> {
-    let tree = spanning_tree(ds);
-    let todo: Vec<_> = tree.iter().map(|&(d, i)| (d, i, i)).collect();
-    let glued = Boundary::new(ds).glue_recursively(todo);
+pub fn inner_edges<T: DSym>(ds: &T) -> Vec<Edge> {
+    let glued = Boundary::new(ds).glue_recursively(spanning_tree(ds));
 
     glued.iter().map(|&(d, i, _)| (d, i)).collect()
 }
@@ -113,7 +112,10 @@ pub fn inner_edges<T: DSym>(ds: &T) -> Vec<(usize, usize)> {
 
 #[test]
 fn test_spanning_tree() {
-    let tree = |s: &str| spanning_tree(&s.parse::<PartialDSym>().unwrap());
+    let tree = |s: &str|
+        spanning_tree(&s.parse::<PartialDSym>().unwrap()).iter()
+            .map(|&(d, i, _)| (d, i))
+            .collect::<Vec<_>>();
 
     assert_eq!(tree("<1.1:3:1 2 3,1 3,2 3:4 8,3>"), vec![(3, 1), (2, 2)]);
     assert_eq!(tree("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>"), vec![(2, 0)]);
