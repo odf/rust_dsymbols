@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
-use std::ops::{Index, Mul};
+use std::ops::{Index, Mul, MulAssign};
 
 
 fn normalized(w: &[isize]) -> Vec<isize> {
@@ -61,6 +61,11 @@ impl FreeWord {
 }
 
 
+fn mul(lhs: &[isize], rhs: &[isize]) -> Vec<isize> {
+    lhs.iter().chain(rhs.iter()).cloned().collect()
+}
+
+
 impl Index<usize> for FreeWord {
     type Output = isize;
 
@@ -74,9 +79,7 @@ impl Mul<&FreeWord> for &FreeWord {
     type Output = FreeWord;
 
     fn mul(self, rhs: &FreeWord) -> Self::Output {
-        FreeWord::new(
-            &self.w.iter().chain(rhs.w.iter()).cloned().collect::<Vec<_>>()
-        )
+        FreeWord::new(&mul(&self.w, &rhs.w))
     }
 }
 
@@ -112,7 +115,7 @@ impl Mul<isize> for &FreeWord {
     type Output = FreeWord;
 
     fn mul(self, rhs: isize) -> Self::Output {
-        self * FreeWord::from([rhs])
+        FreeWord::new(&mul(&self.w, &[rhs]))
     }
 }
 
@@ -121,7 +124,14 @@ impl Mul<isize> for FreeWord {
     type Output = FreeWord;
 
     fn mul(self, rhs: isize) -> Self::Output {
-        self * FreeWord::from([rhs])
+        FreeWord::new(&mul(&self.w, &[rhs]))
+    }
+}
+
+
+impl MulAssign<&FreeWord> for FreeWord {
+    fn mul_assign(&mut self, rhs: &FreeWord) {
+        self.w = mul(&self.w, &rhs.w);
     }
 }
 
