@@ -1,2 +1,2 @@
-mod free_words;
-mod cosets;
+pub mod free_words;
+pub mod cosets;
