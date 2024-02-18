@@ -222,7 +222,7 @@ pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
                 }
 
                 if degree > 1 {
-                    cones.insert(word, degree);
+                    cones.insert(relator_representative(&word), degree);
                 }
             }
         }
@@ -335,8 +335,23 @@ fn test_find_generators() {
 fn test_fundamental_group() {
     let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
 
+    let g = group("<1.1:3:1 2 3,1 3,2 3:4 8,3>");
     assert_eq!(
-        group("<1.1:3:1 2 3,1 3,2 3:4 8,3>").relators,
+        g.gen_to_edge,
+        HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
+    );
+    assert_eq!(
+        g.edge_to_word,
+        HashMap::from([
+            ((1, 0), FreeWord::from([-1])),
+            ((1, 1), FreeWord::from([-2])),
+            ((2, 0), FreeWord::from([-1])),
+            ((3, 0), FreeWord::from([-3])),
+            ((3, 2), FreeWord::from([-2])),
+        ])
+    );
+    assert_eq!(
+        g.relators,
         HashSet::from([
             FreeWord::from([1, 1]),
             FreeWord::from([2, 2]),
@@ -344,6 +359,14 @@ fn test_fundamental_group() {
             FreeWord::from([1, 2, 1, 2, 1, 2, 1, 2]),
             FreeWord::from([1, 3, 1, 3, 1, 3, 1, 3]),
             FreeWord::from([2, 3, 2, 3]),
+        ])
+    );
+    assert_eq!(
+        g.cones,
+        HashMap::from([
+            (FreeWord::from([1, 2]), 4),
+            (FreeWord::from([1, 3]), 4),
+            (FreeWord::from([2, 3]), 2),
         ])
     );
 }
