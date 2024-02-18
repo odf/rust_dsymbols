@@ -68,19 +68,27 @@ impl<'a, T: DSym> Boundary<'a, T> {
         result
     }
 
-    fn glue_recursively(&mut self, todo: Vec<Ridge>) -> Vec<Ridge> {
+    fn glue_recursively(&mut self, todo: Vec<(usize, usize, Option<usize>)>)
+        -> Vec<(usize, usize, Option<usize>)>
+    {
         let mut todo = VecDeque::from(todo);
         let mut result = Vec::new();
 
         while let Some(next) = todo.pop_front() {
             let (d, i, j) = next;
-            let t = if self.ds.op(i, d) == Some(d) { 1 } else { 2 };
-            let m = self.ds.m(i, j, d).unwrap_or(0) * t;
 
-            if j > self.ds.dim() ||
+            let good = if let Some(j) = j {
+                let t = if self.ds.op(i, d) == Some(d) { 1 } else { 2 };
+                let m = self.ds.m(i, j, d).unwrap() * t;
                 self.opposite(d, i, j).is_some_and(|(_, n)| n == m)
-            {
-                todo.extend(self.glue(d, i));
+            } else {
+                true
+            };
+
+            if good {
+                for (d, i, j) in self.glue(d, i) {
+                    todo.push_back((d, i, Some(j)));
+                }
                 result.push(next);
             }
         }
@@ -90,7 +98,7 @@ impl<'a, T: DSym> Boundary<'a, T> {
 }
 
 
-fn spanning_tree<T: DSym>(ds: &T) -> Vec<Ridge> {
+fn spanning_tree<T: DSym>(ds: &T) -> Vec<(usize, usize, Option<usize>)> {
     let mut seen = HashSet::new();
     let mut result = Vec::new();
 
@@ -98,7 +106,7 @@ fn spanning_tree<T: DSym>(ds: &T) -> Vec<Ridge> {
     for (maybe_i, d, di) in ds.traversal(0..=ds.dim(), (1..=ds.size()).rev()) {
         if !seen.contains(&di) {
             if let Some(i) = maybe_i {
-                result.push((d, i, ds.dim() + 1));
+                result.push((d, i, None));
             }
             seen.insert(di);
         }
@@ -119,23 +127,32 @@ fn trace_word<T: DSym>(
     ds: &T,
     edge_to_word: &HashMap<Edge, FreeWord>,
     d: usize,
-    i: usize,
-    j: usize
+    i: Option<usize>,
+    j: Option<usize>
 )
     -> FreeWord
 {
-    let mut e = d;
+    let nil = FreeWord::empty();
     let mut result = FreeWord::empty();
 
-    loop {
-        result *= edge_to_word.get(&(e, i)).unwrap_or(&FreeWord::empty());
-        e = ds.op(i, e).unwrap_or(e);
-        result *= edge_to_word.get(&(e, j)).unwrap_or(&FreeWord::empty());
-        e = ds.op(j, e).unwrap_or(e);
+    if let Some(i) = i {
+        if let Some(j) = j {
+            let mut e = d;
+            loop {
+                result *= edge_to_word.get(&(e, i)).unwrap_or(&nil);
+                e = ds.op(i, e).unwrap_or(e);
+                result *= edge_to_word.get(&(e, j)).unwrap_or(&nil);
+                e = ds.op(j, e).unwrap_or(e);
 
-        if e == d {
-            break;
+                if e == d {
+                    break;
+                }
+            }
+        } else {
+            result *= edge_to_word.get(&(d, i)).unwrap_or(&nil);
         }
+    } else if let Some(j) = j {
+        result *= edge_to_word.get(&(d, j)).unwrap_or(&nil);
     }
 
     result
@@ -161,11 +178,11 @@ fn find_generators<T: DSym>(ds: &T)
                 edge_to_word.insert((d, i), FreeWord::from([gen as isize]));
                 edge_to_word.insert((di, i), FreeWord::from([-(gen as isize)]));
 
-                let glued = bnd.glue_recursively(vec![(d, i, ds.dim() + 1)]);
+                let glued = bnd.glue_recursively(vec![(d, i, None)]);
 
                 for (e, i, j) in glued {
                     let ei = ds.op(i, e).unwrap();
-                    let w = trace_word(ds, &edge_to_word, ei, j, i);
+                    let w = trace_word(ds, &edge_to_word, ei, j, Some(i));
                     if w.len() > 0 {
                         edge_to_word.insert((e, i), w.inverse());
                         edge_to_word.insert((ei, i), w);
@@ -196,7 +213,7 @@ pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
         for j in i..=ds.dim() {
             for d in ds.orbit_reps_2d(i, j) {
                 let di = ds.op(i, d).unwrap();
-                let word = trace_word(ds, &edge_to_word, di, j, i);
+                let word = trace_word(ds, &edge_to_word, di, Some(j), Some(i));
                 let degree = ds.v(i, j, d).unwrap();
                 let rel = word.raised_to(degree as isize);
 
