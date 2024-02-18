@@ -332,7 +332,54 @@ fn test_find_generators() {
 
 
 #[test]
-fn test_fundamental_group() {
+fn test_fundamental_group_a() {
+    let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
+
+    let g = group("<1.1:1 3:1,1,1,1:4,3,4>");
+    assert_eq!(
+        g.gen_to_edge,
+        HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (1, 2)), (4, (1, 3))])
+    );
+    assert_eq!(
+        g.edge_to_word,
+        HashMap::from([
+            ((1, 0), FreeWord::from([-1])),
+            ((1, 1), FreeWord::from([-2])),
+            ((1, 2), FreeWord::from([-3])),
+            ((1, 3), FreeWord::from([-4])),
+        ])
+    );
+    assert_eq!(
+        g.relators,
+        HashSet::from([
+            FreeWord::from([1, 1]),
+            FreeWord::from([1, 2]).raised_to(4),
+            FreeWord::from([1, 3]).raised_to(2),
+            FreeWord::from([1, 4]).raised_to(2),
+            FreeWord::from([2, 2]),
+            FreeWord::from([2, 3]).raised_to(3),
+            FreeWord::from([2, 4]).raised_to(2),
+            FreeWord::from([3, 3]),
+            FreeWord::from([3, 4]).raised_to(4),
+            FreeWord::from([4, 4]),
+        ])
+    );
+    assert_eq!(
+        g.cones,
+        HashMap::from([
+            (FreeWord::from([1, 2]), 4),
+            (FreeWord::from([1, 3]), 2),
+            (FreeWord::from([1, 4]), 2),
+            (FreeWord::from([2, 3]), 3),
+            (FreeWord::from([2, 4]), 2),
+            (FreeWord::from([3, 4]), 4),
+        ])
+    );
+}
+
+
+#[test]
+fn test_fundamental_group_b() {
     let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
 
     let g = group("<1.1:3:1 2 3,1 3,2 3:4 8,3>");
