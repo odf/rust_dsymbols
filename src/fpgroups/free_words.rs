@@ -18,7 +18,7 @@ fn normalized(w: &[isize]) -> Vec<isize> {
 }
 
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FreeWord {
     w: Vec<isize>
 }
@@ -200,7 +200,7 @@ fn relator_permutations(fw: &FreeWord) -> Vec<FreeWord> {
 }
 
 
-fn relator_representative(fw: &FreeWord) -> FreeWord {
+pub fn relator_representative(fw: &FreeWord) -> FreeWord {
     relator_permutations(fw).iter().min().unwrap().clone()
 }
 

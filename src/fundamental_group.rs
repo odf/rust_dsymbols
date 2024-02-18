@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::dsyms::*;
-use crate::fpgroups::free_words::FreeWord;
+use crate::fpgroups::free_words::{relator_representative, FreeWord};
 
 
 type Edge = (usize, usize);
@@ -176,6 +176,45 @@ fn find_generators<T: DSym>(ds: &T)
     }
 
     (edge_to_word, gen_to_edge)
+}
+
+
+pub struct FundamentalGroup<'a, T: DSym> {
+    pub ds: &'a T,
+    pub relators: HashSet<FreeWord>,
+    pub cones: HashMap<FreeWord, usize>,
+    pub gen_to_edge: HashMap<usize, Edge>,
+    pub edge_to_word: HashMap<Edge, FreeWord>,
+}
+
+
+impl<'a, T: DSym> FundamentalGroup<'a, T> {
+    fn new(ds: &'a T) -> Self {
+        let (edge_to_word, gen_to_edge) = find_generators(ds);
+        let mut cones = HashMap::new();
+        let mut relators = HashSet::new();
+
+        for i in 0..=ds.dim() {
+            for j in i..=ds.dim() {
+                for d in ds.orbit_reps_2d(i, j) {
+                    let di = ds.op(i, d).unwrap();
+                    let word = trace_word(ds, &edge_to_word, di, j, i);
+                    let degree = ds.v(i, j, d).unwrap();
+                    let rel = word.raised_to(degree as isize);
+
+                    if rel.len() > 0 {
+                        relators.insert(relator_representative(&rel));
+                    }
+
+                    if degree > 1 {
+                        cones.insert(word, degree);
+                    }
+                }
+            }
+        }
+
+        Self { ds, relators, cones, gen_to_edge, edge_to_word }
+    }
 }
 
 
