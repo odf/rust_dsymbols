@@ -75,9 +75,11 @@ impl<'a, T: DSym> Boundary<'a, T> {
         while let Some(next) = todo.pop_front() {
             let (d, i, j) = next;
             let t = if self.ds.op(i, d) == Some(d) { 1 } else { 2 };
-            let m = self.ds.m(i, j, d).unwrap() * t;
+            let m = self.ds.m(i, j, d).unwrap_or(0) * t;
 
-            if i == j || self.opposite(d, i, j).is_some_and(|(_, n)| n == m) {
+            if j > self.ds.dim() ||
+                self.opposite(d, i, j).is_some_and(|(_, n)| n == m)
+            {
                 todo.extend(self.glue(d, i));
                 result.push(next);
             }
@@ -96,7 +98,7 @@ fn spanning_tree<T: DSym>(ds: &T) -> Vec<Ridge> {
     for (maybe_i, d, di) in ds.traversal(0..=ds.dim(), (1..=ds.size()).rev()) {
         if !seen.contains(&di) {
             if let Some(i) = maybe_i {
-                result.push((d, i, i));
+                result.push((d, i, ds.dim() + 1));
             }
             seen.insert(di);
         }
@@ -122,25 +124,21 @@ fn trace_word<T: DSym>(
 )
     -> FreeWord
 {
-    if i == j {
-        edge_to_word.get(&(d, i)).unwrap_or(&FreeWord::empty()).clone()
-    } else {
-        let mut e = d;
-        let mut result = FreeWord::empty();
+    let mut e = d;
+    let mut result = FreeWord::empty();
 
-        loop {
-            result *= edge_to_word.get(&(e, i)).unwrap_or(&FreeWord::empty());
-            e = ds.op(i, e).unwrap_or(e);
-            result *= edge_to_word.get(&(e, j)).unwrap_or(&FreeWord::empty());
-            e = ds.op(j, e).unwrap_or(e);
+    loop {
+        result *= edge_to_word.get(&(e, i)).unwrap_or(&FreeWord::empty());
+        e = ds.op(i, e).unwrap_or(e);
+        result *= edge_to_word.get(&(e, j)).unwrap_or(&FreeWord::empty());
+        e = ds.op(j, e).unwrap_or(e);
 
-            if e == d {
-                break;
-            }
+        if e == d {
+            break;
         }
-
-        result
     }
+
+    result
 }
 
 
@@ -163,7 +161,9 @@ fn find_generators<T: DSym>(ds: &T)
                 edge_to_word.insert((d, i), FreeWord::from([gen as isize]));
                 edge_to_word.insert((di, i), FreeWord::from([-(gen as isize)]));
 
-                for (e, i, j) in bnd.glue_recursively(vec![(d, i, i)]) {
+                let glued = bnd.glue_recursively(vec![(d, i, ds.dim() + 1)]);
+
+                for (e, i, j) in glued {
                     let ei = ds.op(i, e).unwrap();
                     let w = trace_word(ds, &edge_to_word, ei, j, i);
                     if w.len() > 0 {
@@ -179,8 +179,7 @@ fn find_generators<T: DSym>(ds: &T)
 }
 
 
-pub struct FundamentalGroup<'a, T: DSym> {
-    pub ds: &'a T,
+pub struct FundamentalGroup {
     pub relators: HashSet<FreeWord>,
     pub cones: HashMap<FreeWord, usize>,
     pub gen_to_edge: HashMap<usize, Edge>,
@@ -188,33 +187,31 @@ pub struct FundamentalGroup<'a, T: DSym> {
 }
 
 
-impl<'a, T: DSym> FundamentalGroup<'a, T> {
-    fn new(ds: &'a T) -> Self {
-        let (edge_to_word, gen_to_edge) = find_generators(ds);
-        let mut cones = HashMap::new();
-        let mut relators = HashSet::new();
+pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
+    let (edge_to_word, gen_to_edge) = find_generators(ds);
+    let mut cones = HashMap::new();
+    let mut relators = HashSet::new();
 
-        for i in 0..=ds.dim() {
-            for j in i..=ds.dim() {
-                for d in ds.orbit_reps_2d(i, j) {
-                    let di = ds.op(i, d).unwrap();
-                    let word = trace_word(ds, &edge_to_word, di, j, i);
-                    let degree = ds.v(i, j, d).unwrap();
-                    let rel = word.raised_to(degree as isize);
+    for i in 0..=ds.dim() {
+        for j in i..=ds.dim() {
+            for d in ds.orbit_reps_2d(i, j) {
+                let di = ds.op(i, d).unwrap();
+                let word = trace_word(ds, &edge_to_word, di, j, i);
+                let degree = ds.v(i, j, d).unwrap();
+                let rel = word.raised_to(degree as isize);
 
-                    if rel.len() > 0 {
-                        relators.insert(relator_representative(&rel));
-                    }
+                if rel.len() > 0 {
+                    relators.insert(relator_representative(&rel));
+                }
 
-                    if degree > 1 {
-                        cones.insert(word, degree);
-                    }
+                if degree > 1 {
+                    cones.insert(word, degree);
                 }
             }
         }
-
-        Self { ds, relators, cones, gen_to_edge, edge_to_word }
     }
+
+    FundamentalGroup { relators, cones, gen_to_edge, edge_to_word }
 }
 
 
@@ -313,5 +310,23 @@ fn test_find_generators() {
                 ]),
                 HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
             )
+    );
+}
+
+
+#[test]
+fn test_fundamental_group() {
+    let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
+
+    assert_eq!(
+        group("<1.1:3:1 2 3,1 3,2 3:4 8,3>").relators,
+        HashSet::from([
+            FreeWord::from([1, 1]),
+            FreeWord::from([2, 2]),
+            FreeWord::from([3, 3]),
+            FreeWord::from([1, 2, 1, 2, 1, 2, 1, 2]),
+            FreeWord::from([1, 3, 1, 3, 1, 3, 1, 3]),
+            FreeWord::from([2, 3, 2, 3]),
+        ])
     );
 }
