@@ -37,6 +37,10 @@ impl FreeWord {
         self.w.len()
     }
 
+    pub fn iter(&self) -> std::slice::Iter<'_, isize> {
+        self.w.iter()
+    }
+
     pub fn inverse(&self) -> Self {
         Self::new(&self.w.iter().rev().map(|x| -x).collect::<Vec<_>>())
     }
