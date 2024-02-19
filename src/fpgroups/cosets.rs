@@ -7,7 +7,7 @@ use crate::util::partitions::Partition;
 use super::free_words::{FreeWord, Relator};
 
 
-type CosetTable = Vec<HashMap<isize, usize>>;
+pub type CosetTable = Vec<HashMap<isize, usize>>;
 
 
 #[derive(Clone)]
