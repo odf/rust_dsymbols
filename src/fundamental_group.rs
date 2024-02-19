@@ -434,3 +434,20 @@ fn test_fundamental_group_c() {
         ])
     );
 }
+
+
+#[test]
+fn test_fundamental_group_d() {
+    let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
+
+    let g = group("
+        <1.1:24:
+        2 4 6 8 10 12 14 16 18 20 22 24,
+        16 3 5 7 9 11 13 15 24 19 21 23,
+        10 9 20 19 14 13 22 21 24 23 18 17:
+        8 4,3 3 3 3
+        >");
+    assert_eq!(g.gen_to_edge, HashMap::from([(1, (1, 2)), (2, (3, 2))]));
+    assert_eq!(g.relators, HashSet::from([FreeWord::from([1, 2, -1, -2])]));
+    assert_eq!(g.cones, HashMap::from([]));
+}
