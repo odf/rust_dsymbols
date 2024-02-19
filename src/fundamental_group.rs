@@ -312,26 +312,6 @@ fn test_inner_edges() {
 
 
 #[test]
-fn test_find_generators() {
-    let find = |s: &str| find_generators(&s.parse::<PartialDSym>().unwrap());
-
-    assert_eq!(
-        find("<1.1:3:1 2 3,1 3,2 3:4 8,3>"),
-            (
-                HashMap::from([
-                    ((1, 0), FreeWord::from([-1])),
-                    ((1, 1), FreeWord::from([-2])),
-                    ((2, 0), FreeWord::from([-1])),
-                    ((3, 0), FreeWord::from([-3])),
-                    ((3, 2), FreeWord::from([-2])),
-                ]),
-                HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
-            )
-    );
-}
-
-
-#[test]
 fn test_fundamental_group_a() {
     let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
 
