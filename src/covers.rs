@@ -79,3 +79,23 @@ fn test_finite_universal_cover_round_trip() {
     check("<1.1:1 3:1,1,1,1:3,3,3>");
     check("<1.1:1 3:1,1,1,1:4,3,3>");
 }
+
+
+#[test]
+fn test_finite_universal_cover_group() {
+    let check = |s: &str| {
+        let ds = s.parse::<PartialDSym>().unwrap();
+        let g = fundamental_group(&finite_universal_cover(&ds));
+
+        assert_eq!(g.gen_to_edge.len(), 0);
+        assert_eq!(g.edge_to_word.len(), 0);
+        assert_eq!(g.relators.len(), 0);
+        assert_eq!(g.cones.len(), 0);
+    };
+
+    check("<1.1:1:1,1,1:3,3>");
+    check("<1.1:1:1,1,1:4,3>");
+    check("<1.1:1:1,1,1:3,5>");
+    check("<1.1:1 3:1,1,1,1:3,3,3>");
+    check("<1.1:1 3:1,1,1,1:4,3,3>");
+}
