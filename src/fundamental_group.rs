@@ -382,6 +382,43 @@ fn test_fundamental_group_a() {
 fn test_fundamental_group_b() {
     let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
 
+    let g = group("<1.1:2:2,2,2:4,3>");
+    assert_eq!(
+        g.gen_to_edge,
+        HashMap::from([(1, (1, 1)), (2, (1, 2))])
+    );
+    assert_eq!(
+        g.edge_to_word,
+        HashMap::from([
+            ((1, 1), FreeWord::from([1])),
+            ((1, 2), FreeWord::from([2])),
+            ((2, 1), FreeWord::from([-1])),
+            ((2, 2), FreeWord::from([-2])),
+        ])
+    );
+    assert_eq!(
+        g.relators,
+        HashSet::from([
+            FreeWord::from([1]).raised_to(4),
+            FreeWord::from([2]).raised_to(2),
+            FreeWord::from([1, -2]).raised_to(3),
+        ])
+    );
+    assert_eq!(
+        g.cones,
+        HashMap::from([
+            (FreeWord::from([1]), 4),
+            (FreeWord::from([2]), 2),
+            (FreeWord::from([1, -2]), 3),
+        ])
+    );
+}
+
+
+#[test]
+fn test_fundamental_group_c() {
+    let group = |s: &str| fundamental_group(&s.parse::<PartialDSym>().unwrap());
+
     let g = group("<1.1:3:1 2 3,1 3,2 3:4 8,3>");
     assert_eq!(
         g.gen_to_edge,
