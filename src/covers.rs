@@ -130,4 +130,6 @@ fn test_covers() {
 
     assert_eq!(covers("<1.1:1 1:1,1:3>", 3).len(), 3);
     assert_eq!(covers("<1.1:2 1:2,2:3>", 3).len(), 2);
+
+    assert_eq!(covers("<1.1:1:1,1,1:3,3>", 24).len(), 11);
 }
