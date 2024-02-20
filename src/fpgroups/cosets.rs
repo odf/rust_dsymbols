@@ -416,7 +416,7 @@ pub struct CosetTables {
 
 
 impl CosetTables {
-    fn new(nr_gens: usize, rels: Vec<Relator>, max_rows: usize)
+    fn new(nr_gens: usize, rels: &Vec<Relator>, max_rows: usize)
         -> CosetTables
     {
         let expanded_relators = expanded_relator_set(&rels)
@@ -440,7 +440,7 @@ impl Iterator for CosetTables {
 }
 
 
-pub fn coset_tables(nr_gens: usize, rels: Vec<Relator>, max_rows: usize)
+pub fn coset_tables(nr_gens: usize, rels: &Vec<Relator>, max_rows: usize)
     -> CosetTables
 {
     CosetTables::new(nr_gens, rels, max_rows)
@@ -558,7 +558,7 @@ mod coset_tests {
         assert_eq!(
             coset_tables(
                 2,
-                vec![
+                &vec![
                     Relator::from([1, 1]),
                     Relator::from([2, 2]),
                     Relator::from([1, 2, 1, 2]),
