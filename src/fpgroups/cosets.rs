@@ -302,14 +302,12 @@ fn derived_table(
 
     while let Some(row) = q.pop_front() {
         for rel in expanded_rels {
-            if rel[0] == g {
-                let (head, tail, gap, c) = scan_both_ways(&result, rel, row);
-                if gap == 1 {
-                    result.join(head, tail, c);
-                    q.push_back(head);
-                } else if gap == 0 && head != tail {
-                    return None;
-                }
+            let (head, tail, gap, c) = scan_both_ways(&result, rel, row);
+            if gap == 1 {
+                result.join(head, tail, c);
+                q.push_back(head);
+            } else if gap == 0 && head != tail {
+                return None;
             }
         }
     }
@@ -360,7 +358,11 @@ fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
                 n
             };
 
-            return nval as isize - oval as isize;
+            let result = nval as isize - oval as isize;
+
+            if result != 0 {
+                return result;
+            }
         }
     }
     0
@@ -368,7 +370,7 @@ fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
 
 
 fn is_canonical(table: &DynamicCosetTable) -> bool {
-    for start in 0..table.len() {
+    for start in 1..table.len() {
         if compare_renumbered_from(table, start) < 0 {
             return false;
         }
