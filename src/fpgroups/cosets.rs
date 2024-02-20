@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use crate::util::backtrack::{BackTrackIterator, BackTracking};
 use crate::util::partitions::Partition;
 
-use super::free_words::{FreeWord, Relator};
+use super::free_words::{relator_permutations, FreeWord};
 
 
 pub type CosetTable = Vec<HashMap<isize, usize>>;
@@ -130,10 +130,10 @@ impl fmt::Display for DynamicCosetTable {
 }
 
 
-fn expanded_relator_set(relators: &Vec<Relator>) -> BTreeSet<FreeWord> {
+fn expanded_relator_set(relators: &Vec<FreeWord>) -> BTreeSet<FreeWord> {
     let mut rels = BTreeSet::new();
     for rel in relators {
-        rels.extend(rel.permutations());
+        rels.extend(relator_permutations(&rel));
     }
     rels
 }
@@ -179,7 +179,7 @@ fn scan_and_connect(
 
 
 pub fn coset_table(
-    nr_gens: usize, relators: &Vec<Relator>, subgroup_gens: &Vec<FreeWord>
+    nr_gens: usize, relators: &Vec<FreeWord>, subgroup_gens: &Vec<FreeWord>
 ) -> CosetTable
 {
     let rels = expanded_relator_set(relators);
@@ -416,7 +416,7 @@ pub struct CosetTables {
 
 
 impl CosetTables {
-    fn new(nr_gens: usize, rels: &Vec<Relator>, max_rows: usize)
+    fn new(nr_gens: usize, rels: &Vec<FreeWord>, max_rows: usize)
         -> CosetTables
     {
         let expanded_relators = expanded_relator_set(&rels)
@@ -440,7 +440,7 @@ impl Iterator for CosetTables {
 }
 
 
-pub fn coset_tables(nr_gens: usize, rels: &Vec<Relator>, max_rows: usize)
+pub fn coset_tables(nr_gens: usize, rels: &Vec<FreeWord>, max_rows: usize)
     -> CosetTables
 {
     CosetTables::new(nr_gens, rels, max_rows)
@@ -456,7 +456,7 @@ mod coset_tests {
     {
         coset_table(
             nr_gens,
-            &rels.iter().map(|r| Relator::from(*r)).collect(),
+            &rels.iter().map(|r| FreeWord::from(*r)).collect(),
             &subgens.iter().map(|g| FreeWord::from(*g)).collect(),
         )
     }
@@ -559,9 +559,9 @@ mod coset_tests {
             coset_tables(
                 2,
                 &vec![
-                    Relator::from([1, 1]),
-                    Relator::from([2, 2]),
-                    Relator::from([1, 2, 1, 2]),
+                    FreeWord::from([1, 1]),
+                    FreeWord::from([2, 2]),
+                    FreeWord::from([1, 2, 1, 2]),
                 ],
                 8
             )

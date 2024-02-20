@@ -188,16 +188,16 @@ impl From<Vec<isize>> for FreeWord {
 }
 
 
-fn relator_permutations(fw: &FreeWord) -> Vec<FreeWord> {
+pub fn relator_permutations(fw: &FreeWord) -> BTreeSet<FreeWord> {
     if fw.w.len() == 0 {
-        vec![fw.clone()]
+        BTreeSet::from([fw.clone()])
     } else {
-        let mut result = vec![];
+        let mut result = BTreeSet::from([]);
 
         for i in 0..fw.w.len() {
             let w = fw.rotated(i as isize);
-            result.push(w.inverse());
-            result.push(w);
+            result.insert(w.inverse());
+            result.insert(w);
         }
         result
     }
@@ -206,51 +206,6 @@ fn relator_permutations(fw: &FreeWord) -> Vec<FreeWord> {
 
 pub fn relator_representative(fw: &FreeWord) -> FreeWord {
     relator_permutations(fw).iter().min().unwrap().clone()
-}
-
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Relator {
-    fw: FreeWord
-}
-
-
-impl Relator {
-    pub fn new(fw: &FreeWord) -> Self {
-        Self { fw: relator_representative(fw) }
-    }
-
-    pub fn permutations(&self) -> BTreeSet<FreeWord> {
-        relator_permutations(&self.fw).iter().cloned().collect()
-    }
-}
-
-
-impl From<FreeWord> for Relator {
-    fn from(value: FreeWord) -> Self {
-        Self::new(&value)
-    }
-}
-
-
-impl From<Vec<isize>> for Relator {
-    fn from(value: Vec<isize>) -> Self {
-        FreeWord::from(value).into()
-    }
-}
-
-
-impl<const N: usize> From<[isize; N]> for Relator {
-    fn from(value: [isize; N]) -> Self {
-        FreeWord::from(value).into()
-    }
-}
-
-
-impl From<&[isize]> for Relator {
-    fn from(value: &[isize]) -> Self {
-        FreeWord::from(value).into()
-    }
 }
 
 
@@ -377,19 +332,9 @@ fn test_relator_representative() {
 
 
 #[test]
-fn test_relator_new() {
-    assert_eq!(
-        Relator::new(&FreeWord::new(&[3, 2, 1])).fw,
-        relator_representative(&FreeWord::new(&[3, 2, 1]))
-    );
-}
-
-
-#[test]
 fn test_relator_permutations() {
     let perms = |w| {
-        Relator::new(&FreeWord::new(w))
-            .permutations().iter()
+        relator_permutations(&FreeWord::new(w)).iter()
             .cloned()
             .collect::<Vec<_>>()
     };
@@ -415,12 +360,4 @@ fn test_relator_permutations() {
             FreeWord::new(&[-2, -1, -2, -1]),
         ]
     );
-}
-
-
-#[test]
-fn test_relator_from() {
-    let rel: Relator = vec![1, 2, 3].into();
-    assert_eq!(rel, vec![1, 2, 3].into());
-    assert_eq!(rel.fw, vec![1, 2, 3].into());
 }
