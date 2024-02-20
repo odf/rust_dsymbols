@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::dsyms::*;
 
 use crate::derived::cover;
-use crate::fpgroups::cosets::{coset_table, CosetTable};
+use crate::fpgroups::cosets::{coset_table, coset_tables, CosetTable};
 use crate::fpgroups::free_words::{FreeWord, Relator};
 use crate::fundamental_group::fundamental_group;
 
@@ -16,14 +16,19 @@ fn trace_word(table: &CosetTable, start: usize, word: &FreeWord) -> usize {
 pub fn cover_for_table<T: DSym>(
     ds: &T,
     table: &CosetTable,
-    edge_to_word: HashMap<(usize, usize), FreeWord>
+    edge_to_word: &HashMap<(usize, usize), FreeWord>
 )
     -> PartialDSym
 {
     cover(
         ds,
         table.len(),
-        |sheet, i, d| trace_word(table, sheet, &edge_to_word[&(d, i)])
+        |sheet, i, d|
+            trace_word(
+                table,
+                sheet,
+                &edge_to_word.get(&(d, i)).unwrap_or(&FreeWord::empty())
+            )
     )
 }
 
@@ -37,12 +42,29 @@ pub fn subgroup_cover<T: DSym>(ds: &T, subgens: &Vec<FreeWord>)
         &g.relators.iter().map(|w| Relator::from(w.clone())).collect(),
         subgens
     );
-    cover_for_table(ds, &table, g.edge_to_word)
+    cover_for_table(ds, &table, &g.edge_to_word)
 }
 
 
 pub fn finite_universal_cover<T: DSym>(ds: &T) -> PartialDSym {
     subgroup_cover(ds, &vec![])
+}
+
+
+pub fn covers<T: DSym>(ds: &T, max_deg: usize) -> Vec<PartialDSym> {
+    let mut result = Vec::new();
+    let g = fundamental_group(ds);
+
+    for table in coset_tables(
+        g.gen_to_edge.len(),
+        &g.relators.iter().map(|w| Relator::from(w.clone())).collect(),
+        max_deg
+    ) {
+        let cov = cover_for_table(ds, &table, &g.edge_to_word);
+        result.push(cov);
+    }
+
+    result
 }
 
 
@@ -98,4 +120,14 @@ fn test_finite_universal_cover_group() {
     check("<1.1:1:1,1,1:3,5>");
     check("<1.1:1 3:1,1,1,1:3,3,3>");
     check("<1.1:1 3:1,1,1,1:4,3,3>");
+}
+
+
+#[test]
+fn test_covers() {
+    let covers = |s: &str, n: usize|
+        covers(&s.parse::<PartialDSym>().unwrap(), n);
+
+    assert_eq!(covers("<1.1:1 1:1,1:3>", 3).len(), 3);
+    assert_eq!(covers("<1.1:2 1:2,2:3>", 3).len(), 2);
 }
