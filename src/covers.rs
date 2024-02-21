@@ -80,6 +80,7 @@ fn test_finite_universal_cover_size() {
     assert_eq!(cov("<1.1:1:1,1,1:3,5>").size(), 120);
     assert_eq!(cov("<1.1:1 3:1,1,1,1:3,3,3>").size(), 120);
     assert_eq!(cov("<1.1:1 3:1,1,1,1:4,3,3>").size(), 384);
+    assert_eq!(cov("<1.1:2 3:2,2,2,2:4,3,3>").size(), 384);
 }
 
 
@@ -124,7 +125,7 @@ fn test_finite_universal_cover_group() {
 
 
 #[test]
-fn test_covers() {
+fn test_number_of_covers() {
     let covers = |s: &str, n: usize|
         covers(&s.parse::<PartialDSym>().unwrap(), n);
 
