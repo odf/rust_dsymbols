@@ -90,10 +90,7 @@ fn test_finite_universal_cover_round_trip() {
 
     let check = |s: &str| {
         let ds = s.parse::<PartialDSym>().unwrap();
-        assert_eq!(
-            ds,
-            minimal_image(&finite_universal_cover(&ds)).unwrap_or(ds.clone())
-        );
+        assert_eq!(ds, minimal_image(&finite_universal_cover(&ds)));
     };
 
     check("<1.1:1:1,1,1:3,3>");

@@ -120,26 +120,30 @@ pub fn cover<T, F>(ds: &T, nr_sheets: usize, sheet_map: F) -> PartialDSym
 }
 
 
-pub fn oriented_cover<T>(ds: &T) -> Option<PartialDSym>
-    where T: DSym
-{
+pub fn as_partial_dsym<T: DSym>(ds: &T) -> PartialDSym {
+    let op = |i, d| ds.op(i, d);
+    let v = |i, d| ds.v(i, i + 1, d);
+
+    build_sym_using_vs(build_set(ds.size(), ds.dim(), op), v)
+}
+
+
+pub fn oriented_cover<T: DSym>(ds: &T) -> PartialDSym {
     if ds.is_oriented() {
-        None
+        as_partial_dsym(ds)
     } else {
         let ori = ds.partial_orientation();
         let sheet_map = |k, i, d| {
             if ori[d] == ori[ds.op(i, d).unwrap()] { k ^ 1 } else { k }
         };
-        Some(cover(ds, 2, sheet_map))
+        cover(ds, 2, sheet_map)
     }
 }
 
 
-pub fn minimal_image<T>(ds: &T) -> Option<PartialDSym>
-    where T: DSym
-{
+pub fn minimal_image<T: DSym>(ds: &T) -> PartialDSym {
     if ds.is_minimal() {
-        None
+        as_partial_dsym(ds)
     } else {
         let p = (2..=ds.size())
             .fold(Partition::new(), |p, d| ds.fold(&p, 1, d).unwrap_or(p));
@@ -158,14 +162,14 @@ pub fn minimal_image<T>(ds: &T) -> Option<PartialDSym>
         }
 
 
-        Some(build_sym_using_ms(
+        build_sym_using_ms(
             build_set(
                 next - 1,
                 ds.dim(),
                 |i, d| ds.op(i, img2src[d]).map(|e| src2img[e])
             ),
             |i, d| ds.m(i, i + 1, img2src[d])
-        ))
+        )
     }
 }
 
@@ -174,8 +178,7 @@ pub fn minimal_image<T>(ds: &T) -> Option<PartialDSym>
 fn test_oriented_cover() {
     let check_cover = |src: &str, out: &str| {
         assert_eq!(
-            src.parse::<PartialDSym>()
-                .map(|ds| oriented_cover(&ds).unwrap_or(ds)),
+            src.parse::<PartialDSym>().map(|ds| oriented_cover(&ds)),
             out.parse::<PartialDSym>(),
         );
     };
@@ -296,8 +299,7 @@ fn test_subsymbol() {
 fn test_minimal() {
     let check_minimal = |src: &str, out: &str| {
         assert_eq!(
-            src.parse::<PartialDSym>()
-                .map(|ds| minimal_image(&ds).unwrap_or(ds)),
+            src.parse::<PartialDSym>().map(|ds| minimal_image(&ds)),
             out.parse::<PartialDSym>()
         );
     };
