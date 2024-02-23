@@ -145,6 +145,7 @@ fn test_toroidal_cover() {
         assert!(cov.is_connected());
         assert!(cov.is_oriented());
         assert!(orbit_types_2d(&cov).iter().all(|&(v, _)| v == Some(1)));
+        assert!(cov.morphism(&ds, 1).is_some());
     };
 
     check("<1.1:1:1,1,1:3,6>");
