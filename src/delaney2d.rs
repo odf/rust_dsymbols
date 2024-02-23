@@ -104,6 +104,16 @@ fn opposite<T: DSym>(ds: &T, i: usize, j: usize, d: usize) -> (usize, usize) {
 }
 
 
+fn best_cyclic(corners: &Vec<usize>) -> Vec<usize> {
+    (0..corners.len())
+        .map(|i|
+            corners[i..].iter().chain(corners[..i].iter()).cloned().collect()
+        )
+        .max()
+        .unwrap_or(vec![])
+}
+
+
 fn trace_boundary<T: DSym>(ds: &T) -> Vec<Vec<usize>> {
     let ori = ds.partial_orientation();
     let mut result = vec![];
@@ -123,7 +133,7 @@ fn trace_boundary<T: DSym>(ds: &T) -> Vec<Vec<usize>> {
                 Sign::ZERO => panic!("orientation should be total"),
             };
             let mut e = d;
-            let mut nu = k;
+            let mut nu;
 
             loop {
                 let v = ds.v(j, k, e).unwrap();
@@ -132,7 +142,7 @@ fn trace_boundary<T: DSym>(ds: &T) -> Vec<Vec<usize>> {
                 }
 
                 seen.insert((j, e));
-                let (nu, e) = opposite(ds, k, j, e);
+                (nu, e) = opposite(ds, k, j, e);
                 k = 3 - j - k;
                 j = nu;
 
@@ -141,10 +151,70 @@ fn trace_boundary<T: DSym>(ds: &T) -> Vec<Vec<usize>> {
                 }
             }
 
-            result.push(corners);
+            result.push(best_cyclic(&corners));
         }
     }
+
+    result.sort();
+    result.reverse();
     result
+}
+
+
+fn euler_characteristic<T: DSym>(ds: &T) -> isize {
+    let nr_orbits = |i, j| ds.orbit_reps_2d(i, j).len();
+    let nr_loops = |i|
+        (1..=ds.size()).filter(|&d| ds.op(i, d) == Some(d)).count();
+
+    let nf = ds.size();
+    let ne = (3 * nf + nr_loops(0) + nr_loops(1) + nr_loops(2)) / 2;
+    let nv = nr_orbits(0, 1) + nr_orbits(0, 2) + nr_orbits(1, 2);
+
+    (nf + nv) as isize - ne as isize
+}
+
+
+fn degree_list_as_string(vs: Vec<usize>) -> String {
+    vs.iter()
+        .map(|v| if *v < 10 { v.to_string() } else { format!("({})", v) })
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+
+pub fn orbifold_symbol<T: DSym>(ds: &T) -> String {
+    let bnd_comps = trace_boundary(ds);
+    let chi = euler_characteristic(ds) + bnd_comps.len() as isize;
+    let x = 2 - chi;
+
+    let mut cones: Vec<_> = orbit_types_2d(ds).iter()
+        .filter(|(v, c)| *c && *v > 1)
+        .map(|&(v, _)| v)
+        .collect();
+    cones.sort();
+    cones.reverse();
+
+    let mut parts = vec![degree_list_as_string(cones)];
+
+    for corners in bnd_comps {
+        parts.push("*".to_string());
+        parts.push(degree_list_as_string(corners));
+    }
+
+    if ds.is_weakly_oriented() {
+        parts.push(vec!["o"; (x as usize) / 2].join(""));
+    } else {
+        parts.push(vec!["x"; x as usize].join(""));
+    }
+
+    let s = parts.join("");
+
+    (match &s[..] {
+        "x" => "1x",
+        "*" => "1*",
+        "" => "1",
+        s => s
+    }).to_string()
 }
 
 
@@ -214,4 +284,56 @@ fn test_toroidal_cover() {
     check("<1.1:5:2 4 5,1 2 3 5,3 4 5:8 3,8 3>");
     check("<1.1:4:2 4,1 3 4,3 4:4,4>");
     check("<1.1:4:1 3 4,2 4,4 2 3:4,4>")
+}
+
+
+#[test]
+fn test_orbifold_symbol() {
+    let orb = |s: &str| orbifold_symbol(&s.parse::<PartialDSym>().unwrap());
+
+    assert_eq!(orb("<1.1:3:1 2 3,1 3,2 3:4 8,3>"), "*442");
+    assert_eq!(orb("<1.1:1:1,1,1:5,3>"), "*532");
+    assert_eq!(orb("<1.1:1:1,1,1:6,3>"), "*632");
+    assert_eq!(orb("<1.1:1:1,1,1:7,3>"), "*732");
+    assert_eq!(orb("<1.1:1:1,1,1:15,3>"), "*(15)32");
+    assert_eq!(orb("<1.1:2:2,1 2,1 2:2,4 4>"), "*44");
+    assert_eq!(orb("<1.1:2:2,1 2,1 2:2,4 5>"), "*54");
+    assert_eq!(orb("<1.1:8:2 4 6 8,8 3 5 7,6 5 8 7:4,4>"), "o");
+    assert_eq!(orb("<1.1:8:2 4 6 8,8 3 5 7,5 6 8 7:4,4>"), "xx");
+    assert_eq!(orb("<1.1:5:2 4 5,1 2 3 5,3 4 5:8 3,8 3>"), "*442");
+    assert_eq!(orb("<1.1:4:2 4,1 3 4,3 4:4,4>"), "*x");
+    assert_eq!(orb("<1.1:4:1 3 4,2 4,4 2 3:4,4>"), "**");
+    assert_eq!(orb("<1.1:4:1 3 4,2 4,4 2 3:8,12>"), "*3*2");
+    assert_eq!(
+        orb("
+            <1.1:12:
+            1 3 4 5 7 8 9 11 12,2 4 6 8 10 12,12 2 3 5 6 7 9 10 11:
+            8 12 16,8 12 16>
+        "),
+        "*432*423"
+    );
+    assert_eq!(
+        orb("
+            <1.1:12:
+            1 3 5 8 10 11 12,2 3 6 7 10 12 11,1 4 5 9 7 11 10 12:
+            3 3 3,6 3 3>
+        "),
+        "*22"
+    );
+    assert_eq!(
+        orb("
+            <1.1:16:
+            2 4 6 8 10 12 14 16,16 3 5 7 9 11 13 15,6 5 8 7 14 13 16 15:
+            8,8>
+        "),
+        "oo"
+    );
+    assert_eq!(
+        orb("
+            <1.1:16:
+            2 4 6 8 10 12 14 16,16 3 5 7 9 11 13 15,5 6 8 7 14 13 16 15:
+            8,8>
+        "),
+        "xxxx"
+    );
 }
