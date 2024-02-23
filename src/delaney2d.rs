@@ -1,8 +1,10 @@
 use num_rational::Rational64;
 use num_traits::{Signed, Zero};
 
-use crate::derived::oriented_cover;
+use crate::dsets::*;
 use crate::dsyms::*;
+use crate::covers::covers;
+use crate::derived::oriented_cover;
 
 
 fn orbit_types_2d<T: DSym>(ds: &T) -> Vec<(Option<usize>, bool)> {
@@ -67,6 +69,26 @@ pub fn is_spherical<T: DSym>(ds: &T) -> bool {
 }
 
 
+pub fn toroidal_cover<T: DSym>(ds: &T) -> PartialDSym {
+    assert!(ds.dim() == 2, "must be two-dimensional");
+    assert!(is_euclidean(ds), "must be euclidean");
+
+    let ds = &oriented_cover(ds);
+    let degree = orbit_types_2d(ds).iter()
+        .map(|&(v, _)| v.unwrap())
+        .max()
+        .unwrap_or(1);
+
+    for cov in covers(ds, degree) {
+        if orbit_types_2d(&cov).iter().all(|&(v, _)| v == Some(1)) {
+            return cov;
+        }
+    }
+
+    panic!("symbol is 2d euclidean, should have found a toroidal cover");
+}
+
+
 #[test]
 fn test_curvature() {
     let curv = |s: &str| curvature(&s.parse::<PartialDSym>().unwrap());
@@ -109,4 +131,27 @@ fn test_is_spherical() {
     assert!(!passes("<1.1:2:2,1 2,1 2:2,1 3>"));
     assert!(passes("<1.1:2:2,1 2,1 2:2,3 3>"));
     assert!(!passes("<1.1:2:2,1 2,1 2:2,3 4>"));
+}
+
+
+#[test]
+fn test_toroidal_cover() {
+    let check = |s: &str| {
+        let ds = s.parse::<PartialDSym>().unwrap();
+        let cov = toroidal_cover(&ds);
+
+        assert!(is_euclidean(&cov));
+        assert!(cov.is_complete());
+        assert!(cov.is_connected());
+        assert!(cov.is_oriented());
+        assert!(orbit_types_2d(&cov).iter().all(|&(v, _)| v == Some(1)));
+    };
+
+    check("<1.1:1:1,1,1:3,6>");
+    check("<1.1:3:1 2 3,1 3,2 3:4 8,3>");
+    check("<1.1:8:2 4 6 8,8 3 5 7,6 5 8 7:4,4>");
+    check("<1.1:8:2 4 6 8,8 3 5 7,5 6 8 7:4,4>");
+    check("<1.1:5:2 4 5,1 2 3 5,3 4 5:8 3,8 3>");
+    check("<1.1:4:2 4,1 3 4,3 4:4,4>");
+    check("<1.1:4:1 3 4,2 4,4 2 3:4,4>")
 }
