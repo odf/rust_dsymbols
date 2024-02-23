@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use num_rational::Rational64;
 use num_traits::{Signed, Zero};
 
@@ -86,6 +88,63 @@ pub fn toroidal_cover<T: DSym>(ds: &T) -> PartialDSym {
     }
 
     panic!("symbol is 2d euclidean, should have found a toroidal cover");
+}
+
+
+fn opposite<T: DSym>(ds: &T, i: usize, j: usize, d: usize) -> (usize, usize) {
+    let mut k = i;
+    let mut e = d;
+
+    while ds.op(k, e).unwrap_or(e) != e {
+        e = ds.op(k, e).unwrap();
+        k = i + j - k;
+    }
+
+    (k, e)
+}
+
+
+fn trace_boundary<T: DSym>(ds: &T) -> Vec<Vec<usize>> {
+    let ori = ds.partial_orientation();
+    let mut result = vec![];
+    let mut seen: HashSet<(usize, usize)> = HashSet::new();
+
+    for i in 0..=ds.dim() {
+        for d in 1..=ds.size() {
+            if ds.op(i, d) != Some(d) || seen.contains(&(i, d)) {
+                continue;
+            }
+
+            let mut corners = vec![];
+            let mut j = i;
+            let mut k = match ori[d] {
+                Sign::PLUS => (i + 1) % 3,
+                Sign::MINUS => (i + 2) % 3,
+                Sign::ZERO => panic!("orientation should be total"),
+            };
+            let mut e = d;
+            let mut nu = k;
+
+            loop {
+                let v = ds.v(j, k, e).unwrap();
+                if v > 1 {
+                    corners.push(v);
+                }
+
+                seen.insert((j, e));
+                let (nu, e) = opposite(ds, k, j, e);
+                k = 3 - j - k;
+                j = nu;
+
+                if seen.contains(&(j, e)) {
+                    break;
+                }
+            }
+
+            result.push(corners);
+        }
+    }
+    result
 }
 
 
