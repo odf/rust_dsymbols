@@ -3,7 +3,7 @@ use crate::dsyms::*;
 use crate::util::partitions::Partition;
 
 
-fn build_set<F>(size: usize, dim: usize, op: F) -> PartialDSet
+pub fn build_set<F>(size: usize, dim: usize, op: F) -> PartialDSet
     where F: Fn(usize, usize) -> Option<usize>
 {
     let mut dset = PartialDSet::new(size, dim);
@@ -18,7 +18,7 @@ fn build_set<F>(size: usize, dim: usize, op: F) -> PartialDSet
 }
 
 
-fn build_sym_using_vs<F>(dset: PartialDSet, v: F) -> PartialDSym
+pub fn build_sym_using_vs<F>(dset: PartialDSet, v: F) -> PartialDSym
     where F: Fn(usize, usize) -> Option<usize>
 {
     let mut dsym: PartialDSym = dset.into();
@@ -33,7 +33,7 @@ fn build_sym_using_vs<F>(dset: PartialDSet, v: F) -> PartialDSym
 }
 
 
-fn build_sym_using_ms<F>(dset: PartialDSet, m: F) -> PartialDSym
+pub fn build_sym_using_ms<F>(dset: PartialDSet, m: F) -> PartialDSym
     where F: Fn(usize, usize) -> Option<usize>
 {
     let mut dsym: PartialDSym = dset.into();
