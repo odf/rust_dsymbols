@@ -7,7 +7,7 @@ use crate::covers::covers;
 use crate::derived::oriented_cover;
 
 
-fn orbit_types_2d<T: DSym>(ds: &T) -> Vec<(Option<usize>, bool)> {
+fn orbit_types_2d<T: DSym>(ds: &T) -> Vec<(usize, bool)> {
     let mut result = vec![];
 
     for i in 0..ds.dim() {
@@ -17,7 +17,7 @@ fn orbit_types_2d<T: DSym>(ds: &T) -> Vec<(Option<usize>, bool)> {
                     .all(|&e|
                         ds.op(i, e) != Some(e) && ds.op(j, e) != Some(e)
                     );
-                result.push((ds.v(i, j, d), loopless))
+                result.push((ds.v(i, j, d).unwrap(), loopless))
             }
         }
     }
@@ -32,7 +32,7 @@ pub fn curvature<T: DSym>(ds: &T) -> Rational64 {
 
     let s: Rational64 = orbit_types_2d(ds).iter()
         .map(|&(v, loopless)|
-            Rational64::new(if loopless { 2 } else { 1 }, v.unwrap() as i64)
+            Rational64::new(if loopless { 2 } else { 1 }, v as i64)
         )
         .sum();
 
@@ -57,7 +57,7 @@ pub fn is_spherical<T: DSym>(ds: &T) -> bool {
         let dso = oriented_cover(ds);
         let cones: Vec<_> = orbit_types_2d(&dso).iter()
             .map(|&(v, _)| v)
-            .filter(|&v| v.is_some_and(|v| v > 1))
+            .filter(|&v| v > 1)
             .collect();
 
         match cones.len() {
@@ -75,12 +75,12 @@ pub fn toroidal_cover<T: DSym>(ds: &T) -> PartialDSym {
 
     let ds = &oriented_cover(ds);
     let degree = orbit_types_2d(ds).iter()
-        .map(|&(v, _)| v.unwrap())
+        .map(|&(v, _)| v)
         .max()
         .unwrap_or(1);
 
     for cov in covers(ds, degree) {
-        if orbit_types_2d(&cov).iter().all(|&(v, _)| v == Some(1)) {
+        if orbit_types_2d(&cov).iter().all(|&(v, _)| v == 1) {
             return cov;
         }
     }
@@ -144,7 +144,7 @@ fn test_toroidal_cover() {
         assert!(cov.is_complete());
         assert!(cov.is_connected());
         assert!(cov.is_oriented());
-        assert!(orbit_types_2d(&cov).iter().all(|&(v, _)| v == Some(1)));
+        assert!(orbit_types_2d(&cov).iter().all(|&(v, _)| v == 1));
         assert!(cov.morphism(&ds, 1).is_some());
     };
 
