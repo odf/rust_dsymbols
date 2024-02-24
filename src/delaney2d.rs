@@ -3,10 +3,10 @@ use std::collections::HashSet;
 use num_rational::Rational64;
 use num_traits::{Signed, Zero};
 
+use crate::covers::covers;
+use crate::derived::*;
 use crate::dsets::*;
 use crate::dsyms::*;
-use crate::covers::covers;
-use crate::derived::oriented_cover;
 
 
 fn orbit_types_2d<T: DSym>(ds: &T) -> Vec<(usize, bool)> {
@@ -182,15 +182,20 @@ fn degree_list_as_string(vs: Vec<usize>) -> String {
 }
 
 
+fn cone_degrees<T: DSym>(ds: &T) -> Vec<usize> {
+    orbit_types_2d(ds).iter()
+        .filter(|(v, c)| *c && *v > 1)
+        .map(|&(v, _)| v)
+        .collect()
+}
+
+
 pub fn orbifold_symbol<T: DSym>(ds: &T) -> String {
     let bnd_comps = trace_boundary(ds);
     let chi = euler_characteristic(ds) + bnd_comps.len() as isize;
     let x = 2 - chi;
 
-    let mut cones: Vec<_> = orbit_types_2d(ds).iter()
-        .filter(|(v, c)| *c && *v > 1)
-        .map(|&(v, _)| v)
-        .collect();
+    let mut cones = cone_degrees(ds);
     cones.sort();
     cones.reverse();
 
@@ -215,6 +220,86 @@ pub fn orbifold_symbol<T: DSym>(ds: &T) -> String {
         "" => "1",
         s => s
     }).to_string()
+}
+
+
+fn split_along<T: DSym>(ds: &T, cut_elms: &Vec<usize>, cut_idx: usize)
+    -> (PartialDSym, PartialDSym)
+{
+    let in_cut: HashSet<_> = cut_elms.iter()
+        .flat_map(|&d| [(cut_idx, d), (cut_idx, ds.op(cut_idx, d).unwrap())])
+        .collect();
+
+    let op = |i, d| {
+        if in_cut.contains(&(i, d)) { Some(d) } else { ds.op(i, d) }
+    };
+    let v = |i, d| ds.v(i, i + 1, d);
+    let tmp = build_sym_using_vs(build_set(ds.size(), ds.dim(), op), v);
+
+    (
+        subsymbol(&tmp, 0..=ds.dim(), cut_elms[0]),
+        subsymbol(&tmp, 0..=ds.dim(), ds.op(1, cut_elms[0]).unwrap()),
+    )
+}
+
+
+fn check_cones(cones: Vec<usize>, allow_2_cone: bool) -> bool {
+    cones == vec![] || (allow_2_cone && cones == vec![2])
+}
+
+
+fn bad_spherical_cut<T: DSym>(
+    ds: &T,
+    cut_elms: &Vec<usize>,
+    patch: &PartialDSym,
+    rest: &PartialDSym,
+    allow_2_cone: bool
+)
+    -> bool
+{
+    if euler_characteristic(ds) <= 0 {
+        false
+    } else if patch.size() == ds.size() {
+        let mut vs = vec![
+            ds.v(0, 1, cut_elms[0]),
+            ds.v(1, 2, cut_elms[0])
+        ];
+        if cut_elms.len() > 2 {
+            vs.push(ds.v(1, 2, cut_elms[1]));
+        }
+        let vs = vs.into_iter().flatten()
+            .filter(|&v| v > 1)
+            .collect();
+
+        check_cones(vs, allow_2_cone)
+    } else if
+        patch.size() == ds.size() - cut_elms.len() &&
+        cut_elms.iter().all(|&d|
+            ds.v(0, 1, d) == Some(1) && ds.v(1, 2, d) == Some(1)
+        )
+    {
+        check_cones(cone_degrees(rest), allow_2_cone) 
+    } else {
+        false
+    }
+}
+
+
+fn cuts_off_disk<T: DSym>(
+    ds: &T,
+    cut_elms: &Vec<usize>,
+    cut_idx: usize,
+    allow_2_cone: bool
+)
+    -> bool
+{
+    let (patch, rest) = split_along(ds, cut_elms, cut_idx);
+
+    patch.size() != cut_elms.len() &&
+    !bad_spherical_cut(ds, cut_elms, &patch, &rest, allow_2_cone) &&
+    patch.is_weakly_oriented() &&
+    euler_characteristic(&patch) == 1 &&
+    check_cones(cone_degrees(&patch), allow_2_cone)
 }
 
 
