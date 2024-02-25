@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::iter::successors;
 
 use num_rational::Rational64;
 use num_traits::{Signed, Zero};
@@ -191,6 +192,9 @@ fn cone_degrees<T: DSym>(ds: &T) -> Vec<usize> {
 
 
 pub fn orbifold_symbol<T: DSym>(ds: &T) -> String {
+    assert!(ds.dim() == 2, "must be two-dimensional");
+    assert!(ds.is_complete(), "must be complete");
+
     let bnd_comps = trace_boundary(ds);
     let chi = euler_characteristic(ds) + bnd_comps.len() as isize;
     let x = 2 - chi;
@@ -267,17 +271,14 @@ fn bad_spherical_cut<T: DSym>(
         if cut_elms.len() > 2 {
             vs.push(ds.v(1, 2, cut_elms[1]));
         }
-        let vs = vs.into_iter().flatten()
-            .filter(|&v| v > 1)
-            .collect();
+        let vs = vs.into_iter().flatten().filter(|&v| v > 1).collect();
 
         check_cones(vs, allow_2_cone)
-    } else if
-        patch.size() == ds.size() - cut_elms.len() &&
+    } else if patch.size() == ds.size() - cut_elms.len() {
         cut_elms.iter().all(|&d|
             ds.v(0, 1, d) == Some(1) && ds.v(1, 2, d) == Some(1)
         )
-    {
+        &&
         check_cones(cone_degrees(rest), allow_2_cone) 
     } else {
         false
@@ -300,6 +301,63 @@ fn cuts_off_disk<T: DSym>(
     patch.is_weakly_oriented() &&
     euler_characteristic(&patch) == 1 &&
     check_cones(cone_degrees(&patch), allow_2_cone)
+}
+
+
+pub fn is_pseudo_convex<T: DSym>(ds: &T) -> bool {
+    assert!(ds.dim() == 2, "must be two-dimensional");
+    assert!(ds.is_complete(), "must be complete");
+
+    let ds = &oriented_cover(ds);
+    let step = |i, j, d| ds.op(j, d).and_then(|e| ds.op(i, e));
+    let ori = ds.partial_orientation();
+
+    for a1 in (1..=ds.size()).filter(|&d| ori[d] == Sign::PLUS) {
+        let mut seen1 = HashSet::from([a1]);
+
+        for a2 in successors(ds.op(0, a1), |&d| step(0, 1, d)) {
+            if seen1.contains(&a2) {
+                break;
+            }
+            let mut seen2 = seen1.clone();
+            seen2.insert(a2);
+            seen1.extend([a2, ds.op(1, a2).unwrap()]);
+
+            for b2 in successors(ds.op(2, a2), |&d| step(2, 1, d)) {
+                if seen2.contains(&b2) {
+                    if b2 == a1 && cuts_off_disk(ds, &vec![a1, a2], 1, true) {
+                        return false;
+                    }
+                    break;
+                }
+                let mut seen3 = seen2.clone();
+                seen3.insert(b2);
+                seen2.extend([b2, ds.op(1, b2).unwrap()]);
+
+                for b1 in successors(ds.op(0, b2), |&d| step(0, 1, d)) {
+                    if seen3.contains(&b1) {
+                        break;
+                    }
+                    seen3.extend([b1, ds.op(1, b1).unwrap()]);
+                    let mut seen4 = seen3.clone();
+
+                    for t in successors(ds.op(2, b1), |&d| step(2, 1, d)) {
+                        if seen4.contains(&t) {
+                            if t == a1 && cuts_off_disk(
+                                ds, &vec![a1, a2, b2, b1], 1, false
+                            ) {
+                                return false;
+                            }
+                            break;
+                        }
+                        seen4.extend([t, ds.op(1, t).unwrap()]);
+                    }
+                }
+            }
+        }
+    }
+
+    true
 }
 
 
