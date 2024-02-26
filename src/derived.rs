@@ -76,9 +76,9 @@ pub fn dual<T: DSym>(ds: &T) -> PartialDSym {
 
 
 pub fn subsymbol<T, I>(ds: &T, indices: I, seed: usize) -> PartialDSym
-    where T: DSym, I: Iterator<Item=usize>
+    where T: DSym, I: IntoIterator<Item=usize>
 {
-    let indices: Vec<_> = indices.collect();
+    let indices: Vec<_> = indices.into_iter().collect();
     let elements = ds.orbit(indices.iter().cloned(), seed);
 
     let mut src2img = vec![0; ds.size() + 1];
@@ -268,28 +268,29 @@ fn test_dual() {
 
 #[test]
 fn test_subsymbol() {
-    let check_subsymbol = |src: &str, idcs: &[usize], seed, out: &str| {
+    fn check_subsymbol<I>(src: &str, idcs: I, seed: usize, out: &str)
+        where I: IntoIterator<Item=usize>
+    {
         assert_eq!(
-            src.parse::<PartialDSym>()
-                .map(|ds| subsymbol(&ds, idcs.iter().cloned(), seed)),
+            src.parse::<PartialDSym>().map(|ds| subsymbol(&ds, idcs, seed)),
             out.parse::<PartialDSym>()
         );
-    };
+    }
 
     check_subsymbol(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", &[0, 1], 1,
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [0, 1], 1,
         "<1.1:2 1:1 2,2:6>"
     );
     check_subsymbol(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", &[0, 1], 2,
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [0, 1], 2,
         "<1.1:1 1:1,1:4>"
     );
     check_subsymbol(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", &[1, 2], 1,
+        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [1, 2], 1,
         "<1.1:3 1:3 2,2 3:3>"
     );
     check_subsymbol(
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", &[0, 1, 2], 1,
+        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", [0, 1, 2], 1,
         "<1.1:2:2,1 2,1 2:6,3 2>"
     )
 }
