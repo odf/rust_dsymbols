@@ -3,10 +3,10 @@ use std::collections::BTreeSet;
 use std::ops::{Index, Mul, MulAssign};
 
 
-fn normalized(w: &[isize]) -> Vec<isize> {
+fn normalized<I>(w: I) -> Vec<isize> where I: IntoIterator<Item=isize> {
     let mut buffer = vec![];
 
-    for &x in w {
+    for x in w.into_iter() {
         if buffer.last().is_some_and(|y| x == -y) {
             buffer.pop();
         } else if x != 0 {
@@ -25,12 +25,12 @@ pub struct FreeWord {
 
 
 impl FreeWord {
-    pub fn new(w: &[isize]) -> Self {
+    pub fn new<I>(w: I) -> Self where I: IntoIterator<Item=isize> {
         Self { w: normalized(w) }
     }
 
     pub fn empty() -> Self {
-        Self::new(&[])
+        Self::new([])
     }
 
     pub fn len(&self) -> usize {
@@ -42,7 +42,7 @@ impl FreeWord {
     }
 
     pub fn inverse(&self) -> Self {
-        Self::new(&self.w.iter().rev().map(|x| -x).collect::<Vec<_>>())
+        Self::new(self.w.iter().rev().map(|x| -x))
     }
 
     pub fn raised_to(&self, m: isize) -> Self {
@@ -60,10 +60,11 @@ impl FreeWord {
     pub fn rotated(&self, i: isize) -> Self {
         let n = self.w.len() as isize;
         let i = (n - i.rem_euclid(n)) as usize;
-        Self::new(&self.w[i..]) * Self::new(&self.w[..i])
+        let front = self.w[i..].iter().cloned();
+        let back = self.w[..i].iter().cloned();
+        Self::new(front) * Self::new(back)
     }
 }
-
 
 fn mul(lhs: &[isize], rhs: &[isize]) -> Vec<isize> {
     lhs.iter().chain(rhs.iter()).cloned().collect()
@@ -83,7 +84,7 @@ impl Mul<&FreeWord> for &FreeWord {
     type Output = FreeWord;
 
     fn mul(self, rhs: &FreeWord) -> Self::Output {
-        FreeWord::new(&mul(&self.w, &rhs.w))
+        FreeWord::new(mul(&self.w, &rhs.w))
     }
 }
 
@@ -119,7 +120,7 @@ impl Mul<isize> for &FreeWord {
     type Output = FreeWord;
 
     fn mul(self, rhs: isize) -> Self::Output {
-        FreeWord::new(&mul(&self.w, &[rhs]))
+        FreeWord::new(mul(&self.w, &[rhs]))
     }
 }
 
@@ -128,7 +129,7 @@ impl Mul<isize> for FreeWord {
     type Output = FreeWord;
 
     fn mul(self, rhs: isize) -> Self::Output {
-        FreeWord::new(&mul(&self.w, &[rhs]))
+        FreeWord::new(mul(&self.w, &[rhs]))
     }
 }
 
@@ -167,23 +168,9 @@ impl Ord for FreeWord {
 }
 
 
-impl<const N: usize> From<[isize; N]> for FreeWord {
-    fn from(value: [isize; N]) -> Self {
-        Self::new(&value)
-    }
-}
-
-
-impl From<&[isize]> for FreeWord {
-    fn from(value: &[isize]) -> Self {
+impl<I> From<I> for FreeWord where I: IntoIterator<Item=isize> {
+    fn from(value: I) -> Self {
         Self::new(value)
-    }
-}
-
-
-impl From<Vec<isize>> for FreeWord {
-    fn from(value: Vec<isize>) -> Self {
-        Self::new(&value)
     }
 }
 
@@ -211,8 +198,8 @@ pub fn relator_representative(fw: &FreeWord) -> FreeWord {
 
 #[test]
 fn test_freeword_creation() {
-    assert_eq!(FreeWord::new(&[]).w, &[]);
-    assert_eq!(FreeWord::new(&[1, 2]).w, &[1, 2]);
+    assert_eq!(FreeWord::new([]).w, &[]);
+    assert_eq!(FreeWord::new([1, 2]).w, &[1, 2]);
     assert_eq!(FreeWord::from(vec![1, 2, -2, -1]).w, &[]);
     assert_eq!(FreeWord::from([1, 2, -2, 1, 2]).w, &[1, 1, 2]);
 }
@@ -234,8 +221,8 @@ fn test_freeword_index() {
 fn test_freeword_inverse() {
     assert_eq!(FreeWord::empty().inverse(), FreeWord::empty());
     assert_eq!(
-        FreeWord::new(&[1, 2, 1, -2]).inverse(),
-        FreeWord::new(&[2, -1, -2, -1])
+        FreeWord::new([1, 2, 1, -2]).inverse(),
+        FreeWord::new([2, -1, -2, -1])
     );
 }
 
@@ -244,16 +231,16 @@ fn test_freeword_inverse() {
 fn test_freeword_raise_to() {
     assert_eq!(FreeWord::empty().raised_to(0), FreeWord::empty());
     assert_eq!(FreeWord::empty().raised_to(-3), FreeWord::empty());
-    assert_eq!(FreeWord::new(&[1]).raised_to(0), FreeWord::empty());
-    assert_eq!(FreeWord::new(&[1]).raised_to(1), FreeWord::new(&[1]));
+    assert_eq!(FreeWord::new([1]).raised_to(0), FreeWord::empty());
+    assert_eq!(FreeWord::new([1]).raised_to(1), FreeWord::new([1]));
 
     assert_eq!(
-        FreeWord::new(&[1]).raised_to(-3),
-        FreeWord::new(&[-1, -1, -1])
+        FreeWord::new([1]).raised_to(-3),
+        FreeWord::new([-1, -1, -1])
     );
     assert_eq!(
-        FreeWord::new(&[1, 2, 1, -2, -1]).raised_to(3),
-        FreeWord::new(&[1, 2, 1, 1, 1, -2, -1])
+        FreeWord::new([1, 2, 1, -2, -1]).raised_to(3),
+        FreeWord::new([1, 2, 1, 1, 1, -2, -1])
     );
 }
 
@@ -261,8 +248,8 @@ fn test_freeword_raise_to() {
 #[test]
 fn test_freeword_mul() {
     assert_eq!(
-        FreeWord::new(&[1, 2, 3]) * FreeWord::new(&[-3, -2, 1]),
-        FreeWord::new(&[1, 1])
+        FreeWord::new([1, 2, 3]) * FreeWord::new([-3, -2, 1]),
+        FreeWord::new([1, 1])
     );
 }
 
@@ -270,42 +257,42 @@ fn test_freeword_mul() {
 #[test]
 fn test_freeword_commutator() {
     assert_eq!(
-        FreeWord::new(&[1, 2]).commutator(&FreeWord::new(&[3, 2])),
-        FreeWord::new(&[1, 2, 3, -1, -2, -3])
+        FreeWord::new([1, 2]).commutator(&FreeWord::new([3, 2])),
+        FreeWord::new([1, 2, 3, -1, -2, -3])
     )
 }
 
 
 #[test]
 fn test_freeword_cmp() {
-    assert!(&FreeWord::empty() == &FreeWord::new(&[]));
-    assert!(&FreeWord::empty() < &FreeWord::new(&[1]));
-    assert!(&FreeWord::new(&[2]) > &FreeWord::new(&[1]));
-    assert!(&FreeWord::new(&[1]) < &FreeWord::new(&[-1]));
-    assert!(&FreeWord::new(&[-1]) > &FreeWord::new(&[2]));
-    assert!(&FreeWord::new(&[-1]) < &FreeWord::new(&[-2]));
-    assert!(&FreeWord::new(&[1, 2, 3, -1]) < &FreeWord::new(&[1, 2, 3, -2]));
-    assert!(&FreeWord::new(&[1, 2, 3]) < &FreeWord::new(&[1, 2, 3, -2]));
+    assert!(&FreeWord::empty() == &FreeWord::new([]));
+    assert!(&FreeWord::empty() < &FreeWord::new([1]));
+    assert!(&FreeWord::new([2]) > &FreeWord::new([1]));
+    assert!(&FreeWord::new([1]) < &FreeWord::new([-1]));
+    assert!(&FreeWord::new([-1]) > &FreeWord::new([2]));
+    assert!(&FreeWord::new([-1]) < &FreeWord::new([-2]));
+    assert!(&FreeWord::new([1, 2, 3, -1]) < &FreeWord::new([1, 2, 3, -2]));
+    assert!(&FreeWord::new([1, 2, 3]) < &FreeWord::new([1, 2, 3, -2]));
 }
 
 
 #[test]
 fn test_freeword_rotated() {
     assert_eq!(
-        FreeWord::new(&[1, 2, 3]).rotated(0),
-        FreeWord::new(&[1, 2, 3])
+        FreeWord::new([1, 2, 3]).rotated(0),
+        FreeWord::new([1, 2, 3])
     );
     assert_eq!(
-        FreeWord::new(&[1, 2, 3]).rotated(2),
-        FreeWord::new(&[2, 3, 1])
+        FreeWord::new([1, 2, 3]).rotated(2),
+        FreeWord::new([2, 3, 1])
     );
     assert_eq!(
-        FreeWord::new(&[1, 2, 3]).rotated(-5),
-        FreeWord::new(&[3, 1, 2])
+        FreeWord::new([1, 2, 3]).rotated(-5),
+        FreeWord::new([3, 1, 2])
     );
     assert_eq!(
-        FreeWord::new(&[1, 2, -1]).rotated(1),
-        FreeWord::new(&[2])
+        FreeWord::new([1, 2, -1]).rotated(1),
+        FreeWord::new([2])
     );
 }
 
@@ -313,51 +300,51 @@ fn test_freeword_rotated() {
 #[test]
 fn test_relator_representative() {
     assert_eq!(
-        relator_representative(&FreeWord::new(&[])),
-        FreeWord::new(&[])
+        relator_representative(&FreeWord::new([])),
+        FreeWord::new([])
     );
     assert_eq!(
-        relator_representative(&FreeWord::new(&[3, 2, 1])),
-        FreeWord::new(&[1, 3, 2])
+        relator_representative(&FreeWord::new([3, 2, 1])),
+        FreeWord::new([1, 3, 2])
     );
     assert_eq!(
-        relator_representative(&FreeWord::new(&[3, 2, -1])),
-        FreeWord::new(&[1, -2, -3])
+        relator_representative(&FreeWord::new([3, 2, -1])),
+        FreeWord::new([1, -2, -3])
     );
     assert_eq!(
-        relator_representative(&FreeWord::new(&[3, -1, 2, -1])),
-        FreeWord::new(&[1, -2, 1, -3])
+        relator_representative(&FreeWord::new([3, -1, 2, -1])),
+        FreeWord::new([1, -2, 1, -3])
     );
 }
 
 
 #[test]
 fn test_relator_permutations() {
-    let perms = |w| {
+    let perms = |w: Vec<isize>| {
         relator_permutations(&FreeWord::new(w)).iter()
             .cloned()
             .collect::<Vec<_>>()
     };
 
-    assert_eq!(perms(&[]), vec![FreeWord::new(&[])]);
-    assert_eq!(perms(&[1]), vec![FreeWord::new(&[1]), FreeWord::new(&[-1])]);
+    assert_eq!(perms(vec![]), vec![FreeWord::new([])]);
+    assert_eq!(perms(vec![1]), vec![FreeWord::new([1]), FreeWord::new([-1])]);
 
     assert_eq!(
-        perms(&[1, 2]),
+        perms(vec![1, 2]),
         vec![
-            FreeWord::new(&[1, 2]),
-            FreeWord::new(&[2, 1]),
-            FreeWord::new(&[-1, -2]),
-            FreeWord::new(&[-2, -1]),
+            FreeWord::new([1, 2]),
+            FreeWord::new([2, 1]),
+            FreeWord::new([-1, -2]),
+            FreeWord::new([-2, -1]),
         ]
     );
     assert_eq!(
-        perms(&[1, 2, 1, 2]),
+        perms(vec![1, 2, 1, 2]),
         vec![
-            FreeWord::new(&[1, 2, 1, 2]),
-            FreeWord::new(&[2, 1, 2, 1]),
-            FreeWord::new(&[-1, -2, -1, -2]),
-            FreeWord::new(&[-2, -1, -2, -1]),
+            FreeWord::new([1, 2, 1, 2]),
+            FreeWord::new([2, 1, 2, 1]),
+            FreeWord::new([-1, -2, -1, -2]),
+            FreeWord::new([-2, -1, -2, -1]),
         ]
     );
 }

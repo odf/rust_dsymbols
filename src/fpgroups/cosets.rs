@@ -458,8 +458,8 @@ mod coset_tests {
     {
         coset_table(
             nr_gens,
-            &rels.iter().map(|r| FreeWord::from(*r)).collect(),
-            &subgens.iter().map(|g| FreeWord::from(*g)).collect(),
+            &rels.iter().map(|&r| Vec::from(r).into()).collect(),
+            &subgens.iter().map(|&g| Vec::from(g).into()).collect(),
         )
     }
 
