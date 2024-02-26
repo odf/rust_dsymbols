@@ -15,7 +15,7 @@ fn orbit_types_2d<T: DSym>(ds: &T) -> Vec<(usize, bool)> {
     for i in 0..ds.dim() {
         for j in (i + 1)..=ds.dim() {
             for d in ds.orbit_reps_2d(i, j) {
-                let loopless = ds.orbit([i, j].into_iter(), d).iter()
+                let loopless = ds.orbit([i, j], d).iter()
                     .all(|&e|
                         ds.op(i, e) != Some(e) && ds.op(j, e) != Some(e)
                     );

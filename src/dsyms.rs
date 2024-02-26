@@ -102,7 +102,7 @@ impl<'a, T: DSym> TraversalCode<'a, T> {
     pub fn new(ds: &'a T, seed: usize) -> Self {
         Self {
             ds,
-            traversal: ds.traversal(0..=ds.dim(), [seed].into_iter()),
+            traversal: ds.traversal(0..=ds.dim(), [seed]),
             next_element: 1,
             element_map: vec![0; ds.size() + 1],
             buffer: vec![],

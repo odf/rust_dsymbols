@@ -35,10 +35,11 @@ pub trait DSet: Sized {
         }
     }
 
-    fn traversal<I1, I2>(&self, indices: I1, seeds: I2) -> Traversal<Self, I2>
-        where I1: Iterator<Item=usize>, I2: Iterator<Item=usize>
+    fn traversal<I1, I2>(&self, indices: I1, seeds: I2)
+        -> Traversal<Self, I2::IntoIter>
+        where I1: IntoIterator<Item=usize>, I2: IntoIterator<Item=usize>
     {
-        Traversal::new(self, indices, seeds)
+        Traversal::new(self, indices.into_iter(), seeds.into_iter())
     }
 
     fn full_traversal(&self) -> Traversal<Self, RangeInclusive<usize>> {
@@ -57,20 +58,19 @@ pub trait DSet: Sized {
     }
 
     fn orbit<I>(&self, indices: I, seed: usize) -> HashSet<usize>
-        where I: Iterator<Item=usize>
+        where I: IntoIterator<Item=usize>
     {
-        let seeds = [seed].into_iter();
-        self.traversal(indices, seeds).map(|(_, _, d)| d).collect()
+        self.traversal(indices, [seed]).map(|(_, _, d)| d).collect()
     }
 
     fn full_orbit(&self, seed: usize) -> HashSet<usize> {
-        self.traversal(0..=self.dim(), [seed].into_iter())
+        self.traversal(0..=self.dim(), [seed])
             .map(|(_, _, d)| d)
             .collect()
     }
 
     fn orbit_reps<I1, I2>(&self, indices: I1, seeds: I2) -> Vec<usize>
-        where I1: Iterator<Item=usize>, I2: Iterator<Item=usize>
+        where I1: IntoIterator<Item=usize>, I2: IntoIterator<Item=usize>
     {   let mut result = vec![];
 
         for (i, d, _) in self.traversal(indices, seeds) {
@@ -539,7 +539,7 @@ mod traversal_tests {
         let dsym: PartialDSym = s.parse().unwrap();
 
         assert_eq!(
-            dsym.traversal(0..=2, iter::once(1)).collect::<Vec<_>>(),
+            dsym.traversal(0..=2, [1]).collect::<Vec<_>>(),
             vec![
                 (None, 1, 1),
                 (Some(0), 1, 2),
@@ -562,7 +562,7 @@ mod traversal_tests {
         );
 
         assert_eq!(
-            dsym.traversal([0, 2].into_iter(), [1, 2, 3].into_iter())
+            dsym.traversal([0, 2], [1, 2, 3])
                 .collect::<Vec<_>>(),
             vec![
                 (None, 1, 1),
@@ -601,11 +601,11 @@ mod traversal_tests {
         let dsym: PartialDSym = s.parse().unwrap();
 
         assert_eq!(
-            dsym.orbit([0, 1].into_iter(), 1),
+            dsym.orbit([0, 1], 1),
             HashSet::from([1, 2, 3, 4, 5, 6])
         );
-        assert_eq!(dsym.orbit([0, 2].into_iter(), 1), HashSet::from([1, 4]));
-        assert_eq!(dsym.orbit([0, 2].into_iter(), 2), HashSet::from([2, 6]));
+        assert_eq!(dsym.orbit([0, 2], 1), HashSet::from([1, 4]));
+        assert_eq!(dsym.orbit([0, 2], 2), HashSet::from([2, 6]));
     }
 
     #[test]
@@ -621,9 +621,9 @@ mod traversal_tests {
         let s = "<1.1:6:4 6 5,5 4 6,4 6 5:3,6>";
         let dsym: PartialDSym = s.parse().unwrap();
 
-        assert_eq!(dsym.orbit_reps([0, 1].into_iter(), 1..=6), vec![1]);
-        assert_eq!(dsym.orbit_reps([0, 2].into_iter(), 1..=6), vec![1, 2, 3]);
-        assert_eq!(dsym.orbit_reps([1, 2].into_iter(), 1..=6), vec![1]);
+        assert_eq!(dsym.orbit_reps([0, 1], 1..=6), vec![1]);
+        assert_eq!(dsym.orbit_reps([0, 2], 1..=6), vec![1, 2, 3]);
+        assert_eq!(dsym.orbit_reps([1, 2], 1..=6), vec![1]);
     }
 }
 
