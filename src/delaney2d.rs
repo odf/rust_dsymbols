@@ -480,3 +480,30 @@ fn test_orbifold_symbol() {
         "xxxx"
     );
 }
+
+
+#[test]
+fn test_is_pseudo_convex() {
+    let passes = |s: &str| is_pseudo_convex(&s.parse::<PartialDSym>().unwrap());
+
+    // has handles, cross-caps or multiple boundaries
+    assert!(passes("<1.1:8:2 4 6 8,8 3 5 7,6 5 8 7:4,4>"));
+    assert!(passes("<1.1:8:2 4 6 8,8 3 5 7,5 6 8 7:4,4>"));
+    assert!(passes("<1.1:4:2 4,1 3 4,3 4:4,4>"));
+    assert!(passes("
+        <1.1:12:
+        1 3 4 5 7 8 9 11 12,2 4 6 8 10 12,12 2 3 5 6 7 9 10 11:
+        8 12 16,8 12 16>
+    "));
+
+    // disk
+    assert!(passes("<1.1:3:1 2 3,1 3,2 3:4 8,3>"));
+    assert!(passes("<1.1:1:1,1,1:5,3>"));
+    assert!(passes("<1.1:2:2,1 2,1 2:2,4 4>"));
+    assert!(!passes("<1.1:5:2 4 5,1 2 3 5,3 4 5:8 3,8 3>"));
+    assert!(!passes("
+        <1.1:12:
+        1 3 5 8 10 11 12,2 3 6 7 10 12 11,1 4 5 9 7 11 10 12:
+        3 3 3,6 3 3>
+    "));
+}
