@@ -270,6 +270,17 @@ pub fn core_table(base: &CosetTable) -> CosetTable {
 }
 
 
+pub fn intersection_table(ta: &CosetTable, tb: &CosetTable) -> CosetTable {
+    let nr_gens = *ta[0].keys().max().unwrap() as usize;
+    assert_eq!(nr_gens, *tb[0].keys().max().unwrap() as usize);
+
+    let img = |&(a, b): &(usize, usize), g| (ta[a][&g], tb[b][&g]);
+    let start = &(0 as usize, 0 as usize);
+
+    induced_table(nr_gens, img, start)
+}
+
+
 fn first_free_in_table(table: &DynamicCosetTable) -> Option<(usize, isize)> {
     for k in 0..table.len() {
         for g in table.all_gens() {
