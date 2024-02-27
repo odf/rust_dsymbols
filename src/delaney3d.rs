@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::iter::successors;
 
-use crate::fpgroups::cosets::{core_table, coset_tables, CosetTable};
+use crate::fpgroups::cosets::{
+    core_table, coset_tables, intersection_table, CosetTable
+};
 use crate::fpgroups::free_words::FreeWord;
 
 
@@ -73,7 +75,7 @@ fn construct_candidates(
     let core_tables: Vec<_> = coset_tables(nr_gens, rels, 4)
         .map(|ct| core_table(&ct))
         .collect();
-    let cones2: Vec<_> = cones.iter().filter(|(_, d)| *d == 2).cloned().collect();
+    let cones2 = cones.iter().filter(|(_, d)| *d == 2).cloned().collect();
     let cones3 = cones.iter().filter(|(_, d)| *d == 3).cloned().collect();
 
     let mut result = HashMap::new();
@@ -89,7 +91,19 @@ fn construct_candidates(
 
     for ta in core_tables.iter().filter(|ct| flattens_all(ct, &cones3)) {
         for tb in core_tables.iter().filter(|ct| ct.len() == 2) {
-            //let tx = intersection_table(ta, tb);
+            let tx = intersection_table(ta, tb);
+
+            if flattens_all(&tx, &cones) {
+                if ta.len() == 3 && tx.len() == 6 {
+                    if flattens_all(&tb, &cones2) {
+                        result.get_mut("z6").unwrap().push(tx);
+                    }
+                } else if ta.len() == 6 && tx.len() == 12 {
+                    if !flattens_all(&tb, &cones2) {
+                        result.get_mut("d6").unwrap().push(tx);
+                    }
+                }
+            }
         }
     }
 
