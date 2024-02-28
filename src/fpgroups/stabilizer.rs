@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::free_words::{relator_permutations, FreeWord};
 
@@ -77,4 +77,28 @@ fn close_relations_in_place<F>(
             }
         }
     }
+}
+
+
+fn spanning_tree<F>(base_point: usize, nr_gens: usize, action: F)
+    -> Vec<(usize, isize)>
+    where F: Fn(usize, isize) -> usize
+{
+    let mut edges = vec![];
+    let mut queue = VecDeque::from([base_point]);
+    let mut seen = HashSet::from([base_point]);
+
+    while let Some(point) = queue.pop_front() {
+        for i in 1..=nr_gens as isize {
+            for gen in [i, -i] {
+                let p = action(point, gen);
+                if !seen.contains(&p) {
+                    queue.push_back(p);
+                    seen.insert(p);
+                    edges.push((point, gen));
+                }
+            }
+        }
+    }
+    edges
 }
