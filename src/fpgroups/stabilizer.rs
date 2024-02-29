@@ -35,7 +35,7 @@ fn trace_word<F>(
     let mut result = FreeWord::empty();
 
     for &g in w.iter() {
-        result *= &edge_to_word[&(p, g)];
+        result *= &edge_to_word.get(&(p, g)).unwrap_or(&FreeWord::empty());
         p = action(p, g);
     }
 
@@ -169,4 +169,47 @@ pub fn stabilizer<F>(
     subrels.reverse();
 
     (generators, subrels)
+}
+
+
+#[cfg(test)]
+mod Test {
+    use std::collections::HashMap;
+
+    use super::*;
+
+    fn table_fn<const N: usize, const M: usize>(
+        t: [(usize, [(isize, usize); M]); N]
+    )
+        -> impl Fn(usize, isize) -> usize
+    {
+        let s: HashMap<_, _> = t.iter()
+            .flat_map(|(p, a)| a.iter().map(|(g, x)| ((*p, *g), *x)))
+            .collect();
+
+        move |p: usize, g: isize| s[&(p, g)]
+    }
+
+    fn fw<const N: usize>(w: [isize; N]) -> FreeWord {
+        FreeWord::from(w)
+    }
+
+    #[test]
+    fn test_stabilizer() {
+        let (gens, rels) = stabilizer(
+            0, 4, 3,
+            &vec![
+                fw([1, 1]), fw([2, 2]), fw([3, 3]),
+                fw([1, 2, 1, 2]), fw([1, 3, 1, 3]), fw([2, 3, 2, 3]),
+            ],
+            table_fn([
+                (0, [(1, 1), (2, 2), (3, 0), (-1, 1), (-2, 2), (-3, 0)]),
+                (1, [(1, 0), (2, 3), (3, 1), (-1, 0), (-2, 3), (-3, 1)]),
+                (2, [(1, 3), (2, 0), (3, 2), (-1, 3), (-2, 0), (-3, 2)]),
+                (3, [(1, 2), (2, 1), (3, 3), (-1, 2), (-2, 1), (-3, 3)]),
+            ])
+        );
+        assert_eq!(gens, vec![fw([3])]);
+        assert_eq!(rels, vec![fw([1, 1])]);
+    }
 }
