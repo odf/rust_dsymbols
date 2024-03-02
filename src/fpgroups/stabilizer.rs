@@ -66,7 +66,7 @@ fn close_relations_in_place<F>(
             for i in 0..r.len() {
                 let h = r[i];
                 if !edge_to_word.contains_key(&(x, h)) {
-                    let w = r.rotated(i as isize + 1) * -h;
+                    let w = (r.rotated(i as isize + 1) * -h).inverse();
                     cuts.push((x, h, w));
                 }
                 x = action(x, h);
