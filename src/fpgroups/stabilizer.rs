@@ -79,9 +79,8 @@ fn close_relations_in_place(
 }
 
 
-fn spanning_tree(base_point: usize, nr_gens: usize, ct: &CosetTable)
-    -> Vec<(usize, isize)>
-{
+fn spanning_tree(base_point: usize, ct: &CosetTable) -> Vec<(usize, isize)> {
+    let nr_gens = *ct[0].keys().max().unwrap_or(&0) as usize;
     let mut edges = vec![];
     let mut queue = VecDeque::from([base_point]);
     let mut seen = HashSet::from([base_point]);
@@ -102,17 +101,13 @@ fn spanning_tree(base_point: usize, nr_gens: usize, ct: &CosetTable)
 }
 
 
-pub fn stabilizer(
-    base_point: usize,
-    nr_points: usize,
-    nr_gens: usize,
-    rels: &Vec<FreeWord>,
-    ct: &CosetTable,
-)
+pub fn stabilizer(base_point: usize, rels: &Vec<FreeWord>, ct: &CosetTable)
     -> (Vec<FreeWord> , Vec<FreeWord>)
 {
+    let nr_points = ct.len();
+    let nr_gens = *ct[0].keys().max().unwrap_or(&0) as usize;
     let rels_by_gen = relators_by_start_gen(rels);
-    let tree = spanning_tree(base_point, nr_gens, ct);
+    let tree = spanning_tree(base_point, ct);
 
     let mut point_to_word = HashMap::from([(base_point, FreeWord::empty())]);
     let mut edge_to_word = HashMap::new();
@@ -191,7 +186,7 @@ mod Test {
     fn test_stabilizer() {
         assert_eq!(
             stabilizer(
-                0, 4, 3,
+                0,
                 &vec![
                     fw([1, 1]), fw([2, 2]), fw([3, 3]),
                     fw([1, 2, 1, 2]), fw([1, 3, 1, 3]), fw([2, 3, 2, 3]),
@@ -207,7 +202,7 @@ mod Test {
         );
         assert_eq!(
             stabilizer(
-                0, 2, 3,
+                0,
                 &vec![
                     fw([1, 2, -1, -2]), fw([1, 3, -1, -3]), fw([2, 3, -2, -3]),
                 ],
@@ -227,7 +222,7 @@ mod Test {
         );
         assert_eq!(
             stabilizer(
-                0, 2, 4,
+                0,
                 &vec![
                     fw([2, 2]), fw([3, 3]), fw([4, 4]),
                     fw([1, 2, -1, -2]), fw([1, 3, -1, -3]), fw([1, 4, -1, -4]),
