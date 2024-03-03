@@ -1,3 +1,6 @@
+use super::free_words::FreeWord;
+
+
 fn gcdx(a: isize, b: isize) -> (isize, isize, isize, isize, isize)
 {
     let (mut a, mut a_next) = (a, b);
@@ -15,18 +18,14 @@ fn gcdx(a: isize, b: isize) -> (isize, isize, isize, isize, isize)
 }
 
 
-fn find_pivot<const N: usize, const M: usize>(
-    mat: &[[isize; M]; N],
-    start: usize
-)
-    -> (usize, usize)
-{
+fn find_pivot(mat: &Vec<Vec<isize>>, start: usize) -> (usize, usize) {
+    let (n, m) = (mat.len(), mat[0].len());
     let mut row = start;
     let mut col = start;
     let mut min = mat[row][col].abs();
 
-    for r in start..N {
-        for c in start..M {
+    for r in start..n {
+        for c in start..m {
             let v = mat[r][c].abs();
             if v != 0 && v < min {
                 (row, col, min) = (r, c, v)
@@ -37,42 +36,42 @@ fn find_pivot<const N: usize, const M: usize>(
 }
 
 
-fn move_pivot_in_place<const N: usize, const M: usize>(
-    mat: &mut [[isize; M]; N],
+fn move_pivot_in_place(
+    mat: &mut Vec<Vec<isize>>,
     target: usize,
     (row, col): (usize, usize)
 )
 {
+    let (n, m) = (mat.len(), mat[0].len());
+
     if row != target {
-        (mat[row], mat[target]) = (mat[target], mat[row]);
+        for c in 0..m {
+            (mat[row][c], mat[target][c]) = (mat[target][c], mat[row][c]);
+        }
     }
     if col != target {
-        for r in 0..N {
+        for r in 0..n {
             (mat[r][col], mat[r][target]) = (mat[r][target], mat[r][col]);
         }
     }
 }
 
 
-fn clear_later_rows_in_place<const N: usize, const M: usize>(
-    mat: &mut [[isize; M]; N],
-    i: usize
-)
-    -> usize
-{
+fn clear_later_rows_in_place(mat: &mut Vec<Vec<isize>>, i: usize) -> usize {
+    let (n, m) = (mat.len(), mat[0].len());
     let mut count = 0;
 
-    for row in (i + 1)..N {
+    for row in (i + 1)..n {
         let (e, f) = (mat[i][i], mat[row][i]);
 
         if e != 0 && f % e == 0 {
             let x = f / e;
-            for col in i..M {
+            for col in i..m {
                 mat[row][col] -= x * mat[i][col];
             }
         } else if f != 0 {
             let (_, a, b, c, d) = gcdx(e, f);
-            for col in i..M {
+            for col in i..m {
                 let (v, w) = (mat[i][col], mat[row][col]);
                 mat[i][col] = v * a + w * b;
                 mat[row][col] = v * c + w * d;
@@ -85,25 +84,21 @@ fn clear_later_rows_in_place<const N: usize, const M: usize>(
 }
 
 
-fn clear_later_cols_in_place<const N: usize, const M: usize>(
-    mat: &mut [[isize; M]; N],
-    i: usize
-)
-    -> usize
-{
+fn clear_later_cols_in_place(mat: &mut Vec<Vec<isize>>, i: usize) -> usize {
+    let (n, m) = (mat.len(), mat[0].len());
     let mut count = 0;
 
-    for col in (i + 1)..M {
+    for col in (i + 1)..m {
         let (e, f) = (mat[i][i], mat[i][col]);
 
         if e != 0 && f % e == 0 {
             let x = f / e;
-            for row in i..N {
+            for row in i..n {
                 mat[row][col] -= x * mat[row][i];
             }
         } else if f != 0 {
             let (_, a, b, c, d) = gcdx(e, f);
-            for row in i..N {
+            for row in i..n {
                 let (v, w) = (mat[row][i], mat[row][col]);
                 mat[row][i] = v * a + w * b;
                 mat[row][col] = v * c + w * d;
@@ -116,10 +111,10 @@ fn clear_later_cols_in_place<const N: usize, const M: usize>(
 }
 
 
-fn diagonalize_in_place<const N: usize, const M: usize>(
-    mat: &mut [[isize; M]; N]
-) {
-    for i in 0.. N.min(M) {
+fn diagonalize_in_place(mat: &mut Vec<Vec<isize>>) {
+    let (n, m) = (mat.len(), mat[0].len());
+
+    for i in 0.. n.min(m) {
         let (row, col) = find_pivot(mat, i);
         let val = mat[row][col].abs();
 
@@ -138,15 +133,39 @@ fn diagonalize_in_place<const N: usize, const M: usize>(
 }
 
 
+pub fn abelian_invariants(nr_gens: usize, rels: Vec<FreeWord>) {
+    let n = rels.len().min(nr_gens);
+    let mut mat = vec![vec![0 as isize; nr_gens]; rels.len()];
+
+    for i in 0..rels.len() {
+        for &g in rels[i].iter() {
+            if g < 0 {
+                mat[i][(-g - 1) as usize] -= 1;
+            } else {
+                mat[i][(g - 1) as usize] += 1;
+            }
+        }
+    }
+
+    diagonalize_in_place(&mut mat);
+
+    let mut factors: Vec<_> = (0..n).map(|i| mat[i][i]).collect();
+}
+
+
 #[test]
 fn test_diagonalize_in_place() {
     fn check<const N: usize, const M: usize>(
         mat: [[isize; M]; N],
         out: [[isize; M]; N],
     ) {
-        let mut tmp = mat.clone();
-        diagonalize_in_place(&mut tmp);
-        assert_eq!(tmp, out);
+        let mut mat: Vec<Vec<_>> =
+            mat.iter().map(|row| row.iter().cloned().collect()).collect();
+        let out: Vec<Vec<_>> =
+            out.iter().map(|row| row.iter().cloned().collect()).collect();
+
+        diagonalize_in_place(&mut mat);
+        assert_eq!(mat, out);
     }
 
     check(
