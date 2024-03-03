@@ -86,14 +86,12 @@ fn spanning_tree(base_point: usize, ct: &CosetTable) -> Vec<(usize, isize)> {
     let mut seen = HashSet::from([base_point]);
 
     while let Some(point) = queue.pop_front() {
-        for i in 1..=nr_gens as isize {
-            for gen in [i, -i] {
-                let p = ct[point][&gen];
-                if !seen.contains(&p) {
-                    queue.push_back(p);
-                    seen.insert(p);
-                    edges.push((point, gen));
-                }
+        for gen in (1..=nr_gens as isize).flat_map(|i| [i, -i]) {
+            let p = ct[point][&gen];
+            if !seen.contains(&p) {
+                queue.push_back(p);
+                seen.insert(p);
+                edges.push((point, gen));
             }
         }
     }
@@ -104,39 +102,32 @@ fn spanning_tree(base_point: usize, ct: &CosetTable) -> Vec<(usize, isize)> {
 pub fn stabilizer(base_point: usize, rels: &Vec<FreeWord>, ct: &CosetTable)
     -> (Vec<FreeWord> , Vec<FreeWord>)
 {
-    let nr_points = ct.len();
     let nr_gens = *ct[0].keys().max().unwrap_or(&0) as usize;
     let rels_by_gen = relators_by_start_gen(rels);
-    let tree = spanning_tree(base_point, ct);
 
     let mut point_to_word = HashMap::from([(base_point, FreeWord::empty())]);
     let mut edge_to_word = HashMap::new();
 
-    for edge in tree {
+    for (pt, gen) in spanning_tree(base_point, ct) {
         close_relations_in_place(
-            &mut edge_to_word, edge, &FreeWord::empty(), &rels_by_gen, ct
+            &mut edge_to_word, (pt, gen), &FreeWord::empty(), &rels_by_gen, ct
         );
-        let (pt, gen) = edge;
         point_to_word.insert(ct[pt][&gen], &point_to_word[&pt] * gen);
     }
 
     let mut generators = vec![];
 
-    for px in 0..nr_points {
-        let wx = &point_to_word[&px];
+    for px in 0..ct.len() {
+        for g in (1..=nr_gens as isize).flat_map(|i| [i, -i]) {
+            if edge_to_word.get(&(px, g)).is_none() {
+                let wx = &point_to_word[&px];
+                let wy = &point_to_word[&ct[px][&g]];
+                generators.push(wx * g * wy.inverse());
 
-        for i in 1..=nr_gens as isize {
-            for g in [i, -i] {
-                let edge = (px, g);
-                if edge_to_word.get(&edge).is_none() {
-                    let wy = &point_to_word[&ct[px][&g]];
-                    generators.push(wx * g * wy.inverse());
-
-                    let w = FreeWord::from([generators.len() as isize]);
-                    close_relations_in_place(
-                        &mut edge_to_word, edge, &w, &rels_by_gen, ct
-                    )
-                }
+                let w = FreeWord::from([generators.len() as isize]);
+                close_relations_in_place(
+                    &mut edge_to_word, (px, g), &w, &rels_by_gen, ct
+                )
             }
         }
     }
@@ -144,7 +135,7 @@ pub fn stabilizer(base_point: usize, rels: &Vec<FreeWord>, ct: &CosetTable)
     let mut subrels = vec![];
     let mut seen = HashSet::new();
 
-    for p in 0..nr_points {
+    for p in 0..ct.len() {
         for r in rels {
             let w = relator_representative(
                 &trace_word(p, &r, &edge_to_word, ct)
