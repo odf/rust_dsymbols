@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::fpgroups::free_words::relator_representative;
 
-use super::free_words::{relator_permutations, FreeWord};
+use super::{cosets::CosetTable, free_words::{relator_permutations, FreeWord}};
 
 
 fn relators_by_start_gen(rels: &Vec<FreeWord>)
@@ -22,41 +22,38 @@ fn relators_by_start_gen(rels: &Vec<FreeWord>)
 }
 
 
-fn trace_word<F>(
+fn trace_word(
     point: usize,
     w: &FreeWord,
     edge_to_word: &HashMap<(usize, isize), FreeWord>,
-    action: F
+    ct: &CosetTable
 )
     -> FreeWord
-    where F: Fn(usize, isize) -> usize
 {
     let mut p = point;
     let mut result = FreeWord::empty();
 
     for &g in w.iter() {
         result *= &edge_to_word.get(&(p, g)).unwrap_or(&FreeWord::empty());
-        p = action(p, g);
+        p = ct[p][&g];
     }
 
     result
 }
 
 
-fn close_relations_in_place<F>(
+fn close_relations_in_place(
     edge_to_word: &mut HashMap<(usize, isize), FreeWord>,
     start_edge: (usize, isize),
     wd: &FreeWord,
     rels_by_gen: &HashMap<isize, Vec<FreeWord>>,
-    action: F,
-)
-    where F: Fn(usize, isize) -> usize
-{
+    ct: &CosetTable,
+) {
     let (p, g) = start_edge;
     let mut queue = VecDeque::from([(p, g, wd.clone())]);
 
     while let Some((point, gen, w)) = queue.pop_front() {
-        edge_to_word.insert((action(point, gen), -gen), w.inverse());
+        edge_to_word.insert((ct[point][&gen], -gen), w.inverse());
         edge_to_word.insert((point, gen), w);
 
         for r in rels_by_gen[&gen].iter() {
@@ -69,12 +66,12 @@ fn close_relations_in_place<F>(
                     let w = (r.rotated(i as isize + 1) * -h).inverse();
                     cuts.push((x, h, w));
                 }
-                x = action(x, h);
+                x = ct[x][&h];
             }
 
             if cuts.len() == 1 {
                 let (p, g, w) = cuts[0].clone();
-                let w = trace_word(p, &w, &edge_to_word, &action);
+                let w = trace_word(p, &w, &edge_to_word, ct);
                 queue.push_back((p, g, w));
             }
         }
@@ -82,9 +79,8 @@ fn close_relations_in_place<F>(
 }
 
 
-fn spanning_tree<F>(base_point: usize, nr_gens: usize, action: F)
+fn spanning_tree(base_point: usize, nr_gens: usize, ct: &CosetTable)
     -> Vec<(usize, isize)>
-    where F: Fn(usize, isize) -> usize
 {
     let mut edges = vec![];
     let mut queue = VecDeque::from([base_point]);
@@ -93,7 +89,7 @@ fn spanning_tree<F>(base_point: usize, nr_gens: usize, action: F)
     while let Some(point) = queue.pop_front() {
         for i in 1..=nr_gens as isize {
             for gen in [i, -i] {
-                let p = action(point, gen);
+                let p = ct[point][&gen];
                 if !seen.contains(&p) {
                     queue.push_back(p);
                     seen.insert(p);
@@ -106,28 +102,27 @@ fn spanning_tree<F>(base_point: usize, nr_gens: usize, action: F)
 }
 
 
-pub fn stabilizer<F>(
+pub fn stabilizer(
     base_point: usize,
     nr_points: usize,
     nr_gens: usize,
     rels: &Vec<FreeWord>,
-    action: F,
+    ct: &CosetTable,
 )
     -> (Vec<FreeWord> , Vec<FreeWord>)
-    where F: Fn(usize, isize) -> usize
 {
     let rels_by_gen = relators_by_start_gen(rels);
-    let tree = spanning_tree(base_point, nr_gens, &action);
+    let tree = spanning_tree(base_point, nr_gens, ct);
 
     let mut point_to_word = HashMap::from([(base_point, FreeWord::empty())]);
     let mut edge_to_word = HashMap::new();
 
     for edge in tree {
         close_relations_in_place(
-            &mut edge_to_word, edge, &FreeWord::empty(), &rels_by_gen, &action
+            &mut edge_to_word, edge, &FreeWord::empty(), &rels_by_gen, ct
         );
         let (pt, gen) = edge;
-        point_to_word.insert(action(pt, gen), &point_to_word[&pt] * gen);
+        point_to_word.insert(ct[pt][&gen], &point_to_word[&pt] * gen);
     }
 
     let mut generators = vec![];
@@ -139,12 +134,12 @@ pub fn stabilizer<F>(
             for g in [i, -i] {
                 let edge = (px, g);
                 if edge_to_word.get(&edge).is_none() {
-                    let wy = &point_to_word[&action(px, g)];
+                    let wy = &point_to_word[&ct[px][&g]];
                     generators.push(wx * g * wy.inverse());
 
                     let w = FreeWord::from([generators.len() as isize]);
                     close_relations_in_place(
-                        &mut edge_to_word, edge, &w, &rels_by_gen, &action
+                        &mut edge_to_word, edge, &w, &rels_by_gen, ct
                     )
                 }
             }
@@ -157,7 +152,7 @@ pub fn stabilizer<F>(
     for p in 0..nr_points {
         for r in rels {
             let w = relator_representative(
-                &trace_word(p, &r, &edge_to_word, &action)
+                &trace_word(p, &r, &edge_to_word, ct)
             );
             if w.len() > 0 && !seen.contains(&w) {
                 seen.insert(w.clone());
@@ -178,16 +173,14 @@ mod Test {
 
     use super::*;
 
-    fn table_fn<const N: usize, const M: usize>(
+    fn ct_from_table<const N: usize, const M: usize>(
         t: [(usize, [(isize, usize); M]); N]
     )
-        -> impl Fn(usize, isize) -> usize
+        -> CosetTable
     {
-        let s: HashMap<_, _> = t.iter()
-            .flat_map(|(p, a)| a.iter().map(|(g, x)| ((*p, *g), *x)))
-            .collect();
+        assert!(t.iter().enumerate().all(|(i, &(c, _))| c == i));
 
-        move |p: usize, g: isize| s[&(p, g)]
+        t.iter().map(|(_, r)| HashMap::from(*r)).collect()
     }
 
     fn fw<const N: usize>(w: [isize; N]) -> FreeWord {
@@ -203,7 +196,7 @@ mod Test {
                     fw([1, 1]), fw([2, 2]), fw([3, 3]),
                     fw([1, 2, 1, 2]), fw([1, 3, 1, 3]), fw([2, 3, 2, 3]),
                 ],
-                table_fn([
+                &ct_from_table([
                     (0, [(1, 1), (2, 2), (3, 0), (-1, 1), (-2, 2), (-3, 0)]),
                     (1, [(1, 0), (2, 3), (3, 1), (-1, 0), (-2, 3), (-3, 1)]),
                     (2, [(1, 3), (2, 0), (3, 2), (-1, 3), (-2, 0), (-3, 2)]),
@@ -218,7 +211,7 @@ mod Test {
                 &vec![
                     fw([1, 2, -1, -2]), fw([1, 3, -1, -3]), fw([2, 3, -2, -3]),
                 ],
-                table_fn([
+                &ct_from_table([
                     (0, [(1, 1), (2, 0), (3, 0), (-1, 1), (-2, 0), (-3, 0)]),
                     (1, [(1, 0), (2, 1), (3, 1), (-1, 0), (-2, 1), (-3, 1)]),
                 ])
@@ -240,7 +233,7 @@ mod Test {
                     fw([1, 2, -1, -2]), fw([1, 3, -1, -3]), fw([1, 4, -1, -4]),
                     fw([2, 4, 3, 2, 4, 3]),
                 ],
-                table_fn([
+                &ct_from_table([
                     (0, [
                         (1, 0), (-1, 0),
                         (2, 1), (-2, 1),
