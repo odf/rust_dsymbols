@@ -133,7 +133,7 @@ fn diagonalize_in_place(mat: &mut Vec<Vec<isize>>) {
 }
 
 
-pub fn abelian_invariants(nr_gens: usize, rels: Vec<FreeWord>) {
+pub fn abelian_invariants(nr_gens: usize, rels: &Vec<FreeWord>) -> Vec<usize> {
     let n = rels.len().min(nr_gens);
     let mut mat = vec![vec![0 as isize; nr_gens]; rels.len()];
 
@@ -150,6 +150,26 @@ pub fn abelian_invariants(nr_gens: usize, rels: Vec<FreeWord>) {
     diagonalize_in_place(&mut mat);
 
     let mut factors: Vec<_> = (0..n).map(|i| mat[i][i]).collect();
+
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let (a, b) = (factors[i], factors[j]);
+            if a != 0 && b % a != 0 {
+                let (g, _, _, _, _) = gcdx(a, b);
+                factors[i] = g;
+                factors[j] = a / g * b;
+            }
+        }
+    }
+
+    let mut result: Vec<_> = factors.iter().cloned()
+        .filter(|x| *x != 1)
+        .chain(std::iter::repeat(0).take(nr_gens - n))
+        .map(|x| x.abs() as usize)
+        .collect();
+    result.sort();
+
+    result
 }
 
 
@@ -184,4 +204,23 @@ fn test_diagonalize_in_place() {
         [[2, 0, 0], [0, 2, 0], [0, 0, 2], [2, 2, 0], [2, 0, 2], [0, 2, 2]],
         [[2, 0, 0], [0, 2, 0], [0, 0, 2], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
     )
+}
+
+
+#[test]
+fn test_abelian_invariants() {
+    fn check(nr_gens: usize, rels: &[&[isize]], invariants: &[usize])
+    {
+        let rels = rels.iter().map(|&r| Vec::from(r).into()).collect();
+        assert_eq!(abelian_invariants(nr_gens, &rels), invariants);
+    }
+
+    check(3,
+        &[&[1, 2, -1, -2], &[1, 3, -1, -3], &[2, 3, -2, -3]],
+        &[0, 0, 0]
+    );
+    check(3,
+        &[&[1, 1], &[2, 2], &[3, 3], &[1, 2, 1, 2], &[1, 3, 1, 3], &[2, 3, 2, 3]],
+        &[2, 2, 2]
+    );
 }
