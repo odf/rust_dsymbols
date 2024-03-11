@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::delaney2d::toroidal_cover;
+use crate::delaney3d::pseudo_toroidal_cover;
 use crate::dsets::*;
 use crate::dsyms::*;
 use crate::util::partitions::Partition;
@@ -384,11 +385,24 @@ fn test_minimal() {
 
 
 #[test]
-fn test_collapse() {
+fn test_collapse_2d() {
     let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
 
     let cov = toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>"));
     let out = minimal_image(&collapse(&cov, cov.orbit([0, 2], 1), 2));
 
     assert_eq!(out, dsym("<1.1:1:1,1,1:4,4>"));
+}
+
+
+#[test]
+fn test_collapse_3d() {
+    let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
+
+    let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
+    let cov = dual(&pseudo_toroidal_cover(&ds).unwrap());
+    let remove = (1..=cov.size()).filter(|&d| cov.m(0, 1, d) == Some(3));
+    let out = minimal_image(&collapse(&cov, remove, 3));
+
+    assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
 }
