@@ -202,31 +202,35 @@ pub fn collapse<T, I>(ds: &T, remove: I, connector: usize) -> PartialDSym
         "remove list must be invariant under connector operator"
     );
 
-    let mut src2img = vec![0; ds.size() + 1];
-    let mut img2src = vec![0; ds.size() + 1];
-    let mut next = 1;
-    for d in 1..=ds.size() {
-        if !remove.contains(&d) {
-            src2img[d] = next;
-            img2src[next] = d;
-            next += 1;
-        }
-    }
-
-    let op = |i, d| {
-        let mut e = ds.op(i, img2src[d]).unwrap();
-        if i != connector {
-            while src2img[e] == 0 {
-                e = ds.op(i, ds.op(connector, e).unwrap()).unwrap();
+    if remove.is_empty() {
+        as_partial_dsym(ds)
+    } else {
+        let mut src2img = vec![0; ds.size() + 1];
+        let mut img2src = vec![0; ds.size() + 1];
+        let mut next = 1;
+        for d in 1..=ds.size() {
+            if !remove.contains(&d) {
+                src2img[d] = next;
+                img2src[next] = d;
+                next += 1;
             }
         }
-        Some(src2img[e])
-    };
 
-    build_sym_using_vs(
-        build_set(ds.size() - remove.len(), ds.dim(), op),
-        |i, d| ds.v(i, i + 1, img2src[d])
-    )
+        let op = |i, d| {
+            let mut e = ds.op(i, img2src[d]).unwrap();
+            if i != connector {
+                while src2img[e] == 0 {
+                    e = ds.op(i, ds.op(connector, e).unwrap()).unwrap();
+                }
+            }
+            Some(src2img[e])
+        };
+
+        build_sym_using_vs(
+            build_set(ds.size() - remove.len(), ds.dim(), op),
+            |i, d| ds.v(i, i + 1, img2src[d])
+        )
+    }
 }
 
 
