@@ -79,6 +79,22 @@ fn fix_local_1_vertex(ds: &PartialDSym) -> PartialDSym {
 }
 
 
+pub fn simplify<T: DSym>(ds: &T) -> PartialDSym {
+    // TODO very basic first version
+    let mut ds = as_partial_dsym(ds);
+
+    for op in [merge_all, fix_local_1_vertex] {
+        let old = ds;
+        ds = op(&old);
+        if ds.size() == old.size() {
+            break;
+        }
+    }
+
+    ds
+}
+
+
 #[cfg(test)]
 mod test {
     use crate::delaney3d::pseudo_toroidal_cover;
@@ -93,7 +109,7 @@ mod test {
             let ds = s.parse::<PartialDSym>().unwrap();
             eprintln!("{ds}");
             let cov = pseudo_toroidal_cover(&ds).unwrap();
-            let out = merge_all(&cov);
+            let out = simplify(&cov);
 
             assert_eq!(out.orbit_reps([0, 1, 2], 1..out.size()).len(), 1);
             assert_eq!(out.orbit_reps([1, 2, 3], 1..out.size()).len(), 1);
@@ -102,6 +118,8 @@ mod test {
             assert!(reps.iter().all(|&d| out.r(2, 3, d) != Some(2)));
             let reps = out.orbit_reps([0, 1], 1..out.size());
             assert!(reps.iter().all(|&d| out.r(0, 1, d) != Some(2)));
+            let reps = out.orbit_reps([1, 2], 1..out.size());
+            assert!(reps.iter().all(|&d| out.r(1, 2, d) != Some(1)));
 
             let fg = fundamental_group(&out);
             let nr_gens = fg.gen_to_edge.len();
