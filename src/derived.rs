@@ -176,68 +176,8 @@ pub fn minimal_image<T: DSym>(ds: &T) -> PartialDSym {
 }
 
 
-pub fn collapse<T, I>(ds: &T, remove: I, connector: usize) -> PartialDSym
-    where T: DSym, I: IntoIterator<Item=usize>
-{
-    // WARNING: very general operation that can wreak a lot of havoc!
-
-    let remove: HashSet<_> = remove.into_iter().collect();
-
-    assert!(
-        ds.is_complete(),
-        "symbol must be complete"
-    );
-    assert!(
-        remove.iter().all(|&d| d >= 1 && d <= ds.size()),
-        "remove list must only contain elements of ds"
-    );
-    assert!(
-        connector <= ds.dim(),
-        "connector must be an operator index for ds"
-    );
-    assert!(
-        remove.iter().all(|&d| remove.contains(&ds.op(connector, d).unwrap())),
-        "remove list must be invariant under connector operator"
-    );
-
-    if remove.is_empty() {
-        as_partial_dsym(ds)
-    } else {
-        let mut src2img = vec![0; ds.size() + 1];
-        let mut img2src = vec![0; ds.size() + 1];
-        let mut next = 1;
-        for d in 1..=ds.size() {
-            if !remove.contains(&d) {
-                src2img[d] = next;
-                img2src[next] = d;
-                next += 1;
-            }
-        }
-
-        let op = |i, d| {
-            let mut e = ds.op(i, img2src[d]).unwrap();
-            if i != connector {
-                while src2img[e] == 0 {
-                    e = ds.op(i, ds.op(connector, e).unwrap()).unwrap();
-                }
-            }
-            Some(src2img[e])
-        };
-
-        build_sym_using_vs(
-            build_set(ds.size() - remove.len(), ds.dim(), op),
-            |i, d| ds.v(i, i + 1, img2src[d])
-        )
-    }
-}
-
-
-
 #[cfg(test)]
 mod test {
-    use crate::delaney2d::toroidal_cover;
-    use crate::delaney3d::pseudo_toroidal_cover;
-
     use super::*;
 
     #[test]
@@ -391,29 +331,5 @@ mod test {
             "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
             "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
         );
-    }
-
-
-    #[test]
-    fn test_collapse_2d() {
-        let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
-
-        let cov = toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>"));
-        let out = minimal_image(&collapse(&cov, cov.orbit([0, 2], 1), 2));
-
-        assert_eq!(out, dsym("<1.1:1:1,1,1:4,4>"));
-    }
-
-
-    #[test]
-    fn test_collapse_3d() {
-        let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
-
-        let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
-        let cov = dual(&pseudo_toroidal_cover(&ds).unwrap());
-        let remove = (1..=cov.size()).filter(|&d| cov.m(0, 1, d) == Some(3));
-        let out = minimal_image(&collapse(&cov, remove, 3));
-
-        assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
     }
 }
