@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use crate::delaney2d::toroidal_cover;
-use crate::delaney3d::pseudo_toroidal_cover;
 use crate::dsets::*;
 use crate::dsyms::*;
 use crate::util::partitions::Partition;
@@ -234,179 +232,188 @@ pub fn collapse<T, I>(ds: &T, remove: I, connector: usize) -> PartialDSym
 }
 
 
-#[test]
-fn test_oriented_cover() {
-    let check_cover = |src: &str, out: &str| {
-        assert_eq!(
-            src.parse::<PartialDSym>().map(|ds| oriented_cover(&ds)),
-            out.parse::<PartialDSym>(),
+
+#[cfg(test)]
+mod test {
+    use crate::delaney2d::toroidal_cover;
+    use crate::delaney3d::pseudo_toroidal_cover;
+
+    use super::*;
+
+    #[test]
+    fn test_oriented_cover() {
+        let check_cover = |src: &str, out: &str| {
+            assert_eq!(
+                src.parse::<PartialDSym>().map(|ds| oriented_cover(&ds)),
+                out.parse::<PartialDSym>(),
+            );
+        };
+
+        check_cover(
+            "<1.1:6:2 4 6,6 3 5,2 4 6:3,6>",
+            "<1.1:6:2 4 6,6 3 5,2 4 6:3,6>",
         );
-    };
-
-    check_cover(
-        "<1.1:6:2 4 6,6 3 5,2 4 6:3,6>",
-        "<1.1:6:2 4 6,6 3 5,2 4 6:3,6>",
-    );
-    check_cover(
-        "<1.1:6:2 4 6,6 3 5,2 5 6:3,6>",
-        "<1.1:12:2 4 6 8 10 12,6 3 5 12 9 11,2 11 12 9 10 8:3 3,6 6>",
-    );
-    check_cover(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
-        "<1.1:6:4 5 6,3 5 6,2 6 5:6 4,3>",
-    );
-    check_cover(
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
-        "<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>"
-    );
-}
-
-
-#[test]
-fn test_canonical() {
-    let check_canonical = |src: &str, out: &str| {
-        assert_eq!(
-            src.parse::<PartialDSym>().map(|ds| canonical(&ds)),
-            out.parse::<PartialDSym>()
+        check_cover(
+            "<1.1:6:2 4 6,6 3 5,2 5 6:3,6>",
+            "<1.1:12:2 4 6 8 10 12,6 3 5 12 9 11,2 11 12 9 10 8:3 3,6 6>",
         );
-    };
-
-    check_canonical(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
-        "<1.1:3:1 2 3,2 3,1 3:6 4,3>",
-    );
-    check_canonical(
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
-        "<1.1:2 3:2,1 2,1 2,2:6,2 3,6>",
-    );
-    check_canonical(
-        "<1.1:24:
-        2 4 6 8 10 12 14 16 18 20 22 24,
-        16 3 5 7 9 11 13 15 24 19 21 23,
-        10 9 20 19 14 13 22 21 24 23 18 17:
-        8 4,3 3 3 3>",
-        "<1.1:24:
-        2 4 6 8 10 12 14 16 18 20 22 24,
-        8 3 5 7 24 11 13 15 17 19 21 23,
-        9 10 21 22 17 18 13 14 20 19 24 23:
-        4 8,3 3 3 3>",
-    )
-}
-
-
-#[test]
-fn test_dual() {
-    let check_dual = |src: &str, out: &str| {
-        assert_eq!(
-            src.parse::<PartialDSym>().map(|ds| dual(&ds)),
-            out.parse::<PartialDSym>()
+        check_cover(
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+            "<1.1:6:4 5 6,3 5 6,2 6 5:6 4,3>",
         );
-    };
-
-    check_dual(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
-        "<1.1:3:2 3,3 2,1 2 3:3,6 4>",
-    );
-    check_dual(
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
-    );
-    check_dual(
-        "<1.1:24:
-        2 4 6 8 10 12 14 16 18 20 22 24,
-        16 3 5 7 9 11 13 15 24 19 21 23,
-        10 9 20 19 14 13 22 21 24 23 18 17:
-        8 4,3 3 3 3>",
-        "<1.1:24:
-        10 9 20 19 14 13 22 21 24 23 18 17,
-        16 3 5 7 9 11 13 15 24 19 21 23,
-        2 4 6 8 10 12 14 16 18 20 22 24:
-        3 3 3 3,8 4>",
-    );
-}
-
-
-#[test]
-fn test_subsymbol() {
-    fn check_subsymbol<I>(src: &str, idcs: I, seed: usize, out: &str)
-        where I: IntoIterator<Item=usize>
-    {
-        assert_eq!(
-            src.parse::<PartialDSym>().map(|ds| subsymbol(&ds, idcs, seed)),
-            out.parse::<PartialDSym>()
+        check_cover(
+            "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+            "<1.1:4 3:2 4,3 4,3 4,2 4:6,3 2,6>"
         );
     }
 
-    check_subsymbol(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [0, 1], 1,
-        "<1.1:2 1:1 2,2:6>"
-    );
-    check_subsymbol(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [0, 1], 2,
-        "<1.1:1 1:1,1:4>"
-    );
-    check_subsymbol(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [1, 2], 1,
-        "<1.1:3 1:3 2,2 3:3>"
-    );
-    check_subsymbol(
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", [0, 1, 2], 1,
-        "<1.1:2:2,1 2,1 2:6,3 2>"
-    )
-}
 
+    #[test]
+    fn test_canonical() {
+        let check_canonical = |src: &str, out: &str| {
+            assert_eq!(
+                src.parse::<PartialDSym>().map(|ds| canonical(&ds)),
+                out.parse::<PartialDSym>()
+            );
+        };
 
-#[test]
-fn test_minimal() {
-    let check_minimal = |src: &str, out: &str| {
-        assert_eq!(
-            src.parse::<PartialDSym>().map(|ds| minimal_image(&ds)),
-            out.parse::<PartialDSym>()
+        check_canonical(
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+            "<1.1:3:1 2 3,2 3,1 3:6 4,3>",
         );
-    };
-
-    check_minimal(
-        "<1.1:24:
-        2 4 6 8 10 12 14 16 18 20 22 24,
-        16 3 5 7 9 11 13 15 24 19 21 23,
-        10 9 20 19 14 13 22 21 24 23 18 17:
-        8 4,3 3 3 3>",
-        "<1.1:3:1 2 3,2 3,1 3:8 4,3>",
-    );
-    check_minimal(
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
-        "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
-    );
-    check_minimal(
-        "<1.1:3:1 2 3,3 2,2 3:6 6,3>",
-        "<1.1:1:1,1,1:6,3>",
-    );
-    check_minimal(
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
-        "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
-    );
-}
+        check_canonical(
+            "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+            "<1.1:2 3:2,1 2,1 2,2:6,2 3,6>",
+        );
+        check_canonical(
+            "<1.1:24:
+            2 4 6 8 10 12 14 16 18 20 22 24,
+            16 3 5 7 9 11 13 15 24 19 21 23,
+            10 9 20 19 14 13 22 21 24 23 18 17:
+            8 4,3 3 3 3>",
+            "<1.1:24:
+            2 4 6 8 10 12 14 16 18 20 22 24,
+            8 3 5 7 24 11 13 15 17 19 21 23,
+            9 10 21 22 17 18 13 14 20 19 24 23:
+            4 8,3 3 3 3>",
+        )
+    }
 
 
-#[test]
-fn test_collapse_2d() {
-    let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
+    #[test]
+    fn test_dual() {
+        let check_dual = |src: &str, out: &str| {
+            assert_eq!(
+                src.parse::<PartialDSym>().map(|ds| dual(&ds)),
+                out.parse::<PartialDSym>()
+            );
+        };
 
-    let cov = toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>"));
-    let out = minimal_image(&collapse(&cov, cov.orbit([0, 2], 1), 2));
+        check_dual(
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+            "<1.1:3:2 3,3 2,1 2 3:3,6 4>",
+        );
+        check_dual(
+            "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+            "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+        );
+        check_dual(
+            "<1.1:24:
+            2 4 6 8 10 12 14 16 18 20 22 24,
+            16 3 5 7 9 11 13 15 24 19 21 23,
+            10 9 20 19 14 13 22 21 24 23 18 17:
+            8 4,3 3 3 3>",
+            "<1.1:24:
+            10 9 20 19 14 13 22 21 24 23 18 17,
+            16 3 5 7 9 11 13 15 24 19 21 23,
+            2 4 6 8 10 12 14 16 18 20 22 24:
+            3 3 3 3,8 4>",
+        );
+    }
 
-    assert_eq!(out, dsym("<1.1:1:1,1,1:4,4>"));
-}
+
+    #[test]
+    fn test_subsymbol() {
+        fn check_subsymbol<I>(src: &str, idcs: I, seed: usize, out: &str)
+            where I: IntoIterator<Item=usize>
+        {
+            assert_eq!(
+                src.parse::<PartialDSym>().map(|ds| subsymbol(&ds, idcs, seed)),
+                out.parse::<PartialDSym>()
+            );
+        }
+
+        check_subsymbol(
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [0, 1], 1,
+            "<1.1:2 1:1 2,2:6>"
+        );
+        check_subsymbol(
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [0, 1], 2,
+            "<1.1:1 1:1,1:4>"
+        );
+        check_subsymbol(
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>", [1, 2], 1,
+            "<1.1:3 1:3 2,2 3:3>"
+        );
+        check_subsymbol(
+            "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", [0, 1, 2], 1,
+            "<1.1:2:2,1 2,1 2:6,3 2>"
+        )
+    }
 
 
-#[test]
-fn test_collapse_3d() {
-    let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
+    #[test]
+    fn test_minimal() {
+        let check_minimal = |src: &str, out: &str| {
+            assert_eq!(
+                src.parse::<PartialDSym>().map(|ds| minimal_image(&ds)),
+                out.parse::<PartialDSym>()
+            );
+        };
 
-    let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
-    let cov = dual(&pseudo_toroidal_cover(&ds).unwrap());
-    let remove = (1..=cov.size()).filter(|&d| cov.m(0, 1, d) == Some(3));
-    let out = minimal_image(&collapse(&cov, remove, 3));
+        check_minimal(
+            "<1.1:24:
+            2 4 6 8 10 12 14 16 18 20 22 24,
+            16 3 5 7 9 11 13 15 24 19 21 23,
+            10 9 20 19 14 13 22 21 24 23 18 17:
+            8 4,3 3 3 3>",
+            "<1.1:3:1 2 3,2 3,1 3:8 4,3>",
+        );
+        check_minimal(
+            "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+            "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+        );
+        check_minimal(
+            "<1.1:3:1 2 3,3 2,2 3:6 6,3>",
+            "<1.1:1:1,1,1:6,3>",
+        );
+        check_minimal(
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+            "<1.1:3:1 2 3,3 2,2 3:6 4,3>",
+        );
+    }
 
-    assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
+
+    #[test]
+    fn test_collapse_2d() {
+        let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
+
+        let cov = toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>"));
+        let out = minimal_image(&collapse(&cov, cov.orbit([0, 2], 1), 2));
+
+        assert_eq!(out, dsym("<1.1:1:1,1,1:4,4>"));
+    }
+
+
+    #[test]
+    fn test_collapse_3d() {
+        let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
+
+        let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
+        let cov = dual(&pseudo_toroidal_cover(&ds).unwrap());
+        let remove = (1..=cov.size()).filter(|&d| cov.m(0, 1, d) == Some(3));
+        let out = minimal_image(&collapse(&cov, remove, 3));
+
+        assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
+    }
 }

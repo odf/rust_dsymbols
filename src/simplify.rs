@@ -36,7 +36,7 @@ pub fn merge_all<T: DSym>(ds: &T) -> PartialDSym {
 
 
 #[cfg(test)]
-mod Test {
+mod test {
     use crate::delaney3d::pseudo_toroidal_cover;
     use crate::fpgroups::invariants::abelian_invariants;
     use crate::fundamental_group::fundamental_group;

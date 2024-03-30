@@ -527,8 +527,6 @@ impl fmt::Display for SimpleDSet {
 
 #[cfg(test)]
 mod traversal_tests {
-    use std::iter;
-
     use crate::dsyms::PartialDSym;
 
     use super::*;

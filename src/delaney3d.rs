@@ -154,7 +154,7 @@ pub fn pseudo_toroidal_cover<T: DSym>(ds: &T) -> Option<PartialDSym> {
 
 
 #[test]
-fn test_canonical() {
+fn test_toroidal_cover() {
     let check_pseudo_toroidal = |src: &str, out: &str| {
         assert_eq!(
             src.parse::<PartialDSym>().map(|ds| pseudo_toroidal_cover(&ds)),

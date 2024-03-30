@@ -154,7 +154,7 @@ pub fn stabilizer(base_point: usize, rels: &Vec<FreeWord>, ct: &CosetTable)
 
 
 #[cfg(test)]
-mod Test {
+mod test {
     use std::collections::HashMap;
 
     use super::*;
