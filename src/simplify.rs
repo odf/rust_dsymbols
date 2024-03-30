@@ -1,4 +1,4 @@
-use crate::derived::{as_partial_dsym, collapse, dual};
+use crate::derived::{as_partial_dsym, build_set, build_sym_using_vs, collapse, dual};
 use crate::dsets::DSet;
 use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
@@ -22,13 +22,57 @@ fn merge_facets(ds: &PartialDSym) -> PartialDSym {
 }
 
 
-pub fn merge_all<T: DSym>(ds: &T) -> PartialDSym {
+fn merge_all(ds: &PartialDSym) -> PartialDSym {
     let mut ds = as_partial_dsym(ds);
 
     for op in [
         merge_tiles, merge_facets, dual, merge_tiles, merge_facets, dual
     ] {
         ds = op(&ds);
+    }
+
+    ds
+}
+
+
+fn fix_local_1_vertex(ds: &PartialDSym) -> PartialDSym {
+    let mut ds = as_partial_dsym(ds);
+
+    for c in ds.orbit_reps([1, 2], 1..ds.size()) {
+        if ds.m(1, 2, c) == Some(1) {
+            let d = ds.op(0, ds.op(1, c).unwrap()).unwrap();
+            let e = ds.op(1, ds.op(0, c).unwrap()).unwrap();
+            let f = ds.op(3, d).unwrap();
+            let g = ds.op(3, e).unwrap();
+
+            let d1 = ds.op(1, d).unwrap();
+            let e1 = ds.op(1, e).unwrap();
+            let f1 = ds.op(1, f).unwrap();
+            let g1 = ds.op(1, g).unwrap();
+
+            let op = |i, c| {
+                if i == 1 {
+                    if c == d { Some(e1) }
+                    else if c == e { Some(d1) }
+                    else if c == f { Some(g1) }
+                    else if c == g { Some(f1) }
+                    else if c == d1 { Some(e) }
+                    else if c == e1 { Some(d) }
+                    else if c == f1 { Some(g) }
+                    else if c == g1 { Some(f) }
+                    else { ds.op(i, c) }
+                } else {
+                    ds.op(i, c)
+                }
+            };
+
+            ds = build_sym_using_vs(
+                build_set(ds.size(), ds.dim(), op),
+                |i, d| ds.v(i, i + 1, d)
+            );
+
+            return collapse(&ds, ds.orbit([0, 1, 3], c), 3);
+        }
     }
 
     ds
