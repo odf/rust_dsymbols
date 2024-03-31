@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::derived::{as_partial_dsym, build_set, build_sym_using_vs, dual};
 use crate::dsets::DSet;
@@ -63,6 +63,32 @@ fn collapse<I>(ds: &PartialDSym, remove: I, connector: usize)
 }
 
 
+fn reglue<I>(ds: &PartialDSym, pairs: I, index: usize) -> Option<PartialDSym>
+    where I: IntoIterator<Item=(usize, usize)>
+{
+    let paired: HashMap<_, _> = pairs.into_iter()
+        .flat_map(|(d, e)| [(d, e), (e, d)])
+        .collect();
+
+    if paired.is_empty() {
+        None
+    } else {
+        let op = |i, d| {
+            if i == index && paired.contains_key(&d) {
+                Some(*paired.get(&d).unwrap())
+            } else {
+                ds.op(i, d)
+            }
+        };
+
+        Some(build_sym_using_vs(
+            build_set(ds.size(), ds.dim(), op),
+            |i, d| ds.v(i, i + 1, d)
+        ))
+    }
+}
+
+
 fn merge_tiles(ds: &PartialDSym) -> Option<PartialDSym> {
     let inner = inner_edges(ds);
     let junk = inner.iter().cloned()
@@ -103,8 +129,6 @@ fn merge_all(ds: &PartialDSym) -> Option<PartialDSym> {
 
 
 fn fix_local_1_vertex(ds: &PartialDSym) -> Option<PartialDSym> {
-    let mut ds = as_partial_dsym(ds);
-
     for c in ds.orbit_reps([1, 2], 1..ds.size()) {
         if ds.m(1, 2, c) == Some(1) {
             let d = ds.op(0, ds.op(1, c).unwrap()).unwrap();
@@ -117,28 +141,11 @@ fn fix_local_1_vertex(ds: &PartialDSym) -> Option<PartialDSym> {
             let f1 = ds.op(1, f).unwrap();
             let g1 = ds.op(1, g).unwrap();
 
-            let op = |i, c| {
-                if i == 1 {
-                    if c == d { Some(e1) }
-                    else if c == e { Some(d1) }
-                    else if c == f { Some(g1) }
-                    else if c == g { Some(f1) }
-                    else if c == d1 { Some(e) }
-                    else if c == e1 { Some(d) }
-                    else if c == f1 { Some(g) }
-                    else if c == g1 { Some(f) }
-                    else { ds.op(i, c) }
-                } else {
-                    ds.op(i, c)
-                }
-            };
+            let tmp = reglue(
+                &ds, [(d, e1), (e, d1), (f, g1), (g, f1)], 1
+            ).unwrap();
 
-            ds = build_sym_using_vs(
-                build_set(ds.size(), ds.dim(), op),
-                |i, d| ds.v(i, i + 1, d)
-            );
-
-            return collapse(&ds, ds.orbit([0, 1, 3], c), 3);
+            return collapse(&tmp, tmp.orbit([0, 1, 3], c), 3);
         }
     }
 
