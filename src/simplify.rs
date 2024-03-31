@@ -6,8 +6,9 @@ use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
 
 
-pub fn collapse<T, I>(ds: &T, remove: I, connector: usize) -> PartialDSym
-    where T: DSym, I: IntoIterator<Item=usize>
+fn collapse<I>(ds: &PartialDSym, remove: I, connector: usize)
+    -> Option<PartialDSym>
+    where I: IntoIterator<Item=usize>
 {
     // WARNING: very general operation that can wreak a lot of havoc!
 
@@ -31,7 +32,7 @@ pub fn collapse<T, I>(ds: &T, remove: I, connector: usize) -> PartialDSym
     );
 
     if remove.is_empty() {
-        as_partial_dsym(ds)
+        None
     } else {
         let mut src2img = vec![0; ds.size() + 1];
         let mut img2src = vec![0; ds.size() + 1];
@@ -54,15 +55,15 @@ pub fn collapse<T, I>(ds: &T, remove: I, connector: usize) -> PartialDSym
             Some(src2img[e])
         };
 
-        build_sym_using_vs(
+        Some(build_sym_using_vs(
             build_set(ds.size() - remove.len(), ds.dim(), op),
             |i, d| ds.v(i, i + 1, img2src[d])
-        )
+        ))
     }
 }
 
 
-fn merge_tiles(ds: &PartialDSym) -> PartialDSym {
+fn merge_tiles(ds: &PartialDSym) -> Option<PartialDSym> {
     let inner = inner_edges(ds);
     let junk = inner.iter().cloned()
         .filter(|&(_, i)| i == 3)
@@ -71,7 +72,7 @@ fn merge_tiles(ds: &PartialDSym) -> PartialDSym {
 }
 
 
-fn merge_facets(ds: &PartialDSym) -> PartialDSym {
+fn merge_facets(ds: &PartialDSym) -> Option<PartialDSym> {
     let reps = ds.orbit_reps([2, 3], 1..ds.size());
     let junk = reps.iter().cloned()
         .filter(|&d| ds.r(2, 3, d) == Some(2))
@@ -80,20 +81,28 @@ fn merge_facets(ds: &PartialDSym) -> PartialDSym {
 }
 
 
-fn merge_all(ds: &PartialDSym) -> PartialDSym {
-    let mut ds = as_partial_dsym(ds);
-
-    for op in [
-        merge_tiles, merge_facets, dual, merge_tiles, merge_facets, dual
-    ] {
-        ds = op(&ds);
-    }
-
-    ds
+fn wrap_dual(ds: &PartialDSym) -> Option<PartialDSym> {
+    Some(dual(ds))
 }
 
 
-fn fix_local_1_vertex(ds: &PartialDSym) -> PartialDSym {
+fn merge_all(ds: &PartialDSym) -> Option<PartialDSym> {
+    let mut ds = as_partial_dsym(ds);
+
+    for op in [
+        merge_tiles, merge_facets, wrap_dual,
+        merge_tiles, merge_facets, wrap_dual
+    ] {
+        if let Some(out) = op(&ds) {
+            ds = out;
+        }
+    }
+
+    Some(ds)
+}
+
+
+fn fix_local_1_vertex(ds: &PartialDSym) -> Option<PartialDSym> {
     let mut ds = as_partial_dsym(ds);
 
     for c in ds.orbit_reps([1, 2], 1..ds.size()) {
@@ -133,19 +142,18 @@ fn fix_local_1_vertex(ds: &PartialDSym) -> PartialDSym {
         }
     }
 
-    ds
+    None
 }
 
 
 pub fn simplify<T: DSym>(ds: &T) -> PartialDSym {
     // TODO very basic first version
-    let mut ds = as_partial_dsym(ds);
+    let ds = as_partial_dsym(ds);
+    let ds = merge_all(&ds).or(Some(ds)).unwrap();
 
-    for op in [merge_all, fix_local_1_vertex] {
-        let old = ds;
-        ds = op(&old);
-        if ds.size() == old.size() {
-            break;
+    for op in [fix_local_1_vertex] {
+        if let Some(out) = op(&ds) {
+            return out;
         }
     }
 
@@ -169,7 +177,9 @@ mod test {
         let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
 
         let cov = toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>"));
-        let out = minimal_image(&collapse(&cov, cov.orbit([0, 2], 1), 2));
+        let out = minimal_image(
+            &collapse(&cov, cov.orbit([0, 2], 1), 2).unwrap()
+        );
 
         assert_eq!(out, dsym("<1.1:1:1,1,1:4,4>"));
     }
@@ -182,7 +192,9 @@ mod test {
         let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
         let cov = dual(&pseudo_toroidal_cover(&ds).unwrap());
         let remove = (1..=cov.size()).filter(|&d| cov.m(0, 1, d) == Some(3));
-        let out = minimal_image(&collapse(&cov, remove, 3));
+        let out = minimal_image(
+            &collapse(&cov, remove, 3).unwrap()
+        );
 
         assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
     }
