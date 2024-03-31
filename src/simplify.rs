@@ -10,26 +10,7 @@ fn collapse<I>(ds: &PartialDSym, remove: I, connector: usize)
     -> Option<PartialDSym>
     where I: IntoIterator<Item=usize>
 {
-    // WARNING: very general operation that can wreak a lot of havoc!
-
     let remove: HashSet<_> = remove.into_iter().collect();
-
-    assert!(
-        ds.is_complete(),
-        "symbol must be complete"
-    );
-    assert!(
-        remove.iter().all(|&d| d >= 1 && d <= ds.size()),
-        "remove list must only contain elements of ds"
-    );
-    assert!(
-        connector <= ds.dim(),
-        "connector must be an operator index for ds"
-    );
-    assert!(
-        remove.iter().all(|&d| remove.contains(&ds.op(connector, d).unwrap())),
-        "remove list must be invariant under connector operator"
-    );
 
     if remove.is_empty() {
         None
