@@ -38,7 +38,7 @@ fn collapse<I>(ds: &PartialDSym, remove: I, connector: usize)
 
         Some(build_sym_using_vs(
             build_set(ds.size() - remove.len(), ds.dim(), op),
-            |i, d| ds.v(i, i + 1, img2src[d])
+            |_, _| Some(1)
         ))
     }
 }
@@ -64,7 +64,7 @@ fn reglue<I>(ds: &PartialDSym, pairs: I, index: usize) -> Option<PartialDSym>
 
         Some(build_sym_using_vs(
             build_set(ds.size(), ds.dim(), op),
-            |i, d| ds.v(i, i + 1, d)
+            |_, _| Some(1)
         ))
     }
 }
