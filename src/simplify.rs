@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::derived::{build_set, build_sym_using_vs};
 use crate::dsets::{DSet, PartialDSet};
-use crate::dsyms::{DSym, PartialDSym};
+use crate::dsyms::PartialDSym;
 use crate::fundamental_group::inner_edges;
 
 
@@ -20,6 +20,18 @@ fn dual(ds: &PartialDSet) -> Option<PartialDSet> {
     let n = ds.dim();
 
     Some(build_set(ds.size(), n, |i, d| ds.op(n - i, d)))
+}
+
+
+fn r(ds: &PartialDSet, i: usize, j: usize, d: usize) -> usize {
+    let mut e = d;
+    for k in 1.. {
+        e = ds.op(j, ds.op(i, e).unwrap()).unwrap();
+        if e == d {
+            return k;
+        }
+    }
+    0
 }
 
 
@@ -91,10 +103,9 @@ fn merge_tiles(ds: &PartialDSet) -> Option<PartialDSet> {
 
 
 fn merge_facets(ds: &PartialDSet) -> Option<PartialDSet> {
-    let sym = as_dsym(ds);
     let reps = ds.orbit_reps([2, 3], 1..ds.size());
     let junk = reps.iter().cloned()
-        .filter(|&d| sym.r(2, 3, d) == Some(2))
+        .filter(|&d| r(ds, 2, 3, d) == 2)
         .flat_map(|d| ds.orbit([2, 3], d));
     collapse(ds, junk, 2)
 }
@@ -187,8 +198,8 @@ mod test {
         let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
 
         let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
-        let cov = crate::derived::dual(&pseudo_toroidal_cover(&ds).unwrap());
-        let remove = (1..=cov.size()).filter(|&d| cov.m(0, 1, d) == Some(3));
+        let cov = dual(&as_dset(&pseudo_toroidal_cover(&ds).unwrap())).unwrap();
+        let remove = (1..=cov.size()).filter(|&d| r(&cov, 0, 1, d) == 3);
         let out = minimal_image(&as_dsym(
             &collapse(&as_dset(&cov), remove, 3).unwrap()
         ));
@@ -203,19 +214,19 @@ mod test {
             let ds = s.parse::<PartialDSym>().unwrap();
             eprintln!("{ds}");
             let cov = pseudo_toroidal_cover(&ds).unwrap();
-            let out = as_dsym(&simplify(&cov));
+            let out = simplify(&cov);
 
             assert_eq!(out.orbit_reps([0, 1, 2], 1..out.size()).len(), 1);
             assert_eq!(out.orbit_reps([1, 2, 3], 1..out.size()).len(), 1);
 
             let reps = out.orbit_reps([2, 3], 1..out.size());
-            assert!(reps.iter().all(|&d| out.r(2, 3, d) != Some(2)));
+            assert!(reps.iter().all(|&d| r(&out, 2, 3, d) != 2));
             let reps = out.orbit_reps([0, 1], 1..out.size());
-            assert!(reps.iter().all(|&d| out.r(0, 1, d) != Some(2)));
+            assert!(reps.iter().all(|&d| r(&out, 0, 1, d) != 2));
             let reps = out.orbit_reps([1, 2], 1..out.size());
-            assert!(reps.iter().all(|&d| out.r(1, 2, d) != Some(1)));
+            assert!(reps.iter().all(|&d| r(&out, 1, 2, d) != 1));
 
-            let fg = fundamental_group(&out);
+            let fg = fundamental_group(&as_dsym(&out));
             let nr_gens = fg.gen_to_edge.len();
             let rels: Vec<_> = fg.relators.iter().cloned().collect();
             let inv = abelian_invariants(nr_gens, &rels);
