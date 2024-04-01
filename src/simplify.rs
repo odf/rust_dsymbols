@@ -93,6 +93,50 @@ fn reglue<I>(ds: &PartialDSet, pairs: I, index: usize) -> Option<PartialDSet>
 }
 
 
+fn grow(ds: &PartialDSet, m: usize) -> PartialDSet {
+    let n = ds.size();
+    let op = |i, d| if d > n { Some(d) } else { ds.op(i, d) };
+    build_set(n + m, ds.dim(), op)
+}
+
+
+fn cut_face(ds: &PartialDSet, d1: usize, d2: usize) -> PartialDSet {
+    let n = ds.size();
+    let mut ds = grow(ds, 8);
+    let old = vec![
+        d1, d2,
+        ds.op(3, d2).unwrap(), ds.op(3, d1).unwrap(),
+        ds.op(1, d1).unwrap(), ds.op(1, d2).unwrap(),
+        ds.op(3, ds.op(1, d2).unwrap()).unwrap(),
+        ds.op(3, ds.op(1, d1).unwrap()).unwrap(),
+    ];
+    let nu: Vec<_> = ((n + 1)..(n + 8)).collect();
+
+    ds = reglue(
+        &ds,
+        [(nu[0], nu[1]), (nu[2], nu[3]), (nu[4], nu[5]), (nu[6], nu[7])],
+        0
+    ).unwrap();
+    ds = reglue(
+        &ds,
+        (0..8).map(|k| (nu[k], old[k])),
+        1
+    ).unwrap();
+    ds = reglue(
+        &ds,
+        [(nu[0], nu[4]), (nu[1], nu[5]), (nu[2], nu[6]), (nu[3], nu[7])],
+        2
+    ).unwrap();
+    ds = reglue(
+        &ds,
+        [(nu[0], nu[3]), (nu[1], nu[2]), (nu[4], nu[7]), (nu[5], nu[6])],
+        3
+    ).unwrap();
+
+    ds
+}
+
+
 fn merge_tiles(ds: &PartialDSet) -> Option<PartialDSet> {
     let inner = inner_edges(&as_dsym(ds));
     let junk = inner.iter().cloned()
