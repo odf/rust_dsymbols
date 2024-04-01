@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::derived::{build_set, build_sym_using_vs};
 use crate::dsets::{DSet, PartialDSet};
-use crate::dsyms::PartialDSym;
+use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
 
 
@@ -152,7 +152,7 @@ fn fix_local_1_vertex(ds: &PartialDSet) -> Option<PartialDSet> {
 }
 
 
-pub fn simplify<T: DSet>(ds: &T) -> PartialDSet {
+pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
     // TODO very basic first version
     // TODO add assertions to ensure input is legal
 
@@ -161,11 +161,11 @@ pub fn simplify<T: DSet>(ds: &T) -> PartialDSet {
 
     for op in [fix_local_1_vertex] {
         if let Some(out) = op(&ds) {
-            return out;
+            return as_dsym(&out);
         }
     }
 
-    ds
+    as_dsym(&ds)
 }
 
 
@@ -200,9 +200,7 @@ mod test {
         let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
         let cov = dual(&as_dset(&pseudo_toroidal_cover(&ds).unwrap())).unwrap();
         let remove = (1..=cov.size()).filter(|&d| r(&cov, 0, 1, d) == 3);
-        let out = minimal_image(&as_dsym(
-            &collapse(&as_dset(&cov), remove, 3).unwrap()
-        ));
+        let out = minimal_image(&as_dsym(&collapse(&cov, remove, 3).unwrap()));
 
         assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
     }
@@ -220,13 +218,13 @@ mod test {
             assert_eq!(out.orbit_reps([1, 2, 3], 1..out.size()).len(), 1);
 
             let reps = out.orbit_reps([2, 3], 1..out.size());
-            assert!(reps.iter().all(|&d| r(&out, 2, 3, d) != 2));
+            assert!(reps.iter().all(|&d| out.r(2, 3, d) != Some(2)));
             let reps = out.orbit_reps([0, 1], 1..out.size());
-            assert!(reps.iter().all(|&d| r(&out, 0, 1, d) != 2));
+            assert!(reps.iter().all(|&d| out.r(0, 1, d) != Some(2)));
             let reps = out.orbit_reps([1, 2], 1..out.size());
-            assert!(reps.iter().all(|&d| r(&out, 1, 2, d) != 1));
+            assert!(reps.iter().all(|&d| out.r(1, 2, d) != Some(1)));
 
-            let fg = fundamental_group(&as_dsym(&out));
+            let fg = fundamental_group(&out);
             let nr_gens = fg.gen_to_edge.len();
             let rels: Vec<_> = fg.relators.iter().cloned().collect();
             let inv = abelian_invariants(nr_gens, &rels);
