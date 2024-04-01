@@ -1,13 +1,30 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::derived::{as_partial_dsym, build_set, build_sym_using_vs, dual};
-use crate::dsets::DSet;
+use crate::derived::{build_set, build_sym_using_vs};
+use crate::dsets::{DSet, PartialDSet};
 use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
 
 
-fn collapse<I>(ds: &PartialDSym, remove: I, connector: usize)
-    -> Option<PartialDSym>
+fn as_dset<T: DSet>(ds: &T) -> PartialDSet {
+    build_set(ds.size(), ds.dim(), |i, d| ds.op(i, d))
+}
+
+
+fn as_dsym<T: DSet>(ds: &T) -> PartialDSym {
+    build_sym_using_vs(as_dset(ds), |_, _| Some(1))
+}
+
+
+fn dual(ds: &PartialDSet) -> Option<PartialDSet> {
+    let n = ds.dim();
+
+    Some(build_set(ds.size(), n, |i, d| ds.op(n - i, d)))
+}
+
+
+fn collapse<I>(ds: &PartialDSet, remove: I, connector: usize)
+    -> Option<PartialDSet>
     where I: IntoIterator<Item=usize>
 {
     let remove: HashSet<_> = remove.into_iter().collect();
@@ -36,15 +53,12 @@ fn collapse<I>(ds: &PartialDSym, remove: I, connector: usize)
             Some(src2img[e])
         };
 
-        Some(build_sym_using_vs(
-            build_set(ds.size() - remove.len(), ds.dim(), op),
-            |_, _| Some(1)
-        ))
+        Some(build_set(ds.size() - remove.len(), ds.dim(), op))
     }
 }
 
 
-fn reglue<I>(ds: &PartialDSym, pairs: I, index: usize) -> Option<PartialDSym>
+fn reglue<I>(ds: &PartialDSet, pairs: I, index: usize) -> Option<PartialDSet>
     where I: IntoIterator<Item=(usize, usize)>
 {
     let paired: HashMap<_, _> = pairs.into_iter()
@@ -62,16 +76,13 @@ fn reglue<I>(ds: &PartialDSym, pairs: I, index: usize) -> Option<PartialDSym>
             }
         };
 
-        Some(build_sym_using_vs(
-            build_set(ds.size(), ds.dim(), op),
-            |_, _| Some(1)
-        ))
+        Some(build_set(ds.size(), ds.dim(), op))
     }
 }
 
 
-fn merge_tiles(ds: &PartialDSym) -> Option<PartialDSym> {
-    let inner = inner_edges(ds);
+fn merge_tiles(ds: &PartialDSet) -> Option<PartialDSet> {
+    let inner = inner_edges(&as_dsym(ds));
     let junk = inner.iter().cloned()
         .filter(|&(_, i)| i == 3)
         .flat_map(|(d, _)| ds.orbit([3], d));
@@ -79,26 +90,22 @@ fn merge_tiles(ds: &PartialDSym) -> Option<PartialDSym> {
 }
 
 
-fn merge_facets(ds: &PartialDSym) -> Option<PartialDSym> {
+fn merge_facets(ds: &PartialDSet) -> Option<PartialDSet> {
+    let sym = as_dsym(ds);
     let reps = ds.orbit_reps([2, 3], 1..ds.size());
     let junk = reps.iter().cloned()
-        .filter(|&d| ds.r(2, 3, d) == Some(2))
+        .filter(|&d| sym.r(2, 3, d) == Some(2))
         .flat_map(|d| ds.orbit([2, 3], d));
     collapse(ds, junk, 2)
 }
 
 
-fn wrap_dual(ds: &PartialDSym) -> Option<PartialDSym> {
-    Some(dual(ds))
-}
-
-
-fn merge_all(ds: &PartialDSym) -> Option<PartialDSym> {
-    let mut ds = as_partial_dsym(ds);
+fn merge_all(ds: &PartialDSet) -> Option<PartialDSet> {
+    let mut ds = ds.clone();
 
     for op in [
-        merge_tiles, merge_facets, wrap_dual,
-        merge_tiles, merge_facets, wrap_dual
+        merge_tiles, merge_facets, dual,
+        merge_tiles, merge_facets, dual
     ] {
         if let Some(out) = op(&ds) {
             ds = out;
@@ -109,9 +116,9 @@ fn merge_all(ds: &PartialDSym) -> Option<PartialDSym> {
 }
 
 
-fn fix_local_1_vertex(ds: &PartialDSym) -> Option<PartialDSym> {
+fn fix_local_1_vertex(ds: &PartialDSet) -> Option<PartialDSet> {
     for c in ds.orbit_reps([1, 2], 1..ds.size()) {
-        if ds.m(1, 2, c) == Some(1) {
+        if ds.op(1, c) == ds.op(2, c) {
             let d = ds.op(0, ds.op(1, c).unwrap()).unwrap();
             let e = ds.op(1, ds.op(0, c).unwrap()).unwrap();
             let f = ds.op(3, d).unwrap();
@@ -134,9 +141,11 @@ fn fix_local_1_vertex(ds: &PartialDSym) -> Option<PartialDSym> {
 }
 
 
-pub fn simplify<T: DSym>(ds: &T) -> PartialDSym {
+pub fn simplify<T: DSet>(ds: &T) -> PartialDSet {
     // TODO very basic first version
-    let ds = as_partial_dsym(ds);
+    // TODO add assertions to ensure input is legal
+
+    let ds = as_dset(ds);
     let ds = merge_all(&ds).or(Some(ds)).unwrap();
 
     for op in [fix_local_1_vertex] {
@@ -164,10 +173,10 @@ mod test {
     fn test_collapse_2d() {
         let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
 
-        let cov = toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>"));
-        let out = minimal_image(
+        let cov = as_dset(&toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>")));
+        let out = minimal_image(&as_dsym(
             &collapse(&cov, cov.orbit([0, 2], 1), 2).unwrap()
-        );
+        ));
 
         assert_eq!(out, dsym("<1.1:1:1,1,1:4,4>"));
     }
@@ -178,11 +187,11 @@ mod test {
         let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
 
         let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
-        let cov = dual(&pseudo_toroidal_cover(&ds).unwrap());
+        let cov = crate::derived::dual(&pseudo_toroidal_cover(&ds).unwrap());
         let remove = (1..=cov.size()).filter(|&d| cov.m(0, 1, d) == Some(3));
-        let out = minimal_image(
-            &collapse(&cov, remove, 3).unwrap()
-        );
+        let out = minimal_image(&as_dsym(
+            &collapse(&as_dset(&cov), remove, 3).unwrap()
+        ));
 
         assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
     }
@@ -194,7 +203,7 @@ mod test {
             let ds = s.parse::<PartialDSym>().unwrap();
             eprintln!("{ds}");
             let cov = pseudo_toroidal_cover(&ds).unwrap();
-            let out = simplify(&cov);
+            let out = as_dsym(&simplify(&cov));
 
             assert_eq!(out.orbit_reps([0, 1, 2], 1..out.size()).len(), 1);
             assert_eq!(out.orbit_reps([1, 2, 3], 1..out.size()).len(), 1);
