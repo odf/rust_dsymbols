@@ -257,16 +257,18 @@ pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
     // TODO very basic first version
     // TODO add assertions to ensure input is legal
 
-    let ds = as_dset(ds);
-    let ds = merge_all(&ds).or(Some(ds)).unwrap();
+    let mut ds = as_dset(ds);
+    ds = merge_all(&ds).or(Some(ds)).unwrap();
 
-    for op in [fix_local_1_vertex] {
-        if let Some(out) = op(&ds) {
-            return as_dsym(&out);
+    loop {
+        for op in [fix_local_1_vertex, fix_local_2_vertex] {
+            if let Some(out) = op(&ds) {
+                ds = merge_all(&out).or(Some(out)).unwrap();
+            } else {
+                return as_dsym(&ds);
+            }
         }
     }
-
-    as_dsym(&ds)
 }
 
 
@@ -308,7 +310,7 @@ mod test {
 
 
     #[test]
-    fn test_merge_all() {
+    fn test_simplify() {
         let test = |s: &str| {
             let ds = s.parse::<PartialDSym>().unwrap();
             eprintln!("{ds}");
