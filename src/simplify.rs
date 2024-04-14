@@ -261,12 +261,16 @@ pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
     ds = merge_all(&ds).or(Some(ds)).unwrap();
 
     loop {
+        let mut changed = false;
         for op in [fix_local_1_vertex, fix_local_2_vertex] {
             if let Some(out) = op(&ds) {
                 ds = merge_all(&out).or(Some(out)).unwrap();
-            } else {
-                return as_dsym(&ds);
+                changed = true;
+                break;
             }
+        }
+        if !changed {
+            return as_dsym(&ds);
         }
     }
 }
@@ -276,16 +280,19 @@ pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
 mod test {
     use crate::delaney2d::toroidal_cover;
     use crate::delaney3d::pseudo_toroidal_cover;
-    use crate::derived::minimal_image;
+    use crate::derived::{canonical, minimal_image};
     use crate::fpgroups::invariants::abelian_invariants;
     use crate::fundamental_group::fundamental_group;
 
     use super::*;
 
+    fn dsym(s: &str) -> PartialDSym {
+        s.parse::<PartialDSym>().unwrap()
+    }
+
 
     #[test]
     fn test_collapse_2d() {
-        let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
 
         let cov = as_dset(&toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>")));
         let out = minimal_image(&as_dsym(
@@ -298,8 +305,6 @@ mod test {
 
     #[test]
     fn test_collapse_3d() {
-        let dsym = |s: &str| s.parse::<PartialDSym>().unwrap();
-
         let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
         let cov = dual(&as_dset(&pseudo_toroidal_cover(&ds).unwrap())).unwrap();
         let remove = (1..=cov.size()).filter(|&d| r(&cov, 0, 1, d) == 3);
@@ -311,9 +316,15 @@ mod test {
 
     #[test]
     fn test_simplify() {
+        let good = HashSet::from([
+            dsym("<1.1:1 3:1,1,1,1:4,3,4>").to_string(),
+            dsym(
+                "<1.1:8 3:2 4 6 8,6 3 5 7 8,2 7 8 5 6,4 3 6 8:3 4,5 3,3 4>"
+            ).to_string()
+        ]);
+
         let test = |s: &str| {
             let ds = s.parse::<PartialDSym>().unwrap();
-            eprintln!("{ds}");
             let cov = pseudo_toroidal_cover(&ds).unwrap();
             let out = simplify(&cov);
 
@@ -325,13 +336,16 @@ mod test {
             let reps = out.orbit_reps([0, 1], 1..out.size());
             assert!(reps.iter().all(|&d| out.r(0, 1, d) != Some(2)));
             let reps = out.orbit_reps([1, 2], 1..out.size());
-            assert!(reps.iter().all(|&d| out.r(1, 2, d) != Some(1)));
+            assert!(reps.iter().all(|&d| out.r(1, 2, d) != Some(2)));
 
             let fg = fundamental_group(&out);
             let nr_gens = fg.gen_to_edge.len();
             let rels: Vec<_> = fg.relators.iter().cloned().collect();
             let inv = abelian_invariants(nr_gens, &rels);
             assert_eq!(inv, vec![0, 0, 0]);
+
+            let tmp = canonical(&minimal_image(&out)).to_string();
+            assert!(good.contains(&tmp));
         };
 
         test("<1.4:1 3:1,1,1,1:4,3,4>");
