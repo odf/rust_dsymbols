@@ -208,6 +208,51 @@ fn fix_local_1_vertex(ds: &PartialDSet) -> Option<PartialDSet> {
 }
 
 
+fn fix_local_2_vertex(ds: &PartialDSet) -> Option<PartialDSet> {
+    for d in ds.orbit_reps([1, 2], 1..ds.size()) {
+        if r(&ds, 1, 2, d) == 2 {
+            let e = ds.op(3, ds.op(2, d).unwrap()).unwrap();
+            if
+                d == e ||
+                d == ds.op(1, ds.op(0, e).unwrap()).unwrap() ||
+                d == ds.op(0, ds.op(1, e).unwrap()).unwrap()
+            {
+                continue;
+            }
+
+            let mut ds = as_dset(ds);
+            let e = ds.op(2, ds.op(1, d).unwrap()).unwrap();
+
+            if r(&ds, 0, 1, d) > 3 {
+                ds = cut_face(
+                    &ds,
+                    ds.op(0, d).unwrap(),
+                    ds.op(0, ds.op(1, d).unwrap()).unwrap()
+                );
+            }
+
+            if r(&ds, 0, 1, e) > 3 {
+                ds = cut_face(
+                    &ds,
+                    ds.op(0, e).unwrap(),
+                    ds.op(0, ds.op(1, e).unwrap()).unwrap()
+                );
+            }
+
+            ds = squeeze_tile_3d(
+                &ds,
+                ds.op(1, ds.op(0, d).unwrap()).unwrap(),
+                ds.op(1, ds.op(0, e).unwrap()).unwrap(),
+            );
+
+            return collapse(&ds, ds.orbit([0, 1, 3], d), 3);
+        }
+    }
+
+    None
+}
+
+
 pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
     // TODO very basic first version
     // TODO add assertions to ensure input is legal
