@@ -137,6 +137,18 @@ fn cut_face(ds: &PartialDSet, d1: usize, d2: usize) -> PartialDSet {
 }
 
 
+fn squeeze_tile_3d(ds: &PartialDSet, d: usize, e: usize) -> PartialDSet {
+    let f = ds.op(0, e).unwrap();
+    let g = ds.op(0, d).unwrap();
+    let f2 = ds.op(2, f).unwrap();
+    let g2 = ds.op(2, g).unwrap();
+    let d2 = ds.op(2, d).unwrap();
+    let e2 = ds.op(2, e).unwrap();
+
+    reglue(&ds, [(f, d), (g, e), (f2, d2), (g2, e2)], 2).unwrap()
+}
+
+
 fn merge_tiles(ds: &PartialDSet) -> Option<PartialDSet> {
     let inner = inner_edges(&as_dsym(ds));
     let junk = inner.iter().cloned()
