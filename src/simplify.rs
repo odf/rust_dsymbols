@@ -110,7 +110,7 @@ fn cut_face(ds: &PartialDSet, d1: usize, d2: usize) -> PartialDSet {
         ds.op(3, ds.op(1, d2).unwrap()).unwrap(),
         ds.op(3, ds.op(1, d1).unwrap()).unwrap(),
     ];
-    let nu: Vec<_> = ((n + 1)..(n + 8)).collect();
+    let nu: Vec<_> = ((n + 1)..(n + 9)).collect();
 
     ds = reglue(
         &ds,
