@@ -341,8 +341,7 @@ mod test {
 
             let fg = fundamental_group(&out);
             let nr_gens = fg.gen_to_edge.len();
-            let rels: Vec<_> = fg.relators.iter().cloned().collect();
-            let inv = abelian_invariants(nr_gens, &rels);
+            let inv = abelian_invariants(nr_gens, fg.relators.clone());
             assert_eq!(inv, vec![0, 0, 0]);
 
             let tmp = canonical(&minimal_image(&out)).to_string();

@@ -99,11 +99,13 @@ fn spanning_tree(base_point: usize, ct: &CosetTable) -> Vec<(usize, isize)> {
 }
 
 
-pub fn stabilizer(base_point: usize, rels: &Vec<FreeWord>, ct: &CosetTable)
+pub fn stabilizer<I>(base_point: usize, rels: I, ct: &CosetTable)
     -> (Vec<FreeWord> , Vec<FreeWord>)
+    where I: IntoIterator<Item=FreeWord> + Clone
 {
+    let rels: Vec<_> = rels.into_iter().collect();
     let nr_gens = *ct[0].keys().max().unwrap_or(&0) as usize;
-    let rels_by_gen = relators_by_start_gen(rels);
+    let rels_by_gen = relators_by_start_gen(&rels);
 
     let mut point_to_word = HashMap::from([(base_point, FreeWord::empty())]);
     let mut edge_to_word = HashMap::new();
@@ -136,7 +138,7 @@ pub fn stabilizer(base_point: usize, rels: &Vec<FreeWord>, ct: &CosetTable)
     let mut seen = HashSet::new();
 
     for p in 0..ct.len() {
-        for r in rels {
+        for r in &rels {
             let w = relator_representative(
                 &trace_word(p, &r, &edge_to_word, ct)
             );
@@ -178,7 +180,7 @@ mod test {
         assert_eq!(
             stabilizer(
                 0,
-                &vec![
+                vec![
                     fw([1, 1]), fw([2, 2]), fw([3, 3]),
                     fw([1, 2, 1, 2]), fw([1, 3, 1, 3]), fw([2, 3, 2, 3]),
                 ],
@@ -194,7 +196,7 @@ mod test {
         assert_eq!(
             stabilizer(
                 0,
-                &vec![
+                vec![
                     fw([1, 2, -1, -2]), fw([1, 3, -1, -3]), fw([2, 3, -2, -3]),
                 ],
                 &ct_from_table([
@@ -214,7 +216,7 @@ mod test {
         assert_eq!(
             stabilizer(
                 0,
-                &vec![
+                vec![
                     fw([2, 2]), fw([3, 3]), fw([4, 4]),
                     fw([1, 2, -1, -2]), fw([1, 3, -1, -3]), fw([1, 4, -1, -4]),
                     fw([2, 4, 3, 2, 4, 3]),
