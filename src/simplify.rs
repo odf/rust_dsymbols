@@ -254,8 +254,9 @@ fn fix_local_2_vertex(ds: &PartialDSet) -> Option<PartialDSet> {
 
 
 pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
-    // TODO very basic first version
     // TODO add assertions to ensure input is legal
+    // TODO implement non-disk face removal
+    // TODO implement non-connected face intersection removal
 
     let mut ds = as_dset(ds);
     ds = merge_all(&ds).or(Some(ds)).unwrap();
