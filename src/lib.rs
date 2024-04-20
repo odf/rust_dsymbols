@@ -6,6 +6,7 @@ pub mod derived;
 pub mod fundamental_group;
 pub mod covers;
 pub mod simplify;
+pub mod euclidicity;
 pub mod delaney2d;
 pub mod delaney3d;
 pub mod parse_dsym;
