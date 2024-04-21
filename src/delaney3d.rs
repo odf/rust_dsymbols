@@ -75,12 +75,11 @@ fn construct_candidates(fg: &FundamentalGroup)
     -> HashMap<String, Vec<CosetTable>>
 {
     let nr_gens = fg.gen_to_edge.len();
-    let rels: Vec<_> = fg.relators.iter().cloned().collect();
     let cones: Vec<_> = fg.cones.iter()
         .map(|(fw, &d)| (fw.clone(), d))
         .collect();
 
-    let core_tables: Vec<_> = coset_tables(nr_gens, &rels, 4)
+    let core_tables: Vec<_> = coset_tables(nr_gens, &fg.relators, 4)
         .map(|ct| core_table(&ct))
         .collect();
     let cones2 = cones.iter().filter(|(_, d)| *d == 2).cloned().collect();

@@ -197,7 +197,7 @@ fn find_generators<T: DSym>(ds: &T)
 
 
 pub struct FundamentalGroup {
-    pub relators: HashSet<FreeWord>,
+    pub relators: Vec<FreeWord>,
     pub cones: HashMap<FreeWord, usize>,
     pub gen_to_edge: HashMap<usize, Edge>,
     pub edge_to_word: HashMap<Edge, FreeWord>,
@@ -227,6 +227,8 @@ pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
             }
         }
     }
+
+    let relators = relators.iter().cloned().collect();
 
     FundamentalGroup { relators, cones, gen_to_edge, edge_to_word }
 }
@@ -330,7 +332,7 @@ fn test_fundamental_group_a() {
         ])
     );
     assert_eq!(
-        g.relators,
+        g.relators.iter().cloned().collect::<HashSet<_>>(),
         HashSet::from([
             FreeWord::from([1, 1]),
             FreeWord::from([1, 2]).raised_to(4),
@@ -377,7 +379,7 @@ fn test_fundamental_group_b() {
         ])
     );
     assert_eq!(
-        g.relators,
+        g.relators.iter().cloned().collect::<HashSet<_>>(),
         HashSet::from([
             FreeWord::from([1]).raised_to(4),
             FreeWord::from([2]).raised_to(2),
@@ -415,7 +417,7 @@ fn test_fundamental_group_c() {
         ])
     );
     assert_eq!(
-        g.relators,
+        g.relators.iter().cloned().collect::<HashSet<_>>(),
         HashSet::from([
             FreeWord::from([1, 1]),
             FreeWord::from([2, 2]),
@@ -448,6 +450,9 @@ fn test_fundamental_group_d() {
         8 4,3 3 3 3
         >");
     assert_eq!(g.gen_to_edge, HashMap::from([(1, (1, 2)), (2, (3, 2))]));
-    assert_eq!(g.relators, HashSet::from([FreeWord::from([1, 2, -1, -2])]));
+    assert_eq!(
+        g.relators.iter().cloned().collect::<HashSet<_>>(),
+        HashSet::from([FreeWord::from([1, 2, -1, -2])])
+    );
     assert_eq!(g.cones, HashMap::from([]));
 }

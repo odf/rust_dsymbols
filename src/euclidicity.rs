@@ -12,9 +12,8 @@ fn bad_subgroup_invariants(
 ) -> bool
 {
     let nr_gens = fg.gen_to_edge.len();
-    let rels: Vec<_> = fg.relators.iter().cloned().collect();
 
-    for table in coset_tables(nr_gens, &rels, index) {
+    for table in coset_tables(nr_gens, &fg.relators, index) {
         let (sgens, srels) = stabilizer(0, fg.relators.clone(), &table);
         if abelian_invariants(sgens.len(), srels) != expected {
             return true;
@@ -55,10 +54,9 @@ fn bad_connected_components(ds: &PartialDSym) -> bool {
 fn bad_subgroup_count(fg: &FundamentalGroup, index: usize, expected: usize)
     -> bool
 {
-    let nr_gens = fg.gen_to_edge.len();
-    let rels: Vec<_> = fg.relators.iter().cloned().collect();
-
-    let n = coset_tables(nr_gens, &rels, index).take(expected + 1).count();
+    let n = coset_tables(fg.gen_to_edge.len(), &fg.relators, index)
+        .take(expected + 1)
+        .count();
 
     n != expected
 }
