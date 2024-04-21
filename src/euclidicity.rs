@@ -73,27 +73,27 @@ pub enum Euclidean {
 }
 
 
-pub fn is_euclidean<T>(ds: &T) -> Euclidean
-    where T: DSym
-{
-    let key = |s: &str| s.parse::<PartialDSym>().unwrap().to_string();
+fn give_up(s: &str, ds: PartialDSym) -> Euclidean {
+    Euclidean::Maybe(s.to_string(), SimpleDSym::from(ds))
+}
 
+
+fn fail(s: &str) -> Euclidean {
+    Euclidean::No(s.to_string())
+}
+
+
+pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
     let good = HashSet::from([
-        key("<1.1:1 3:1,1,1,1:4,3,4>"),
-        key("<1.1:8 3:2 4 6 8,6 3 5 7 8,2 7 8 5 6,4 3 6 8:3 4,5 3,3 4>"),
+        "<1.1:1 3:1,1,1,1:4,3,4>",
+        "<1.1:8 3:2 4 6 8,6 3 5 7 8,2 7 8 5 6,4 3 6 8:3 4,5 3,3 4>",
     ]);
-
-    let give_up = |s: &str, ds: PartialDSym| {
-        Euclidean::Maybe(s.to_string(), SimpleDSym::from(ds))
-    };
-
-    let fail = |s: &str| Euclidean::No(s.to_string());
 
     if let Some(cov) = pseudo_toroidal_cover(ds) {
         let simp = simplify(&cov);
         let key = canonical(&minimal_image(&simp)).to_string();
 
-        if good.contains(&key) {
+        if good.contains(&key[..]) {
             Euclidean::Yes
         } else if simp.size() == 0 {
             fail("cover is a lens space")
@@ -113,8 +113,14 @@ pub fn is_euclidean<T>(ds: &T) -> Euclidean
                 fail("cover has at least one handle")
             } else if fg.relators.is_empty() {
                 fail("cover has free fundamental group")
+            } else if bad_subgroup_invariants(&fg, 2, vec![0, 0, 0]) {
+                fail("bad subgroups for cover")
+            } else if bad_subgroup_count(&fg, 3, 21) {
+                fail("bad subgroup count for cover")
+            } else if bad_subgroup_count(&fg, 4, 56) {
+                fail("bad subgroup count for cover")
             } else {
-                todo!()
+                give_up("no decision found", simp)
             }
         }
     } else {
