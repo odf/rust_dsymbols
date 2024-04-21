@@ -1,10 +1,14 @@
-use crate::derived::subsymbol;
+use std::collections::HashSet;
+
+use crate::delaney3d::pseudo_toroidal_cover;
+use crate::derived::{canonical, minimal_image, subsymbol};
 use crate::dsets::DSet;
-use crate::dsyms::PartialDSym;
+use crate::dsyms::{DSym, PartialDSym, SimpleDSym};
 use crate::fpgroups::cosets::coset_tables;
 use crate::fpgroups::invariants::abelian_invariants;
 use crate::fpgroups::stabilizer::stabilizer;
 use crate::fundamental_group::{fundamental_group, FundamentalGroup};
+use crate::simplify::simplify;
 
 
 fn bad_subgroup_invariants(
@@ -59,4 +63,61 @@ fn bad_subgroup_count(fg: &FundamentalGroup, index: usize, expected: usize)
         .count();
 
     n != expected
+}
+
+
+pub enum Euclidean {
+    Yes,
+    No(String),
+    Maybe(String, SimpleDSym),
+}
+
+
+pub fn is_euclidean<T>(ds: &T) -> Euclidean
+    where T: DSym
+{
+    let key = |s: &str| s.parse::<PartialDSym>().unwrap().to_string();
+
+    let good = HashSet::from([
+        key("<1.1:1 3:1,1,1,1:4,3,4>"),
+        key("<1.1:8 3:2 4 6 8,6 3 5 7 8,2 7 8 5 6,4 3 6 8:3 4,5 3,3 4>"),
+    ]);
+
+    let give_up = |s: &str, ds: PartialDSym| {
+        Euclidean::Maybe(s.to_string(), SimpleDSym::from(ds))
+    };
+
+    let fail = |s: &str| Euclidean::No(s.to_string());
+
+    if let Some(cov) = pseudo_toroidal_cover(ds) {
+        let simp = simplify(&cov);
+        let key = canonical(&minimal_image(&simp)).to_string();
+
+        if good.contains(&key) {
+            Euclidean::Yes
+        } else if simp.size() == 0 {
+            fail("cover is a lens space")
+        } else if !simp.is_connected() {
+            if bad_connected_components(&simp) {
+                fail("cover is a non-trivial connected sum")
+            } else {
+                give_up("cover is a (potentially trivial) connected sum", simp)
+            }
+        } else {
+            let fg = fundamental_group(&simp);
+            let invars = abelian_invariants(
+                fg.gen_to_edge.len(), fg.relators.clone()
+            );
+
+            if invars != [0, 0, 0] {
+                fail("cover has at least one handle")
+            } else if fg.relators.is_empty() {
+                fail("cover has free fundamental group")
+            } else {
+                todo!()
+            }
+        }
+    } else {
+        fail("no pseudo-toroidal cover")
+    }
 }
