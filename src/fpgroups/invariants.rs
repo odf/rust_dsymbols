@@ -139,6 +139,11 @@ pub fn abelian_invariants<I>(nr_gens: usize, rels: I)
 {
     let rels: Vec<_> = rels.into_iter().collect();
     let n = rels.len().min(nr_gens);
+
+    if n == 0 {
+        return vec![];
+    }
+
     let mut mat = vec![vec![0 as isize; nr_gens]; rels.len()];
 
     for i in 0..rels.len() {
