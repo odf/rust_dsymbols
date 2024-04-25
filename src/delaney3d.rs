@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::iter::successors;
 
 use crate::covers::cover_for_table;
@@ -72,7 +72,7 @@ fn flattens_all(ct: &CosetTable, cones: &Vec<(FreeWord, usize)>) -> bool {
 
 
 fn construct_candidates(fg: &FundamentalGroup)
-    -> HashMap<String, Vec<CosetTable>>
+    -> BTreeMap<String, Vec<CosetTable>>
 {
     let nr_gens = fg.gen_to_edge.len();
     let cones: Vec<_> = fg.cones.iter()
@@ -85,7 +85,7 @@ fn construct_candidates(fg: &FundamentalGroup)
     let cones2 = cones.iter().filter(|(_, d)| *d == 2).cloned().collect();
     let cones3 = cones.iter().filter(|(_, d)| *d == 3).cloned().collect();
 
-    let mut result = HashMap::new();
+    let mut result = BTreeMap::new();
     for p in point_groups() {
         result.insert(p, vec![]);
     }
