@@ -157,7 +157,7 @@ pub fn stabilizer<I>(base_point: usize, rels: I, ct: &CosetTable)
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use std::collections::{BTreeMap, HashMap};
 
     use super::*;
 
@@ -168,7 +168,7 @@ mod test {
     {
         assert!(t.iter().enumerate().all(|(i, &(c, _))| c == i));
 
-        t.iter().map(|(_, r)| HashMap::from(*r)).collect()
+        t.iter().map(|(_, r)| BTreeMap::from(*r)).collect()
     }
 
     fn fw<const N: usize>(w: [isize; N]) -> FreeWord {

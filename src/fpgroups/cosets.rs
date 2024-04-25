@@ -7,14 +7,14 @@ use crate::util::partitions::Partition;
 use super::free_words::{relator_permutations, FreeWord};
 
 
-pub type CosetTable = Vec<HashMap<isize, usize>>;
+pub type CosetTable = Vec<BTreeMap<isize, usize>>;
 
 
 #[derive(Clone)]
 struct DynamicCosetTable {
     nr_gens: usize,
     top_row: usize,
-    table: HashMap<(usize, isize), usize>,
+    table: BTreeMap<(usize, isize), usize>,
     part: Partition<usize>
 }
 
@@ -24,7 +24,7 @@ impl DynamicCosetTable {
         Self {
             nr_gens,
             top_row: 0,
-            table: HashMap::new(),
+            table: BTreeMap::new(),
             part: Partition::new(),
         }
     }
@@ -100,7 +100,7 @@ impl DynamicCosetTable {
 
         let mut result = vec![];
         for &k in to_idx.keys() {
-            let mut row = HashMap::new();
+            let mut row = BTreeMap::new();
             for g in self.all_gens() {
                 if let Some(c) = self.get(k, g) {
                     row.insert(g, to_idx[&c]);
@@ -217,9 +217,9 @@ pub fn coset_table(
 }
 
 
-pub fn coset_representative(table: &CosetTable) -> HashMap<usize, FreeWord> {
+pub fn coset_representative(table: &CosetTable) -> BTreeMap<usize, FreeWord> {
     let mut queue = VecDeque::from([0]);
-    let mut result = HashMap::from([(0, FreeWord::empty())]);
+    let mut result = BTreeMap::from([(0, FreeWord::empty())]);
 
     while let Some(i) = queue.pop_front() {
         let w = result[&i].clone();
@@ -479,30 +479,30 @@ mod coset_tests {
         assert_eq!(
             make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[]),
             vec![
-                HashMap::from([(1, 1), (2, 2), (-1, 1), (-2, 2)]),
-                HashMap::from([(1, 0), (2, 3), (-1, 0), (-2, 3)]),
-                HashMap::from([(1, 3), (2, 0), (-1, 3), (-2, 0)]),
-                HashMap::from([(1, 2), (2, 1), (-1, 2), (-2, 1)]),
+                BTreeMap::from([(1, 1), (2, 2), (-1, 1), (-2, 2)]),
+                BTreeMap::from([(1, 0), (2, 3), (-1, 0), (-2, 3)]),
+                BTreeMap::from([(1, 3), (2, 0), (-1, 3), (-2, 0)]),
+                BTreeMap::from([(1, 2), (2, 1), (-1, 2), (-2, 1)]),
             ]
         );
         assert_eq!(
             make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1]]),
             vec![
-                HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
-                HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
+                BTreeMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
+                BTreeMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
             ]
         );
         assert_eq!(
             make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[2]]),
             vec![
-                HashMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
-                HashMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
+                BTreeMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
+                BTreeMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
             ]
         );
         assert_eq!(
             make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1], &[2]]),
             vec![
-                HashMap::from([(1, 0), (2, 0), (-1, 0), (-2, 0)]),
+                BTreeMap::from([(1, 0), (2, 0), (-1, 0), (-2, 0)]),
             ]
         );
         assert_eq!(
