@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 use std::fmt;
 use std::ops::RangeInclusive;
 
@@ -57,16 +57,16 @@ pub trait DSet: Sized {
         sgn
     }
 
-    fn orbit<I>(&self, indices: I, seed: usize) -> HashSet<usize>
+    fn orbit<I>(&self, indices: I, seed: usize) -> Vec<usize>
         where I: IntoIterator<Item=usize>
     {
-        self.traversal(indices, [seed]).map(|(_, _, d)| d).collect()
+        self.traversal(indices, [seed]).map(|(_, _, d)| d)
+            .collect::<BTreeSet<_>>().iter().cloned()
+            .collect()
     }
 
-    fn full_orbit(&self, seed: usize) -> HashSet<usize> {
-        self.traversal(0..=self.dim(), [seed])
-            .map(|(_, _, d)| d)
-            .collect()
+    fn full_orbit(&self, seed: usize) -> Vec<usize> {
+        self.orbit(0..=self.dim(), seed)
     }
 
     fn orbit_reps<I1, I2>(&self, indices: I1, seeds: I2) -> Vec<usize>
@@ -600,10 +600,10 @@ mod traversal_tests {
 
         assert_eq!(
             dsym.orbit([0, 1], 1),
-            HashSet::from([1, 2, 3, 4, 5, 6])
+            Vec::from([1, 2, 3, 4, 5, 6])
         );
-        assert_eq!(dsym.orbit([0, 2], 1), HashSet::from([1, 4]));
-        assert_eq!(dsym.orbit([0, 2], 2), HashSet::from([2, 6]));
+        assert_eq!(dsym.orbit([0, 2], 1), Vec::from([1, 4]));
+        assert_eq!(dsym.orbit([0, 2], 2), Vec::from([2, 6]));
     }
 
     #[test]
@@ -611,7 +611,7 @@ mod traversal_tests {
         let s = "<1.1:6:4 6 5,5 4 6,4 6 5:3,6>";
         let dsym: PartialDSym = s.parse().unwrap();
 
-        assert_eq!(dsym.full_orbit(1), HashSet::from([1, 2, 3, 4, 5, 6]));
+        assert_eq!(dsym.full_orbit(1), Vec::from([1, 2, 3, 4, 5, 6]));
     }
 
     #[test]
