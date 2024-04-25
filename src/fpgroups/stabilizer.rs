@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 
 use crate::fpgroups::free_words::relator_representative;
 
@@ -6,9 +6,9 @@ use super::{cosets::CosetTable, free_words::{relator_permutations, FreeWord}};
 
 
 fn relators_by_start_gen(rels: &Vec<FreeWord>)
-    -> HashMap<isize, Vec<FreeWord>>
+    -> BTreeMap<isize, Vec<FreeWord>>
 {
-    let mut result = HashMap::new();
+    let mut result = BTreeMap::new();
 
     for rel in rels {
         for w in relator_permutations(&rel) {
@@ -46,7 +46,7 @@ fn close_relations_in_place(
     edge_to_word: &mut HashMap<(usize, isize), FreeWord>,
     start_edge: (usize, isize),
     wd: &FreeWord,
-    rels_by_gen: &HashMap<isize, Vec<FreeWord>>,
+    rels_by_gen: &BTreeMap<isize, Vec<FreeWord>>,
     ct: &CosetTable,
 ) {
     let (p, g) = start_edge;
@@ -157,7 +157,7 @@ pub fn stabilizer<I>(base_point: usize, rels: I, ct: &CosetTable)
 
 #[cfg(test)]
 mod test {
-    use std::collections::{BTreeMap, HashMap};
+    use std::collections::BTreeMap;
 
     use super::*;
 

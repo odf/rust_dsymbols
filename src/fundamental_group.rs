@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
 use crate::dsyms::*;
 use crate::fpgroups::free_words::{relator_representative, FreeWord};
@@ -125,7 +125,7 @@ pub fn inner_edges<T: DSym>(ds: &T) -> Vec<Edge> {
 
 fn trace_word<T: DSym>(
     ds: &T,
-    edge_to_word: &HashMap<Edge, FreeWord>,
+    edge_to_word: &BTreeMap<Edge, FreeWord>,
     d: usize,
     i: Option<usize>,
     j: Option<usize>
@@ -160,10 +160,10 @@ fn trace_word<T: DSym>(
 
 
 fn find_generators<T: DSym>(ds: &T)
-    -> (HashMap<Edge, FreeWord>, HashMap<usize, Edge>)
+    -> (BTreeMap<Edge, FreeWord>, BTreeMap<usize, Edge>)
 {
-    let mut edge_to_word = HashMap::new();
-    let mut gen_to_edge = HashMap::new();
+    let mut edge_to_word = BTreeMap::new();
+    let mut gen_to_edge = BTreeMap::new();
 
     let mut bnd = Boundary::new(ds);
     bnd.glue_recursively(spanning_tree(ds));
@@ -198,16 +198,16 @@ fn find_generators<T: DSym>(ds: &T)
 
 pub struct FundamentalGroup {
     pub relators: Vec<FreeWord>,
-    pub cones: HashMap<FreeWord, usize>,
-    pub gen_to_edge: HashMap<usize, Edge>,
-    pub edge_to_word: HashMap<Edge, FreeWord>,
+    pub cones: BTreeMap<FreeWord, usize>,
+    pub gen_to_edge: BTreeMap<usize, Edge>,
+    pub edge_to_word: BTreeMap<Edge, FreeWord>,
 }
 
 
 pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
     let (edge_to_word, gen_to_edge) = find_generators(ds);
-    let mut cones = HashMap::new();
-    let mut relators = HashSet::new();
+    let mut cones = BTreeMap::new();
+    let mut relators = BTreeSet::new();
 
     for i in 0..=ds.dim() {
         for j in i..=ds.dim() {
@@ -320,11 +320,11 @@ fn test_fundamental_group_a() {
     let g = group("<1.1:1 3:1,1,1,1:4,3,4>");
     assert_eq!(
         g.gen_to_edge,
-        HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (1, 2)), (4, (1, 3))])
+        BTreeMap::from([(1, (1, 0)), (2, (1, 1)), (3, (1, 2)), (4, (1, 3))])
     );
     assert_eq!(
         g.edge_to_word,
-        HashMap::from([
+        BTreeMap::from([
             ((1, 0), FreeWord::from([-1])),
             ((1, 1), FreeWord::from([-2])),
             ((1, 2), FreeWord::from([-3])),
@@ -348,7 +348,7 @@ fn test_fundamental_group_a() {
     );
     assert_eq!(
         g.cones,
-        HashMap::from([
+        BTreeMap::from([
             (FreeWord::from([1, 2]), 4),
             (FreeWord::from([1, 3]), 2),
             (FreeWord::from([1, 4]), 2),
@@ -367,11 +367,11 @@ fn test_fundamental_group_b() {
     let g = group("<1.1:2:2,2,2:4,3>");
     assert_eq!(
         g.gen_to_edge,
-        HashMap::from([(1, (1, 1)), (2, (1, 2))])
+        BTreeMap::from([(1, (1, 1)), (2, (1, 2))])
     );
     assert_eq!(
         g.edge_to_word,
-        HashMap::from([
+        BTreeMap::from([
             ((1, 1), FreeWord::from([1])),
             ((1, 2), FreeWord::from([2])),
             ((2, 1), FreeWord::from([-1])),
@@ -388,7 +388,7 @@ fn test_fundamental_group_b() {
     );
     assert_eq!(
         g.cones,
-        HashMap::from([
+        BTreeMap::from([
             (FreeWord::from([1]), 4),
             (FreeWord::from([2]), 2),
             (FreeWord::from([1, -2]), 3),
@@ -404,11 +404,11 @@ fn test_fundamental_group_c() {
     let g = group("<1.1:3:1 2 3,1 3,2 3:4 8,3>");
     assert_eq!(
         g.gen_to_edge,
-        HashMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
+        BTreeMap::from([(1, (1, 0)), (2, (1, 1)), (3, (3, 0))])
     );
     assert_eq!(
         g.edge_to_word,
-        HashMap::from([
+        BTreeMap::from([
             ((1, 0), FreeWord::from([-1])),
             ((1, 1), FreeWord::from([-2])),
             ((2, 0), FreeWord::from([-1])),
@@ -429,7 +429,7 @@ fn test_fundamental_group_c() {
     );
     assert_eq!(
         g.cones,
-        HashMap::from([
+        BTreeMap::from([
             (FreeWord::from([1, 2]), 4),
             (FreeWord::from([1, 3]), 4),
             (FreeWord::from([2, 3]), 2),
@@ -449,10 +449,10 @@ fn test_fundamental_group_d() {
         10 9 20 19 14 13 22 21 24 23 18 17:
         8 4,3 3 3 3
         >");
-    assert_eq!(g.gen_to_edge, HashMap::from([(1, (1, 2)), (2, (3, 2))]));
+    assert_eq!(g.gen_to_edge, BTreeMap::from([(1, (1, 2)), (2, (3, 2))]));
     assert_eq!(
         g.relators.iter().cloned().collect::<HashSet<_>>(),
         HashSet::from([FreeWord::from([1, 2, -1, -2])])
     );
-    assert_eq!(g.cones, HashMap::from([]));
+    assert_eq!(g.cones, BTreeMap::from([]));
 }

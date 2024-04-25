@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::dsyms::*;
 
@@ -16,7 +16,7 @@ fn trace_word(table: &CosetTable, start: usize, word: &FreeWord) -> usize {
 pub fn cover_for_table<T: DSym>(
     ds: &T,
     table: &CosetTable,
-    edge_to_word: &HashMap<(usize, usize), FreeWord>
+    edge_to_word: &BTreeMap<(usize, usize), FreeWord>
 )
     -> PartialDSym
 {
