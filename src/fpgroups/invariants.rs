@@ -22,7 +22,7 @@ fn find_pivot(mat: &Vec<Vec<isize>>, start: usize) -> (usize, usize) {
     let (n, m) = (mat.len(), mat[0].len());
     let mut row = start;
     let mut col = start;
-    let mut min = mat[row][col].abs();
+    let mut min = isize::max_value();
 
     for r in start..n {
         for c in start..m {
