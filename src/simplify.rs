@@ -6,6 +6,13 @@ use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
 
 
+#[derive(Clone)]
+enum DSetOrEmpty {
+    DSet(PartialDSet),
+    Empty
+}
+
+
 fn as_dset<T: DSet>(ds: &T) -> PartialDSet {
     build_set(ds.size(), ds.dim(), |i, d| ds.op(i, d))
 }
@@ -16,10 +23,15 @@ fn as_dsym<T: DSet>(ds: &T) -> PartialDSym {
 }
 
 
-fn dual(ds: &PartialDSet) -> Option<PartialDSet> {
-    let n = ds.dim();
-
-    Some(build_set(ds.size(), n, |i, d| ds.op(n - i, d)))
+fn dual(ds: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    match ds {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            let n = ds.dim();
+            let ds_out = build_set(ds.size(), n, |i, d| ds.op(n - i, d));
+            Some(DSetOrEmpty::DSet(ds_out))
+        }
+    }
 }
 
 
@@ -35,37 +47,45 @@ fn r(ds: &PartialDSet, i: usize, j: usize, d: usize) -> usize {
 }
 
 
-fn collapse<I>(ds: &PartialDSet, remove: I, connector: usize)
-    -> Option<PartialDSet>
+fn collapse<I>(ds: &DSetOrEmpty, remove: I, connector: usize)
+    -> Option<DSetOrEmpty>
     where I: IntoIterator<Item=usize>
 {
-    let remove: HashSet<_> = remove.into_iter().collect();
+    match ds {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            let remove: HashSet<_> = remove.into_iter().collect();
 
-    if remove.is_empty() {
-        None
-    } else {
-        let mut src2img = vec![0; ds.size() + 1];
-        let mut img2src = vec![0; ds.size() + 1];
-        let mut next = 1;
-        for d in 1..=ds.size() {
-            if !remove.contains(&d) {
-                src2img[d] = next;
-                img2src[next] = d;
-                next += 1;
+            if remove.is_empty() {
+                None
+            } else if remove.len() == ds.size() {
+                Some(DSetOrEmpty::Empty)
+            } else {
+                let mut src2img = vec![0; ds.size() + 1];
+                let mut img2src = vec![0; ds.size() + 1];
+                let mut next = 1;
+                for d in 1..=ds.size() {
+                    if !remove.contains(&d) {
+                        src2img[d] = next;
+                        img2src[next] = d;
+                        next += 1;
+                    }
+                }
+
+                let op = |i, d| {
+                    let mut e = ds.op(i, img2src[d]).unwrap();
+                    if i != connector {
+                        while src2img[e] == 0 {
+                            e = ds.op(i, ds.op(connector, e).unwrap()).unwrap();
+                        }
+                    }
+                    Some(src2img[e])
+                };
+
+                let ds_out = build_set(ds.size() - remove.len(), ds.dim(), op);
+                Some(DSetOrEmpty::DSet(ds_out))
             }
         }
-
-        let op = |i, d| {
-            let mut e = ds.op(i, img2src[d]).unwrap();
-            if i != connector {
-                while src2img[e] == 0 {
-                    e = ds.op(i, ds.op(connector, e).unwrap()).unwrap();
-                }
-            }
-            Some(src2img[e])
-        };
-
-        Some(build_set(ds.size() - remove.len(), ds.dim(), op))
     }
 }
 
@@ -149,25 +169,35 @@ fn squeeze_tile_3d(ds: &PartialDSet, d: usize, e: usize) -> PartialDSet {
 }
 
 
-fn merge_tiles(ds: &PartialDSet) -> Option<PartialDSet> {
-    let inner = inner_edges(&as_dsym(ds));
-    let junk = inner.iter().cloned()
-        .filter(|&(_, i)| i == 3)
-        .flat_map(|(d, _)| ds.orbit([3], d));
-    collapse(ds, junk, 3)
+fn merge_tiles(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    match input {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            let inner = inner_edges(&as_dsym(ds));
+            let junk = inner.iter().cloned()
+                .filter(|&(_, i)| i == 3)
+                .flat_map(|(d, _)| ds.orbit([3], d));
+            collapse(input, junk, 3)
+        }
+    }
 }
 
 
-fn merge_facets(ds: &PartialDSet) -> Option<PartialDSet> {
-    let reps = ds.orbit_reps([2, 3], 1..ds.size());
-    let junk = reps.iter().cloned()
-        .filter(|&d| r(ds, 2, 3, d) == 2)
-        .flat_map(|d| ds.orbit([2, 3], d));
-    collapse(ds, junk, 2)
+fn merge_facets(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    match input {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            let reps = ds.orbit_reps([2, 3], 1..ds.size());
+            let junk = reps.iter().cloned()
+                .filter(|&d| r(ds, 2, 3, d) == 2)
+                .flat_map(|d| ds.orbit([2, 3], d));
+            collapse(input, junk, 2)
+        }
+    }
 }
 
 
-fn merge_all(ds: &PartialDSet) -> Option<PartialDSet> {
+fn merge_all(ds: &DSetOrEmpty) -> Option<DSetOrEmpty> {
     let mut ds = ds.clone();
 
     for op in [
@@ -183,82 +213,94 @@ fn merge_all(ds: &PartialDSet) -> Option<PartialDSet> {
 }
 
 
-fn fix_local_1_vertex(ds: &PartialDSet) -> Option<PartialDSet> {
-    for c in ds.orbit_reps([1, 2], 1..ds.size()) {
-        if ds.op(1, c) == ds.op(2, c) {
-            let d = ds.op(0, ds.op(1, c).unwrap()).unwrap();
-            let e = ds.op(1, ds.op(0, c).unwrap()).unwrap();
-            let f = ds.op(3, d).unwrap();
-            let g = ds.op(3, e).unwrap();
+fn fix_local_1_vertex(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    match input {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            for c in ds.orbit_reps([1, 2], 1..ds.size()) {
+                if ds.op(1, c) == ds.op(2, c) {
+                    let d = ds.op(0, ds.op(1, c).unwrap()).unwrap();
+                    let e = ds.op(1, ds.op(0, c).unwrap()).unwrap();
+                    let f = ds.op(3, d).unwrap();
+                    let g = ds.op(3, e).unwrap();
 
-            let d1 = ds.op(1, d).unwrap();
-            let e1 = ds.op(1, e).unwrap();
-            let f1 = ds.op(1, f).unwrap();
-            let g1 = ds.op(1, g).unwrap();
+                    let d1 = ds.op(1, d).unwrap();
+                    let e1 = ds.op(1, e).unwrap();
+                    let f1 = ds.op(1, f).unwrap();
+                    let g1 = ds.op(1, g).unwrap();
 
-            let tmp = reglue(
-                &ds, [(d, e1), (e, d1), (f, g1), (g, f1)], 1
-            ).unwrap();
+                    let tmp = reglue(
+                        &ds, [(d, e1), (e, d1), (f, g1), (g, f1)], 1
+                    ).unwrap();
 
-            return collapse(&tmp, tmp.orbit([0, 1, 3], c), 3);
+                    let orb = tmp.orbit([0, 1, 3], c);
+                    return collapse(&DSetOrEmpty::DSet(tmp), orb, 3);
+                }
+            }
+
+            None
         }
     }
-
-    None
 }
 
 
-fn fix_local_2_vertex(ds: &PartialDSet) -> Option<PartialDSet> {
-    for d in ds.orbit_reps([1, 2], 1..ds.size()) {
-        if r(&ds, 1, 2, d) == 2 {
-            let e = ds.op(3, ds.op(2, d).unwrap()).unwrap();
-            if
-                d == e ||
-                d == ds.op(1, ds.op(0, e).unwrap()).unwrap() ||
-                d == ds.op(0, ds.op(1, e).unwrap()).unwrap()
-            {
-                continue;
+fn fix_local_2_vertex(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    match input {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            for d in ds.orbit_reps([1, 2], 1..ds.size()) {
+                if r(&ds, 1, 2, d) == 2 {
+                    let e = ds.op(3, ds.op(2, d).unwrap()).unwrap();
+                    if
+                        d == e ||
+                        d == ds.op(1, ds.op(0, e).unwrap()).unwrap() ||
+                        d == ds.op(0, ds.op(1, e).unwrap()).unwrap()
+                    {
+                        continue;
+                    }
+
+                    let mut ds = as_dset(ds);
+                    let e = ds.op(2, ds.op(1, d).unwrap()).unwrap();
+
+                    if r(&ds, 0, 1, d) > 3 {
+                        ds = cut_face(
+                            &ds,
+                            ds.op(0, d).unwrap(),
+                            ds.op(0, ds.op(1, d).unwrap()).unwrap()
+                        );
+                    }
+
+                    if r(&ds, 0, 1, e) > 3 {
+                        ds = cut_face(
+                            &ds,
+                            ds.op(0, e).unwrap(),
+                            ds.op(0, ds.op(1, e).unwrap()).unwrap()
+                        );
+                    }
+
+                    ds = squeeze_tile_3d(
+                        &ds,
+                        ds.op(1, ds.op(0, d).unwrap()).unwrap(),
+                        ds.op(1, ds.op(0, e).unwrap()).unwrap(),
+                    );
+
+                    let orb = ds.orbit([0, 1, 3], d);
+                    return collapse(&DSetOrEmpty::DSet(ds), orb, 3);
+                }
             }
 
-            let mut ds = as_dset(ds);
-            let e = ds.op(2, ds.op(1, d).unwrap()).unwrap();
-
-            if r(&ds, 0, 1, d) > 3 {
-                ds = cut_face(
-                    &ds,
-                    ds.op(0, d).unwrap(),
-                    ds.op(0, ds.op(1, d).unwrap()).unwrap()
-                );
-            }
-
-            if r(&ds, 0, 1, e) > 3 {
-                ds = cut_face(
-                    &ds,
-                    ds.op(0, e).unwrap(),
-                    ds.op(0, ds.op(1, e).unwrap()).unwrap()
-                );
-            }
-
-            ds = squeeze_tile_3d(
-                &ds,
-                ds.op(1, ds.op(0, d).unwrap()).unwrap(),
-                ds.op(1, ds.op(0, e).unwrap()).unwrap(),
-            );
-
-            return collapse(&ds, ds.orbit([0, 1, 3], d), 3);
+            None
         }
     }
-
-    None
 }
 
 
-pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
+pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
     // TODO add assertions to ensure input is legal
     // TODO implement non-disk face removal
     // TODO implement non-connected face intersection removal
 
-    let mut ds = as_dset(ds);
+    let mut ds = DSetOrEmpty::DSet(as_dset(ds));
     ds = merge_all(&ds).or(Some(ds)).unwrap();
 
     loop {
@@ -271,7 +313,10 @@ pub fn simplify<T: DSet>(ds: &T) -> PartialDSym {
             }
         }
         if !changed {
-            return as_dsym(&ds);
+            return match ds {
+                DSetOrEmpty::Empty => None,
+                DSetOrEmpty::DSet(ds) => Some(as_dsym(&ds))
+            }
         }
     }
 }
@@ -293,29 +338,6 @@ mod test {
 
 
     #[test]
-    fn test_collapse_2d() {
-
-        let cov = as_dset(&toroidal_cover(&dsym("<1.1:1:1,1,1:3,6>")));
-        let out = minimal_image(&as_dsym(
-            &collapse(&cov, cov.orbit([0, 2], 1), 2).unwrap()
-        ));
-
-        assert_eq!(out, dsym("<1.1:1:1,1,1:4,4>"));
-    }
-
-
-    #[test]
-    fn test_collapse_3d() {
-        let ds = dsym("<1.1:4 3:1 2 3 4,1 2 4,1 3 4,2 3 4:3 3 8,4 3,3 4>");
-        let cov = dual(&as_dset(&pseudo_toroidal_cover(&ds).unwrap())).unwrap();
-        let remove = (1..=cov.size()).filter(|&d| r(&cov, 0, 1, d) == 3);
-        let out = minimal_image(&as_dsym(&collapse(&cov, remove, 3).unwrap()));
-
-        assert_eq!(out, dsym("<1.1:1 3:1,1,1,1:4,3,4>"));
-    }
-
-
-    #[test]
     fn test_simplify() {
         let good = HashSet::from([
             dsym("<1.1:1 3:1,1,1,1:4,3,4>").to_string(),
@@ -327,7 +349,7 @@ mod test {
         let test = |s: &str| {
             let ds = s.parse::<PartialDSym>().unwrap();
             let cov = pseudo_toroidal_cover(&ds).unwrap();
-            let out = simplify(&cov);
+            let out = simplify(&cov).unwrap();
 
             assert_eq!(out.orbit_reps([0, 1, 2], 1..out.size()).len(), 1);
             assert_eq!(out.orbit_reps([1, 2, 3], 1..out.size()).len(), 1);

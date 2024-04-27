@@ -90,38 +90,39 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
     ]);
 
     if let Some(cov) = pseudo_toroidal_cover(ds) {
-        let simp = simplify(&cov);
-        let key = canonical(&minimal_image(&simp)).to_string();
+        if let Some(simp) = simplify(&cov) {
+            let key = canonical(&minimal_image(&simp)).to_string();
 
-        if good.contains(&key[..]) {
-            Euclidean::Yes
-        } else if simp.size() == 0 {
-            fail("cover is a lens space")
-        } else if !simp.is_connected() {
-            if bad_connected_components(&simp) {
-                fail("cover is a non-trivial connected sum")
+            if good.contains(&key[..]) {
+                Euclidean::Yes
+            } else if !simp.is_connected() {
+                if bad_connected_components(&simp) {
+                    fail("cover is a non-trivial connected sum")
+                } else {
+                    give_up("cover is a (potentially trivial) connected sum", simp)
+                }
             } else {
-                give_up("cover is a (potentially trivial) connected sum", simp)
+                let fg = fundamental_group(&simp);
+                let invars = abelian_invariants(
+                    fg.gen_to_edge.len(), fg.relators.clone()
+                );
+
+                if invars != [0, 0, 0] {
+                    fail("cover has at least one handle")
+                } else if fg.relators.is_empty() {
+                    fail("cover has free fundamental group")
+                } else if bad_subgroup_invariants(&fg, 2, vec![0, 0, 0]) {
+                    fail("bad subgroups for cover")
+                } else if bad_subgroup_count(&fg, 3, 21) {
+                    fail("bad subgroup count for cover")
+                } else if bad_subgroup_count(&fg, 4, 56) {
+                    fail("bad subgroup count for cover")
+                } else {
+                    give_up("no decision found", simp)
+                }
             }
         } else {
-            let fg = fundamental_group(&simp);
-            let invars = abelian_invariants(
-                fg.gen_to_edge.len(), fg.relators.clone()
-            );
-
-            if invars != [0, 0, 0] {
-                fail("cover has at least one handle")
-            } else if fg.relators.is_empty() {
-                fail("cover has free fundamental group")
-            } else if bad_subgroup_invariants(&fg, 2, vec![0, 0, 0]) {
-                fail("bad subgroups for cover")
-            } else if bad_subgroup_count(&fg, 3, 21) {
-                fail("bad subgroup count for cover")
-            } else if bad_subgroup_count(&fg, 4, 56) {
-                fail("bad subgroup count for cover")
-            } else {
-                give_up("no decision found", simp)
-            }
+            fail("cover is a lens space")
         }
     } else {
         fail("no pseudo-toroidal cover")
