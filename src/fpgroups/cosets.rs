@@ -39,15 +39,12 @@ impl DynamicCosetTable {
     }
 
     fn get(&self, c: usize, g: isize) -> Option<usize> {
-        assert_eq!(c, self.canon(c));
         self.table.get(&(c, g)).map(|&d| self.canon(d))
     }
 
     fn set(&mut self, c: usize, g: isize, d: usize) {
         let n = self.nr_gens as isize;
         assert!(g >= -n && g <= n);
-        assert_eq!(c, self.canon(c));
-        assert_eq!(d, self.canon(d));
 
         self.top_row = self.top_row.max(c).max(d);
         self.table.insert((c, g), d);
