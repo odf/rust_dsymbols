@@ -116,11 +116,10 @@ fn diagonalize_in_place(mat: &mut Vec<Vec<isize>>) {
 
     for i in 0.. n.min(m) {
         let (row, col) = find_pivot(mat, i);
-        let val = mat[row][col].abs();
 
-        if val != 0 {
+        if mat[row][col] != 0 {
+            move_pivot_in_place(mat, i, (row, col));
             loop {
-                move_pivot_in_place(mat, i, (row, col));
                 clear_later_rows_in_place(mat, i);
                 if clear_later_cols_in_place(mat, i) == 0 {
                     break;
