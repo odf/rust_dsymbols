@@ -14,9 +14,14 @@ fn main() {
             s.parse::<PartialDSym>().ok()
         ) {
             match is_euclidean(&ds) {
-                Yes => println!("{i} good"),
-                No(s) => println!("{i} bad: {s}"),
-                Maybe(s, _) => println!("{i} undecided: {s}"),
+                Yes => {
+                    println!(
+                        "#Symbol {i} is good: simplified cover recognized"
+                    );
+                    println!("{ds}");
+                },
+                No(s) => println!("#Symbol {i} is bad: {s}"),
+                Maybe(s, _) => println!("#Symbol {i} is undecided: {s}"),
             }
         }
     }
