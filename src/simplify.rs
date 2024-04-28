@@ -295,6 +295,47 @@ fn fix_local_2_vertex(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
+fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    match input {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            let mut face_rep = vec![0; ds.size() + 1];
+            for d in ds.orbit_reps([0, 1], 1..=ds.size()) {
+                for e in ds.orbit([0, 1], d) {
+                    face_rep[e] = d;
+                }
+            }
+            let face_rep = face_rep;
+
+            for d in ds.orbit_reps([1, 2], 1..=ds.size()) {
+                let mut e = ds.op(1, ds.op(2, d).unwrap()).unwrap();
+                while e != d {
+                    if face_rep[e] == face_rep[d] {
+                        let f = ds.op(3, d).unwrap();
+                        let g = ds.op(3, e).unwrap();
+
+                        let d1 = ds.op(1, d).unwrap();
+                        let e1 = ds.op(1, e).unwrap();
+                        let f1 = ds.op(1, f).unwrap();
+                        let g1 = ds.op(1, g).unwrap();
+
+                        return Some(DSetOrEmpty::DSet(
+                            reglue(
+                                &ds, [(d, e1), (e, d1), (f, g1), (g, f1)], 1
+                            ).unwrap()
+                        ));
+                    } else {
+                        e = ds.op(1, ds.op(2, e).unwrap()).unwrap();
+                    }
+                }
+            }
+
+            None
+        }
+    }
+}
+
+
 pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
     // TODO add assertions to ensure input is legal
     // TODO implement non-disk face removal
@@ -305,7 +346,11 @@ pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
 
     loop {
         let mut changed = false;
-        for op in [fix_local_1_vertex, fix_local_2_vertex] {
+        for op in [
+            fix_local_1_vertex,
+            fix_local_2_vertex,
+            fix_non_disk_face,
+        ] {
             if let Some(out) = op(&ds) {
                 ds = merge_all(&out).or(Some(out)).unwrap();
                 changed = true;
