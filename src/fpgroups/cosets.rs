@@ -2,7 +2,7 @@ use core::fmt;
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 
 use crate::util::backtrack::{BackTrackIterator, BackTracking};
-use crate::util::partitions::Partition;
+use crate::util::partitions::IntPartition;
 
 use super::free_words::{relator_permutations, FreeWord};
 
@@ -15,7 +15,7 @@ struct DynamicCosetTable {
     nr_gens: usize,
     top_row: usize,
     table: BTreeMap<(usize, isize), usize>,
-    part: Partition<usize>
+    part: IntPartition
 }
 
 
@@ -25,7 +25,7 @@ impl DynamicCosetTable {
             nr_gens,
             top_row: 0,
             table: BTreeMap::new(),
-            part: Partition::new(),
+            part: IntPartition::new(),
         }
     }
 
@@ -56,7 +56,7 @@ impl DynamicCosetTable {
     }
 
     fn canon(&self, c: usize) -> usize {
-        self.part.find(&c)
+        self.part.find(c)
     }
 
     fn merge(&mut self, a: usize, b: usize) {
@@ -78,7 +78,7 @@ impl DynamicCosetTable {
                         self.set(a, g, bg);
                     }
                 }
-                self.part.unite(&a, &b);
+                self.part.unite(a, b);
 
                 let c = if self.canon(a) == a { b } else { a };
                 for g in self.all_gens() {

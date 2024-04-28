@@ -124,6 +124,112 @@ impl<T> Clone for Partition<T> where T: Clone {
 }
 
 
+#[derive(Clone)]
+struct IntPartitionImpl {
+    rank: Vec<usize>,
+    parent: Vec<usize>,
+}
+
+
+impl IntPartitionImpl {
+    fn new() -> Self {
+        IntPartitionImpl { rank: vec![], parent: vec![] }
+    }
+
+    fn root_index(&mut self, a: usize) -> usize {
+        let mut x = a;
+        let mut root = x;
+
+        for i in self.parent.len()..=a {
+            self.parent.push(i);
+            self.rank.push(0);
+        }
+
+        while self.parent[root] != root {
+            root = self.parent[root];
+        }
+
+        while x != root {
+            let t = x;
+            x = self.parent[x];
+            self.parent[t] = root;
+        }
+
+        root
+    }
+
+    fn find(&mut self, a: usize) -> usize {
+        self.root_index(a)
+    }
+
+    fn unite(&mut self, a: usize, b: usize) {
+        let x = self.root_index(a);
+        let y = self.root_index(b);
+
+        if x != y {
+            let rx = self.rank[x];
+            let ry = self.rank[y];
+
+            if rx < ry {
+                self.parent[x] = y;
+            } else {
+                if rx == ry {
+                    self.rank[x] = rx + 1;
+                }
+                self.parent[y] = x;
+            }
+        }
+    }
+}
+
+
+pub struct IntPartition {
+    _impl: UnsafeCell<IntPartitionImpl>,
+}
+
+
+impl IntPartition {
+    pub fn new() -> Self {
+        IntPartition { _impl: UnsafeCell::new(IntPartitionImpl::new())}
+    }
+
+    pub fn find(&self, x: usize) -> usize {
+        unsafe { (*self._impl.get()).find(x) }
+    }
+
+    pub fn unite(&mut self, x: usize, y: usize) {
+        unsafe { (*self._impl.get()).unite(x, y) };
+    }
+
+    pub fn classes(&self, elms: &[usize]) -> Vec<Vec<usize>> {
+        let mut class_for_rep = HashMap::new();
+        let mut classes = vec![];
+
+        for &e in elms {
+            let rep = self.find(e);
+            if let Some(cl) = class_for_rep.get(&rep) {
+                let class: &mut Vec<_> = &mut classes[*cl];
+                class.push(e.clone());
+            } else {
+                class_for_rep.insert(rep, classes.len());
+                classes.push(vec![e.clone()]);
+            }
+        }
+
+        classes
+    }
+}
+
+
+impl Clone for IntPartition {
+    fn clone(&self) -> Self {
+        Self {
+            _impl: UnsafeCell::new(unsafe { (*self._impl.get()).clone() })
+        }
+    }
+}
+
+
 #[test]
 pub fn test_partition() {
     let p = {
@@ -147,6 +253,39 @@ pub fn test_partition() {
                 assert_eq!(p.find(&a), p.find(&b));
             } else {
                 assert_ne!(p.find(&a), p.find(&b));
+            }
+        }
+    }
+
+    let elms: Vec<_> = (0..=9).collect();
+    let cl = p.classes(&elms);
+    assert_eq!(cl, vec![vec![0], vec![1, 2, 3, 4, 5, 6], vec![7, 8], vec![9]]);
+}
+
+
+#[test]
+pub fn test_int_partition() {
+    let p = {
+        let mut p = IntPartition::new();
+        for (a, b) in [(1, 2), (3, 4), (5, 6), (7, 8), (2, 3), (1, 6)] {
+            p.unite(a, b);
+        }
+        p
+    };
+
+    let test = HashMap::from([
+        (0, 0),
+        (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1),
+        (7, 2), (8, 2),
+        (9, 3),
+    ]);
+
+    for a in 0..=9 {
+        for b in 0..=9 {
+            if test[&a] == test[&b] {
+                assert_eq!(p.find(a), p.find(b));
+            } else {
+                assert_ne!(p.find(a), p.find(b));
             }
         }
     }
