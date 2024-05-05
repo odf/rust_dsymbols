@@ -33,6 +33,9 @@ fn run() {
 
 
 fn run_test() {
+    use std::time::Instant;
+    let now = Instant::now();
+
     let mut i = 0;
     let mut good = vec![];
     let mut ambiguous = vec![];
@@ -60,6 +63,8 @@ fn run_test() {
         }
     }
 
+    let elapsed = now.elapsed();
+
     println!(
         "### {} good symbols: {}",
         good.len(),
@@ -70,4 +75,5 @@ fn run_test() {
         ambiguous.len(),
         ambiguous.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(" ")
     );
+    println!("### Running time was {:.2?} seconds.", elapsed.as_secs_f32());
 }
