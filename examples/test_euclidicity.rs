@@ -12,25 +12,7 @@ fn main() {
 
 #[cfg(not(feature = "pprof"))]
 fn run() {
-    let mut i = 0;
-    for line in stdin().lines() {
-        i += 1;
-
-        if let Some(ds) = line.ok().and_then(|s|
-            s.parse::<PartialDSym>().ok()
-        ) {
-            match is_euclidean(&ds) {
-                Yes => {
-                    println!(
-                        "#Symbol {i} is good: simplified cover recognized"
-                    );
-                    println!("{ds}");
-                },
-                No(s) => println!("#Symbol {i} is bad: {s}"),
-                Maybe(s, _) => println!("#Symbol {i} is undecided: {s}"),
-            }
-        }
-    }
+    run_test();
 }
 
 
@@ -41,7 +23,20 @@ fn run() {
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
+    run_test();
+
+    if let Ok(report) = guard.report().build() {
+        let file = std::fs::File::create("flamegraph.svg").unwrap();
+        report.flamegraph(file).unwrap();
+    };
+}
+
+
+fn run_test() {
     let mut i = 0;
+    let mut good = vec![];
+    let mut ambiguous = vec![];
+
     for line in stdin().lines() {
         i += 1;
 
@@ -50,19 +45,29 @@ fn run() {
         ) {
             match is_euclidean(&ds) {
                 Yes => {
-                    println!(
-                        "#Symbol {i} is good: simplified cover recognized"
-                    );
+                    let s = "simplified cover recognized".to_string();
+                    println!("#Symbol {i} is good: {s}");
                     println!("{ds}");
+                    good.push(i);
                 },
                 No(s) => println!("#Symbol {i} is bad: {s}"),
-                Maybe(s, _) => println!("#Symbol {i} is undecided: {s}"),
+                Maybe(s, out) => {
+                    println!("#Symbol {i} is undecided: {s}");
+                    println!("#??? {out}");
+                    ambiguous.push(i);
+                },
             }
         }
     }
 
-    if let Ok(report) = guard.report().build() {
-        let file = std::fs::File::create("flamegraph.svg").unwrap();
-        report.flamegraph(file).unwrap();
-    };
+    println!(
+        "### {} good symbols: {}",
+        good.len(),
+        good.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(" ")
+    );
+    println!(
+        "### {} ambiguous symbols: {}",
+        ambiguous.len(),
+        ambiguous.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(" ")
+    );
 }
