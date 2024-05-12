@@ -369,7 +369,6 @@ pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
 
 #[cfg(test)]
 mod test {
-    use crate::delaney2d::toroidal_cover;
     use crate::delaney3d::pseudo_toroidal_cover;
     use crate::derived::{canonical, minimal_image};
     use crate::fpgroups::invariants::abelian_invariants;
