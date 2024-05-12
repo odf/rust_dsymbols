@@ -1,17 +1,31 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 
-pub fn min_edge_cut<I>(edges: I, source: usize, sink: usize) -> Vec<usize>
+pub fn min_edge_cut<I>(edges: I, source: usize, sink: usize)
+    -> Vec<(usize, usize)>
     where I: IntoIterator<Item=(usize, usize)>
 {
     let edges: BTreeSet<_> = edges.into_iter().collect();
 
-    let directed_neighbors = by_first(edges.clone());
-    let all_neighbors = by_first(
+    let neighbors = by_first(
         edges.iter().flat_map(|&(v, w)| [(v, w), (w, v)])
     );
 
-    todo!()
+    let mut path_edges = BTreeSet::new();
+
+    loop {
+        let (next, seen) = augment(
+            &edges, &neighbors, source, sink, &path_edges
+        );
+        if let Some(next) = next {
+            path_edges = next;
+        } else {
+            return edges.iter()
+                .filter(|&(v, w)| seen.contains(v) && !seen.contains(w))
+                .cloned()
+                .collect();
+        }
+    }
 }
 
 
@@ -31,11 +45,11 @@ fn by_first<I>(pairs: I) -> BTreeMap<usize, BTreeSet<usize>>
 
 
 fn augment(
-    edges: BTreeSet<(usize, usize)>,
-    neighbors: BTreeMap<usize, Vec<usize>>,
+    edges: &BTreeSet<(usize, usize)>,
+    neighbors: &BTreeMap<usize, BTreeSet<usize>>,
     source: usize,
     sink: usize,
-    path_edges: BTreeSet<(usize, usize)>
+    path_edges: &BTreeSet<(usize, usize)>
 )
     -> (Option<BTreeSet<(usize, usize)>>, BTreeSet<usize>)
 {
