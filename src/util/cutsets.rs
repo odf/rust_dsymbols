@@ -115,30 +115,30 @@ fn augment(
 }
 
 
-#[test]
-fn test_min_edge_cut() {
-    let edges = vec![
-        (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),
-        (2, 7), (3, 7), (3, 9), (4, 8), (4, 9), (4, 10), (5, 9), (6, 9),
-        (7, 11), (8, 11), (9, 11), (10, 11)
-    ];
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    let cut = min_edge_cut(edges, 1, 11);
+    fn example() -> Vec<(usize, usize)> {
+        vec![
+            (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),
+            (2, 7), (3, 7), (3, 9), (4, 8), (4, 9), (4, 10), (5, 9), (6, 9),
+            (7, 11), (8, 11), (10, 11),
+            (11, 9)
+        ]
+    }
 
-    assert_eq!(cut, vec![(1, 4), (7, 11), (9, 11)]);
-}
+    #[test]
+    fn test_min_edge_cut() {
+        let mut cut = min_edge_cut(example(), 1, 11);
+        cut.sort();
+        assert_eq!(cut, vec![(1, 4), (7, 11)]);
+    }
 
-
-#[test]
-fn test_min_vertex_cut() {
-    let edges = vec![
-        (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),
-        (2, 7), (3, 7), (3, 9), (4, 8), (4, 9), (4, 10), (5, 9), (6, 9),
-        (7, 11), (8, 11), (9, 11), (10, 11)
-    ];
-
-    let mut cut = min_vertex_cut(edges, 1, 11);
-    cut.sort();
-
-    assert_eq!(cut, [4, 7, 9]);
+    #[test]
+    fn test_min_vertex_cut() {
+        let mut cut = min_vertex_cut(example(), 1, 11);
+        cut.sort();
+        assert_eq!(cut, [4, 7]);
+    }
 }
