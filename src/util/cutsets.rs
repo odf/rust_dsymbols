@@ -29,6 +29,29 @@ pub fn min_edge_cut<I>(edges: I, source: usize, sink: usize)
 }
 
 
+pub fn min_vertex_cut<I>(edges: I, source: usize, sink: usize)
+    -> Vec<usize>
+    where I: IntoIterator<Item=(usize, usize)>
+{
+    let edges: BTreeSet<_> = edges.into_iter().collect();
+
+    let vertices: BTreeSet<_> = edges.iter()
+        .flat_map(|&(v, w)| [v, w])
+        .collect();
+
+    let offset = vertices.iter().max().unwrap_or(&0) + 1;
+
+    let x_edges: Vec<_> = std::iter::empty()
+        .chain(edges.iter().map(|&(v, w)| (v + offset, w)))
+        .chain(vertices.iter().map(|&v| (v, v + offset)))
+        .collect();
+
+    min_edge_cut(x_edges, source + offset, sink).iter()
+        .map(|&(v, w)| v.min(w))
+        .collect()
+}
+
+
 fn by_first<I>(pairs: I) -> BTreeMap<usize, BTreeSet<usize>>
     where I: IntoIterator<Item=(usize, usize)>
 {
@@ -103,4 +126,19 @@ fn test_min_edge_cut() {
     let cut = min_edge_cut(edges, 1, 11);
 
     assert_eq!(cut, vec![(1, 4), (7, 11), (9, 11)]);
+}
+
+
+#[test]
+fn test_min_vertex_cut() {
+    let edges = vec![
+        (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),
+        (2, 7), (3, 7), (3, 9), (4, 8), (4, 9), (4, 10), (5, 9), (6, 9),
+        (7, 11), (8, 11), (9, 11), (10, 11)
+    ];
+
+    let mut cut = min_vertex_cut(edges, 1, 11);
+    cut.sort();
+
+    assert_eq!(cut, [4, 7, 9]);
 }
