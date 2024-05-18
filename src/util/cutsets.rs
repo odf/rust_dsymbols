@@ -29,6 +29,18 @@ pub fn min_edge_cut<I>(edges: I, source: usize, sink: usize)
 }
 
 
+pub fn min_edge_cut_undirected<I>(edges: I, source: usize, sink: usize)
+    -> Vec<(usize, usize)>
+    where I: IntoIterator<Item=(usize, usize)>
+{
+    let edges: BTreeSet<_> = edges.into_iter()
+        .flat_map(&|(v, w)| [(v, w), (w, v)])
+        .collect();
+
+    min_edge_cut(edges, source, sink)
+}
+
+
 pub fn min_vertex_cut<I>(edges: I, source: usize, sink: usize)
     -> Vec<usize>
     where I: IntoIterator<Item=(usize, usize)>
@@ -49,6 +61,18 @@ pub fn min_vertex_cut<I>(edges: I, source: usize, sink: usize)
     min_edge_cut(x_edges, source + offset, sink).iter()
         .map(|&(v, w)| v.min(w))
         .collect()
+}
+
+
+pub fn min_vertex_cut_undirected<I>(edges: I, source: usize, sink: usize)
+    -> Vec<usize>
+    where I: IntoIterator<Item=(usize, usize)>
+{
+    let edges: BTreeSet<_> = edges.into_iter()
+        .flat_map(&|(v, w)| [(v, w), (w, v)])
+        .collect();
+
+    min_vertex_cut(edges, source, sink)
 }
 
 
@@ -128,17 +152,44 @@ mod test {
         ]
     }
 
+    fn nice_vs(vertices: Vec<usize>) -> Vec<usize>
+    {
+        let mut vs = vertices.clone();
+        vs.sort();
+        vs
+    }
+
+    fn nice_es(edges: Vec<(usize, usize)>) -> Vec<(usize, usize)>
+    {
+        let mut es: Vec<_> = edges.iter()
+            .map(|&(v, w)| if w < v { (w, v) } else { (v, w) })
+            .collect();
+
+        es.sort();
+        es
+    }
+
     #[test]
     fn test_min_edge_cut() {
-        let mut cut = min_edge_cut(example(), 1, 11);
-        cut.sort();
-        assert_eq!(cut, vec![(1, 4), (7, 11)]);
+        let cut = min_edge_cut(example(), 1, 11);
+        assert_eq!(nice_es(cut), [(1, 4), (7, 11)]);
+    }
+
+    #[test]
+    fn test_min_edge_cut_undirected() {
+        let cut = min_edge_cut_undirected(example(), 1, 11);
+        assert_eq!(nice_es(cut), [(1, 4), (4, 9), (7, 11), (9, 11)]);
     }
 
     #[test]
     fn test_min_vertex_cut() {
-        let mut cut = min_vertex_cut(example(), 1, 11);
-        cut.sort();
-        assert_eq!(cut, [4, 7]);
+        let cut = min_vertex_cut(example(), 1, 11);
+        assert_eq!(nice_vs(cut), [4, 7]);
+    }
+
+    #[test]
+    fn test_min_vertex_cut_undirected() {
+        let cut = min_vertex_cut_undirected(example(), 1, 11);
+        assert_eq!(nice_vs(cut), [4, 7, 9]);
     }
 }
