@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use crate::derived::{build_set, build_sym_using_vs};
 use crate::dsets::{DSet, PartialDSet};
@@ -336,6 +336,43 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
+fn find_small_tile_cut(input: &DSetOrEmpty) -> Option<(usize, usize)> {
+    match input {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            let (elm_to_index, reps, edges) = make_skeleton(ds);
+
+            for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
+                todo!();
+            }
+            None
+        }
+    }
+}
+
+
+fn make_skeleton(ds: &PartialDSet)
+    -> (Vec<usize>, Vec<usize>, Vec<(usize, usize)>)
+{
+    let reps = ds.orbit_reps([1, 2], 1..=ds.size());
+
+    let mut elm_to_index = vec![0; ds.size() + 1];
+    for (i, &d) in reps.iter().enumerate() {
+        for e in ds.orbit([1, 2], d) {
+            elm_to_index[e] = i;
+        }
+    }
+
+    let edges: Vec<_> = ds.orbit_reps([0, 2], 1..=ds.size()).iter()
+        .map(|&d| (elm_to_index[d], elm_to_index[ds.op(0, d).unwrap()]))
+        .map(|(d, e)| (d.min(e), d.max(e)))
+        .collect::<BTreeSet<_>>().iter().cloned()
+        .collect();
+
+    (elm_to_index, reps, edges)
+}
+
+
 pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
     // TODO add assertions to ensure input is legal
     // TODO implement non-disk face removal
@@ -369,6 +406,7 @@ pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
 
 #[cfg(test)]
 mod test {
+    use crate::covers::finite_universal_cover;
     use crate::delaney3d::pseudo_toroidal_cover;
     use crate::derived::{canonical, minimal_image};
     use crate::fpgroups::invariants::abelian_invariants;
@@ -380,6 +418,16 @@ mod test {
         s.parse::<PartialDSym>().unwrap()
     }
 
+
+    #[test]
+    fn test_make_skeleton() {
+        let ds = finite_universal_cover(&dsym("<1.1:1:1,1,1:3,3>"));
+        let (elm_to_index, reps, edges) = make_skeleton(&as_dset(&ds));
+        assert_eq!(elm_to_index.len(), 25);
+        assert_eq!(reps.len(), 4);
+        assert_eq!(edges.len(), 6);
+        assert_eq!(edges, vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]);
+    }
 
     #[test]
     fn test_simplify() {
