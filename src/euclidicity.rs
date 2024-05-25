@@ -8,7 +8,7 @@ use crate::fpgroups::cosets::coset_tables;
 use crate::fpgroups::invariants::abelian_invariants;
 use crate::fpgroups::stabilizer::stabilizer;
 use crate::fundamental_group::{fundamental_group, FundamentalGroup};
-use crate::simplify::simplify;
+use crate::simplify::{find_small_tile_cut, simplify};
 
 
 fn bad_subgroup_invariants(
@@ -117,6 +117,14 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
                     fail("bad subgroup count for cover")
                 } else if bad_subgroup_count(&fg, 4, 56) {
                     fail("bad subgroup count for cover")
+                } else if let Some((a, b)) = find_small_tile_cut(&simp) {
+                    let msg = format!(
+                        "unimplemented simplification: \
+                        cut tile to create {}-face and glue along {}-face",
+                        b,
+                        a
+                    );
+                    give_up(&msg[..], key)
                 } else {
                     give_up("no decision found", key)
                 }

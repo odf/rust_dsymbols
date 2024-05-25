@@ -4,6 +4,7 @@ use crate::derived::{build_set, build_sym_using_vs};
 use crate::dsets::{DSet, PartialDSet};
 use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
+use crate::util::cutsets::min_vertex_cut_undirected;
 
 
 #[derive(Clone)]
@@ -336,18 +337,32 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-fn find_small_tile_cut(input: &DSetOrEmpty) -> Option<(usize, usize)> {
-    match input {
-        DSetOrEmpty::Empty => None,
-        DSetOrEmpty::DSet(ds) => {
-            let (elm_to_index, reps, edges) = make_skeleton(ds);
+pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, usize)> {
+    let (elm_to_index, reps, edges) = make_skeleton(&as_dset(ds));
+    let source = reps.len();
+    let sink = source + 1;
 
-            for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
-                todo!();
-            }
-            None
+    for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
+        let d3 = ds.op(3, d).unwrap();
+        let v_in: HashSet<_> = ds.orbit([0, 1], d).iter()
+            .map(|&e| elm_to_index[e])
+            .collect();
+        let v_out: HashSet<_> = ds.orbit([0, 1], d3).iter()
+            .map(|&e| elm_to_index[e])
+            .collect();
+
+        let edges = edges.iter().cloned()
+            .chain(v_in.iter().map(|&v| (source, v)))
+            .chain(v_out.iter().map(|&v| (v, sink)));
+
+        let cut = min_vertex_cut_undirected(edges, source, sink);
+
+        if cut.len() < v_in.len() {
+            return Some((v_in.len(), cut.len()));
         }
     }
+
+    None
 }
 
 
