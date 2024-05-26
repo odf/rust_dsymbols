@@ -342,6 +342,8 @@ pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, usize)> {
     let source = reps.len();
     let sink = source + 1;
 
+    let mut best = None;
+
     for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
         let d3 = ds.op(3, d).unwrap();
         let v_in: HashSet<_> = ds.orbit([0, 1], d).iter()
@@ -356,13 +358,20 @@ pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, usize)> {
             .chain(v_out.iter().map(|&v| (v, sink)));
 
         let cut = min_vertex_cut_undirected(edges, source, sink);
+        let (n, m) = (v_in.len(), cut.len());
 
-        if cut.len() < v_in.len() {
-            return Some((v_in.len(), cut.len()));
+        if m < n {
+            if let Some((n_best, m_best)) = best {
+                if m < m_best || m == m_best && n > n_best {
+                    best = Some((n, m));
+                }
+            } else {
+                best = Some((n, m));
+            }
         }
     }
 
-    None
+    best
 }
 
 
