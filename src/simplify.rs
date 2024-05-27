@@ -338,7 +338,12 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 
 
 pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, Vec<usize>)> {
-    let (elm_to_index, reps, edges) = make_skeleton(&as_dset(ds));
+    small_tile_cut(&as_dset(ds))
+}
+
+
+fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
+    let (elm_to_index, reps, edges) = make_skeleton(ds);
     let source = reps.len();
     let sink = source + 1;
 
