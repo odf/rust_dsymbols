@@ -337,7 +337,7 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, usize)> {
+pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, Vec<usize>)> {
     let (elm_to_index, reps, edges) = make_skeleton(&as_dset(ds));
     let source = reps.len();
     let sink = source + 1;
@@ -361,17 +361,18 @@ pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, usize)> {
         let (n, m) = (v_in.len(), cut.len());
 
         if m < n {
-            if let Some((n_best, m_best)) = best {
-                if m < m_best || m == m_best && n > n_best {
-                    best = Some((n, m));
+            let key = (m, -(n as isize));
+            if let Some((best_key, _, _)) = best {
+                if key < best_key {
+                    best = Some((key, d, cut));
                 }
             } else {
-                best = Some((n, m));
+                best = Some((key, d, cut));
             }
         }
     }
 
-    best
+    best.and_then(|(_, d, cut)| Some((d, cut)))
 }
 
 
