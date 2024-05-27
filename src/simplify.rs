@@ -337,8 +337,22 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, Vec<usize>)> {
-    small_tile_cut(&as_dset(ds))
+fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    match input {
+        DSetOrEmpty::Empty => None,
+        DSetOrEmpty::DSet(ds) => {
+            if let Some((d, cut)) = small_tile_cut(ds) {
+                let marked: HashSet<_> = cut.iter()
+                    .flat_map(|&e| ds.orbit([1, 2], e))
+                    .collect();
+                let start = marked.iter()
+                    .find(|&&e| !marked.contains(&ds.op(0, e).unwrap()));
+                todo!()
+            } else {
+                None
+            }
+        }
+    }
 }
 
 
@@ -362,7 +376,9 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
             .chain(v_in.iter().map(|&v| (source, v)))
             .chain(v_out.iter().map(|&v| (v, sink)));
 
-        let cut = min_vertex_cut_undirected(edges, source, sink);
+        let cut: Vec<_> = min_vertex_cut_undirected(edges, source, sink).iter()
+            .map(|&v| reps[v])
+            .collect();
         let (n, m) = (v_in.len(), cut.len());
 
         if m < n {
@@ -378,6 +394,11 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
     }
 
     best.and_then(|(_, d, cut)| Some((d, cut)))
+}
+
+
+pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, Vec<usize>)> {
+    small_tile_cut(&as_dset(ds))
 }
 
 
