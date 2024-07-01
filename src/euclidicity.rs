@@ -119,8 +119,8 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
                     fail("bad subgroup count for cover")
                 } else if let Some((d, cut)) = find_small_tile_cut(&simp) {
                     let msg = format!(
-                        "unimplemented: split along {}-cut, glue at {}-face",
-                        cut.len(), simp.r(0, 1, d).unwrap()
+                        "unimplemented: split along {}-cut {:?}, glue at {}-face",
+                        cut.len(), cut, simp.r(0, 1, d).unwrap()
                     );
                     give_up(&msg[..], key)
                 } else {

@@ -342,17 +342,46 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds) => {
             if let Some((d, cut)) = small_tile_cut(ds) {
-                let marked: HashSet<_> = cut.iter()
-                    .flat_map(|&e| ds.orbit([1, 2], e))
-                    .collect();
-                let start = marked.iter()
-                    .find(|&&e| !marked.contains(&ds.op(0, e).unwrap()));
+                let cut = ordered_cut(cut, ds);
                 todo!()
             } else {
                 None
             }
         }
     }
+}
+
+
+fn ordered_cut(cut: Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
+    let marked: HashSet<_> = cut.iter()
+        .flat_map(|&e| ds.orbit([1, 2], e))
+        .collect();
+    let start = *marked.iter()
+        .find(|&&e| !marked.contains(&ds.op(0, e).unwrap()))
+        .unwrap();
+
+    let mut result = vec![];
+    let mut d = start;
+
+    while result.len() < cut.len() + 1 {
+        let mut e = ds.op(0, d).unwrap();
+        while !marked.contains(&e) {
+            e = ds.op(0, ds.op(1, e).unwrap()).unwrap();
+        }
+
+        if e != ds.op(1, d).unwrap() {
+            result.push((d, e));
+        }
+        d = ds.op(2, e).unwrap();
+
+        if d == start {
+            break;
+        }
+    }
+
+    assert_eq!(result.len(), cut.len());
+
+    result
 }
 
 
@@ -397,8 +426,13 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
 }
 
 
-pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, Vec<usize>)> {
-    small_tile_cut(&as_dset(ds))
+pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, Vec<(usize, usize)>)> {
+    let ds = as_dset(ds);
+    if let Some((d, cut)) = small_tile_cut(&ds) {
+        Some((d, ordered_cut(cut, &ds)))
+    } else {
+        None
+    }
 }
 
 
