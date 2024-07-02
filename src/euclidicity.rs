@@ -91,6 +91,7 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
 
     if let Some(cov) = pseudo_toroidal_cover(ds) {
         if let Some(simp) = simplify(&cov) {
+            let simp = canonical(&simp);
             let key = canonical(&minimal_image(&simp));
 
             if good.contains(&key.to_string()[..]) {
@@ -99,7 +100,7 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
                 if bad_connected_components(&simp) {
                     fail("cover is a non-trivial connected sum")
                 } else {
-                    give_up("cover is a (potentially trivial) connected sum", key)
+                    give_up("cover is a (potentially trivial) connected sum", simp)
                 }
             } else {
                 let fg = fundamental_group(&simp);
@@ -122,7 +123,7 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
                         "unimplemented: split along {}-cut {:?}, glue at {}-face",
                         cut.len(), cut, simp.r(0, 1, d).unwrap()
                     );
-                    give_up(&msg[..], key)
+                    give_up(&msg[..], simp)
                 } else {
                     give_up("no decision found", key)
                 }
