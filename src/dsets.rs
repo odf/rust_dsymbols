@@ -23,6 +23,13 @@ pub trait DSet: Sized {
     fn set_count(&self) -> usize { 1 }
     fn symbol_count(&self) -> usize { 1 }
 
+    fn walk<I>(&self, d: usize, path: I)
+        -> Option<usize>
+        where I: IntoIterator<Item=usize>
+    {
+        path.into_iter().fold(Some(d), |d, i| d.and(self.op(i, d.unwrap())))
+    }
+
     fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
         if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
             None
@@ -738,6 +745,7 @@ mod partial_dset_tests {
             ])
         );
 
+        assert_eq!(dset.walk(1, [0, 1, 2]), Some(4));
         assert_eq!(dset.op(0, 0), None);
         assert!(dset.is_connected());
         assert!(dset.is_complete());
