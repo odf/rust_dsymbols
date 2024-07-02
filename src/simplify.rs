@@ -370,7 +370,7 @@ fn ordered_cut(cut: Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
         }
 
         if e != ds.op(1, d).unwrap() {
-            result.push((d, e));
+            result.push((ds.op(1, d).unwrap(), ds.op(1, e).unwrap()));
         }
         d = ds.op(2, e).unwrap();
 
