@@ -158,6 +158,51 @@ fn cut_face(ds: &PartialDSet, d1: usize, d2: usize) -> PartialDSet {
 }
 
 
+fn cut_tile(ds: &PartialDSet, cut_chambers: &Vec<usize>) -> PartialDSet {
+    let n = ds.size();
+    let m = cut_chambers.len();
+    assert!(m % 2 == 0);
+    let opposites: Vec<_> = cut_chambers.iter()
+        .map(|&d| ds.op(2, d).unwrap())
+        .collect();
+    let mut ds = grow(ds, 2 * m);
+
+    let cycle_0 = |start: usize| ((0..(m / 2)))
+        .map(move |i| (start + 2 * i, start + 2 * i + 1));
+
+    let cycle_1 = |start: usize| ((0..(m / 2)))
+        .map(move |i| (start + 2 * i + 1, start + (2 * i + 2) % m));
+
+    ds = reglue(
+        &ds,
+        std::iter::empty().chain(cycle_0(n + 1)).chain(cycle_0(n + m + 1)),
+        0
+    ).unwrap();
+
+    ds = reglue(
+        &ds,
+        std::iter::empty().chain(cycle_1(n + 1)).chain(cycle_1(n + m + 1)),
+        1
+    ).unwrap();
+
+    ds = reglue(
+        &ds,
+        std::iter::empty()
+            .chain((0..m).map(|i| (cut_chambers[i], n + 1 + i)))
+            .chain((0..m).map(|i| (opposites[i], n + m + 1 + i))),
+        2
+    ).unwrap();
+
+    ds = reglue(
+        &ds,
+        (0..m).map(|i| (n + 1 + i, n + m + 1 + i)),
+        3
+    ).unwrap();
+
+    ds
+}
+
+
 fn squeeze_tile_3d(ds: &PartialDSet, d: usize, e: usize) -> PartialDSet {
     let f = ds.op(0, e).unwrap();
     let g = ds.op(0, d).unwrap();
@@ -341,9 +386,21 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
     match input {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds) => {
-            if let Some((d, cut)) = small_tile_cut(ds) {
-                let cut = ordered_cut(cut, ds);
-                todo!()
+            let mut ds = as_dset(ds);
+
+            if let Some((glue_chamber, cut_vertex_reps)) = small_tile_cut(&ds) {
+                let mut cut_chambers = vec![];
+
+                for (d, e) in ordered_cut(cut_vertex_reps, &ds) {
+                    if ds.walk(d, [1, 0, 1]) != Some(e) {
+                        ds = cut_face(&ds, d, e);
+                    }
+                    cut_chambers.push(ds.op(1, d).unwrap());
+                    cut_chambers.push(ds.op(1, e).unwrap());
+                }
+
+                ds = cut_tile(&ds, &cut_chambers);
+                todo!() // once cut_tile() works, glue face at glue_chamber
             } else {
                 None
             }
@@ -366,11 +423,11 @@ fn ordered_cut(cut: Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
     while result.len() < cut.len() + 1 {
         let mut e = ds.op(0, d).unwrap();
         while !marked.contains(&e) {
-            e = ds.op(0, ds.op(1, e).unwrap()).unwrap();
+            e = ds.walk(e, [1, 0]).unwrap();
         }
 
         if e != ds.op(1, d).unwrap() {
-            result.push((ds.op(1, d).unwrap(), ds.op(1, e).unwrap()));
+            result.push((d, e));
         }
         d = ds.op(2, e).unwrap();
 
