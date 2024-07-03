@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use crate::derived::{build_set, build_sym_using_vs};
+use crate::derived::{build_set, build_sym_using_vs, canonical};
 use crate::dsets::{DSet, PartialDSet};
 use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
@@ -383,15 +383,23 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 
 
 fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
+    // TODO - fix for cuts with multiple vertices incident to glued face
     match input {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds) => {
-            let mut ds = as_dset(ds);
+            let mut ds = as_dset(&canonical(&as_dsym(ds)));
 
             if let Some((glue_chamber, cut_vertex_reps)) = small_tile_cut(&ds) {
+                let ordered = ordered_cut(&cut_vertex_reps, &ds);
+
+                assert_eq!(
+                    ordered.len(), cut_vertex_reps.len(),
+                    "got {:?} from {:?} in {}", ordered, cut_vertex_reps, ds
+                );
+
                 let mut cut_chambers = vec![];
 
-                for (d, e) in ordered_cut(cut_vertex_reps, &ds) {
+                for (d, e) in ordered {
                     if ds.walk(d, [1, 0, 1]) != Some(e) {
                         ds = cut_face(&ds, d, e);
                     }
@@ -400,7 +408,9 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
                 }
 
                 ds = cut_tile(&ds, &cut_chambers);
-                todo!() // once cut_tile() works, glue face at glue_chamber
+
+                let junk = ds.orbit([0, 1, 3], glue_chamber);
+                collapse(&DSetOrEmpty::DSet(ds), junk, 3)
             } else {
                 None
             }
@@ -409,7 +419,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-fn ordered_cut(cut: Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
+fn ordered_cut(cut: &Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
     let marked: HashSet<_> = cut.iter()
         .flat_map(|&e| ds.orbit([1, 2], e))
         .collect();
@@ -435,8 +445,6 @@ fn ordered_cut(cut: Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
             break;
         }
     }
-
-    assert_eq!(result.len(), cut.len());
 
     result
 }
@@ -483,16 +491,6 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
 }
 
 
-pub fn find_small_tile_cut(ds: &PartialDSym) -> Option<(usize, Vec<(usize, usize)>)> {
-    let ds = as_dset(ds);
-    if let Some((d, cut)) = small_tile_cut(&ds) {
-        Some((d, ordered_cut(cut, &ds)))
-    } else {
-        None
-    }
-}
-
-
 fn make_skeleton(ds: &PartialDSet)
     -> (Vec<usize>, Vec<usize>, Vec<(usize, usize)>)
 {
@@ -517,8 +515,6 @@ fn make_skeleton(ds: &PartialDSet)
 
 pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
     // TODO add assertions to ensure input is legal
-    // TODO implement non-disk face removal
-    // TODO implement non-connected face intersection removal
 
     let mut ds = DSetOrEmpty::DSet(as_dset(ds));
     ds = merge_all(&ds).or(Some(ds)).unwrap();
@@ -529,6 +525,7 @@ pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
             fix_local_1_vertex,
             fix_local_2_vertex,
             fix_non_disk_face,
+            split_and_glue,
         ] {
             if let Some(out) = op(&ds) {
                 ds = merge_all(&out).or(Some(out)).unwrap();
