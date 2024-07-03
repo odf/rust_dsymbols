@@ -383,7 +383,6 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 
 
 fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
-    // TODO - fix for cuts with multiple vertices incident to glued face
     match input {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds) => {
@@ -436,9 +435,18 @@ fn ordered_cut(cut: &Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
             e = ds.walk(e, [1, 0]).unwrap();
         }
 
-        if e != ds.op(1, d).unwrap() {
+        if marked.contains(&ds.walk(d, [1, 0]).unwrap()) {
+            let mut c = ds.walk(d, [1, 0, 1]).unwrap();
+            while marked.contains(&c) {
+                result.push((d, c));
+                d = ds.walk(d, [1, 0]).unwrap();
+                c = ds.walk(c, [0, 1]).unwrap();
+            }
+            assert_eq!(ds.op(1, d), Some(e));
+        } else if e != ds.op(1, d).unwrap() {
             result.push((d, e));
         }
+
         d = ds.op(2, e).unwrap();
 
         if d == start {
