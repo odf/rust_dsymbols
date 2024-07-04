@@ -386,36 +386,48 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
     match input {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds) => {
-            let mut ds = as_dset(&canonical(&as_dsym(ds)));
+            let ds = as_dset(&canonical(&as_dsym(ds)));
 
             if let Some((glue_chamber, cut_vertex_reps)) = small_tile_cut(&ds) {
-                let ordered = ordered_cut(&cut_vertex_reps, &ds);
-
-                assert_eq!(
-                    ordered.len(), cut_vertex_reps.len(),
-                    "got {:?} from {:?} in {}", ordered, cut_vertex_reps, ds
-                );
-
-                // TODO verify there are no incompatible face cuts
-                let mut cut_chambers = vec![];
-
-                for (d, e) in ordered {
-                    if ds.walk(d, [1, 0, 1]) != Some(e) {
-                        ds = cut_face(&ds, d, e);
-                    }
-                    cut_chambers.push(ds.op(1, d).unwrap());
-                    cut_chambers.push(ds.op(1, e).unwrap());
-                }
-
-                ds = cut_tile(&ds, &cut_chambers);
-
-                let junk = ds.orbit([0, 1, 3], glue_chamber);
-                collapse(&DSetOrEmpty::DSet(ds), junk, 3)
+                split_and_glue_attempt(&ds, glue_chamber, cut_vertex_reps)
             } else {
                 None
             }
         }
     }
+}
+
+
+fn split_and_glue_attempt(
+    ds: &PartialDSet, glue_chamber: usize, cut_vertex_reps: Vec<usize>
+) -> Option<DSetOrEmpty>
+{
+    let ordered = ordered_cut(&cut_vertex_reps, &ds);
+    let mut ds = as_dset(ds);
+
+    assert_eq!(
+        ordered.len(), cut_vertex_reps.len(),
+        "got {:?} from {:?} in {}", ordered, cut_vertex_reps, ds
+    );
+
+    let mut cut_chambers = vec![];
+
+    for (d, e) in ordered {
+        if ds.walk(d, [1, 0, 1]) != Some(e) {
+            if ds.orbit([0, 1], d).contains(&e) {
+                ds = cut_face(&ds, d, e);
+            } else {
+                return None;
+            }
+        }
+        cut_chambers.push(ds.op(1, d).unwrap());
+        cut_chambers.push(ds.op(1, e).unwrap());
+    }
+
+    ds = cut_tile(&ds, &cut_chambers);
+
+    let junk = ds.orbit([0, 1, 3], glue_chamber);
+    collapse(&DSetOrEmpty::DSet(ds), junk, 3)
 }
 
 
