@@ -396,6 +396,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
                     "got {:?} from {:?} in {}", ordered, cut_vertex_reps, ds
                 );
 
+                // TODO verify there are no incompatible face cuts
                 let mut cut_chambers = vec![];
 
                 for (d, e) in ordered {
