@@ -198,3 +198,18 @@ fn test_toroidal_cover() {
         4 4 4 4 4 4 4 4 4 4 4 4>",
     );
 }
+
+
+#[test]
+fn test_toroidal_cover_edgecase() {
+    let check_pseudo_toroidal = |src: &str| {
+        let cov = src.parse::<PartialDSym>()
+            .map(|ds| pseudo_toroidal_cover(&ds))
+            .unwrap();
+        assert!(cov.is_some());
+    };
+
+    check_pseudo_toroidal(
+        "<2872.1:7 3:1 3 4 6 7,2 3 5 7,4 5 6 7,1 2 3 7 6:3 4,2 6,18 4>",
+    );
+}
