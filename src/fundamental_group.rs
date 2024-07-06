@@ -198,7 +198,7 @@ fn find_generators<T: DSym>(ds: &T)
 
 pub struct FundamentalGroup {
     pub relators: Vec<FreeWord>,
-    pub cones: BTreeMap<FreeWord, usize>,
+    pub cones: BTreeSet<(FreeWord, usize)>,
     pub gen_to_edge: BTreeMap<usize, Edge>,
     pub edge_to_word: BTreeMap<Edge, FreeWord>,
 }
@@ -206,7 +206,7 @@ pub struct FundamentalGroup {
 
 pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
     let (edge_to_word, gen_to_edge) = find_generators(ds);
-    let mut cones = BTreeMap::new();
+    let mut cones = BTreeSet::new();
     let mut relators = BTreeSet::new();
 
     for i in 0..=ds.dim() {
@@ -222,7 +222,7 @@ pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
                 }
 
                 if degree > 1 {
-                    cones.insert(relator_representative(&word), degree);
+                    cones.insert((relator_representative(&word), degree));
                 }
             }
         }
@@ -348,7 +348,7 @@ fn test_fundamental_group_a() {
     );
     assert_eq!(
         g.cones,
-        BTreeMap::from([
+        BTreeSet::from([
             (FreeWord::from([1, 2]), 4),
             (FreeWord::from([1, 3]), 2),
             (FreeWord::from([1, 4]), 2),
@@ -388,7 +388,7 @@ fn test_fundamental_group_b() {
     );
     assert_eq!(
         g.cones,
-        BTreeMap::from([
+        BTreeSet::from([
             (FreeWord::from([1]), 4),
             (FreeWord::from([2]), 2),
             (FreeWord::from([1, -2]), 3),
@@ -429,7 +429,7 @@ fn test_fundamental_group_c() {
     );
     assert_eq!(
         g.cones,
-        BTreeMap::from([
+        BTreeSet::from([
             (FreeWord::from([1, 2]), 4),
             (FreeWord::from([1, 3]), 4),
             (FreeWord::from([2, 3]), 2),
@@ -454,5 +454,5 @@ fn test_fundamental_group_d() {
         g.relators.iter().cloned().collect::<HashSet<_>>(),
         HashSet::from([FreeWord::from([1, 2, -1, -2])])
     );
-    assert_eq!(g.cones, BTreeMap::from([]));
+    assert_eq!(g.cones, BTreeSet::from([]));
 }
