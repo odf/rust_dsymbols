@@ -1,4 +1,5 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::fmt;
 
 use crate::derived::{build_set, build_sym_using_vs, canonical};
 use crate::dsets::{DSet, PartialDSet};
@@ -398,10 +399,68 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
+struct DrawingInstructions<'a>
+{
+    ds: &'a PartialDSet
+}
+
+
+impl<'a> DrawingInstructions<'a>
+{
+    pub fn new(ds: &'a PartialDSet) -> Self {
+        assert_eq!(canonical(&as_dsym(ds)), as_dsym(ds));
+        assert!(ds.is_oriented());
+        assert!(ds.is_complete());
+
+        Self { ds }
+    }
+}
+
+
+impl<'a> fmt::Display for DrawingInstructions<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ds = self.ds;
+        let mut seen= HashSet::new();
+        let mut queue = VecDeque::from([(0, 1)]);
+
+        let r = |d| ds.orbit([0, 1], d).len() / 2;
+
+        while let Some((c, d)) = queue.pop_front() {
+            if !seen.contains(&d) {
+                write!(f, "{}-gon from {d}", r(d))?;
+                if c != 0 {
+                    write!(f, " connected to {c}")?;
+                }
+                writeln!(f, "")?;
+
+                seen.extend(ds.orbit([0, 1], d));
+
+                let mut e = d;
+                loop {
+                    queue.push_back((e, ds.op(2, e).unwrap()));
+                    e = ds.walk(e, [0, 1]).unwrap();
+                    if e == d {
+                        break;
+                    }
+                }
+            } else if d > c {
+                writeln!(f, "connect {c} to {d}")?;
+            }
+        }
+        writeln!(f, "")?;
+
+        Ok(())
+    }
+}
+
+
 fn split_and_glue_attempt(
     ds: &PartialDSet, glue_chamber: usize, cut_vertex_reps: Vec<usize>
 ) -> Option<DSetOrEmpty>
 {
+    //eprint!("split_and_glue_attempt(ds, {glue_chamber}, {cut_vertex_reps:?})");
+    //eprintln!(" where ds:\n\n{}", DrawingInstructions::new(&ds));
+
     let ordered = ordered_cut(&cut_vertex_reps, &ds);
     let mut ds = as_dset(ds);
 
