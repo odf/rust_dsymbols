@@ -446,12 +446,15 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 
             if let Some(cut) = small_tile_cut(&ds) {
                 let (glue_chamber, cut_vertex_reps, inside_vertex_reps) = cut;
+                let special_chamber = ds.op(3, glue_chamber).unwrap();
                 let marked_vertex_reps = std::iter::empty()
                     .chain(ds.orbit([0, 1], glue_chamber))
                     .chain(cut_vertex_reps.iter().cloned())
                     .chain(inside_vertex_reps.iter().cloned())
                     .collect();
-                let ordered = ordered_cut(&marked_vertex_reps, &ds);
+                let ordered = ordered_cut(
+                    special_chamber, &marked_vertex_reps, &ds
+                );
                 assert_eq!(
                     ordered.len(), cut_vertex_reps.len(),
                     "got {:?} from {:?} in\n\n{}",
@@ -514,8 +517,16 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>, Vec<usize>)> {
 }
 
 
-fn ordered_cut(cut: &Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
-    let marked: HashSet<_> = cut.iter()
+fn ordered_cut(
+    special_chamber: usize,
+    marked_vertex_reps: &Vec<usize>,
+    ds: &PartialDSet
+) -> Vec<(usize, usize)>
+{
+    let special: HashSet<_> = ds.orbit([0, 1], special_chamber).iter()
+        .cloned()
+        .collect();
+    let marked: HashSet<_> = marked_vertex_reps.iter()
         .flat_map(|&e| ds.orbit([1, 2], e))
         .collect();
     let start = *marked.iter()
@@ -525,13 +536,19 @@ fn ordered_cut(cut: &Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
     let mut result = vec![];
     let mut d = start;
 
-    while result.len() < cut.len() + 1 {
-        let mut e = ds.op(0, d).unwrap();
-        while !marked.contains(&e) {
-            e = ds.walk(e, [1, 0]).unwrap();
+    while result.len() < ds.size() + 1 { // avoid looping forever in error case
+        let mut e = ds.op(1, d).unwrap();
+        while marked.contains(&ds.op(0, e).unwrap()) {
+            e = ds.walk(e, [0, 1]).unwrap();
         }
 
-        if e != ds.op(1, d).unwrap() {
+        if special.contains(&d) {
+            let mut d = d;
+            while ds.op(1, d) != Some(e) {
+                result.push((d, ds.walk(d, [1, 0, 1]).unwrap()));
+                d = ds.walk(d, [1, 0]).unwrap();
+            }
+        } else if ds.op(1, d) != Some(e) {
             result.push((d, e));
         }
 
