@@ -444,15 +444,18 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
         DSetOrEmpty::DSet(ds) => {
             let ds = as_dset(&canonical(&as_dsym(ds)));
 
-            if let Some((glue_chamber, cut_vertex_reps)) = small_tile_cut(&ds) {
-                //eprint!("split_and_glue(ds) -");
-                //eprint!(" trying {glue_chamber}, {cut_vertex_reps:?}");
-                //eprintln!(" where ds:\n\n{}", DrawingInstructions::new(&ds));
-
-                let ordered = ordered_cut(&cut_vertex_reps, &ds);
+            if let Some(cut) = small_tile_cut(&ds) {
+                let (glue_chamber, cut_vertex_reps, inside_vertex_reps) = cut;
+                let marked_vertex_reps = std::iter::empty()
+                    .chain(ds.orbit([0, 1], glue_chamber))
+                    .chain(cut_vertex_reps.iter().cloned())
+                    .chain(inside_vertex_reps.iter().cloned())
+                    .collect();
+                let ordered = ordered_cut(&marked_vertex_reps, &ds);
                 assert_eq!(
                     ordered.len(), cut_vertex_reps.len(),
-                    "got {:?} from {:?} in {}", ordered, cut_vertex_reps, ds
+                    "got {:?} from {:?} in\n\n{}",
+                    ordered, cut_vertex_reps, DrawingInstructions::new(&ds)
                 );
                 split_and_glue_attempt(&ds, glue_chamber, ordered)
             } else {
@@ -463,7 +466,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
+fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>, Vec<usize>)> {
     let (elm_to_index, reps, edges) = make_skeleton(ds);
     let source = reps.len();
     let sink = source + 1;
@@ -483,25 +486,31 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
             .chain(v_in.iter().map(|&v| (source, v)))
             .chain(v_out.iter().map(|&v| (v, sink)));
 
-        let cut: Vec<_> = min_vertex_cut_undirected(edges, source, sink)
-            .cut_vertices.iter()
-            .map(|&v| reps[v])
-            .collect();
-        let (n, m) = (v_in.len(), cut.len());
+        let cut_raw = min_vertex_cut_undirected(edges, source, sink);
+        let (n, m) = (v_in.len(), cut_raw.cut_vertices.len());
 
         if m < n {
+            let cut_vertices: Vec<_> = cut_raw.cut_vertices.iter()
+                .map(|&v| reps[v])
+                .collect();
+            let inside_vertices: Vec<_> = cut_raw.inside_vertices.iter()
+                .filter(|&&v| v < reps.len())
+                .map(|&v| reps[v])
+                .collect();
             let key = (m, -(n as isize));
-            if let Some((best_key, _, _)) = best {
+            if let Some((best_key, _, _, _)) = best {
                 if key < best_key {
-                    best = Some((key, d, cut));
+                    best = Some((key, d, cut_vertices, inside_vertices));
                 }
             } else {
-                best = Some((key, d, cut));
+                best = Some((key, d, cut_vertices, inside_vertices));
             }
         }
     }
 
-    best.and_then(|(_, d, cut)| Some((d, cut)))
+    best.and_then(|(_, d, cut_vertices, inside_vertices)|
+        Some((d, cut_vertices, inside_vertices))
+    )
 }
 
 
@@ -522,15 +531,7 @@ fn ordered_cut(cut: &Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
             e = ds.walk(e, [1, 0]).unwrap();
         }
 
-        if marked.contains(&ds.walk(d, [1, 0]).unwrap()) {
-            let mut c = ds.walk(d, [1, 0, 1]).unwrap();
-            while marked.contains(&c) {
-                result.push((d, c));
-                d = ds.walk(d, [1, 0]).unwrap();
-                c = ds.walk(c, [0, 1]).unwrap();
-            }
-            assert_eq!(ds.op(1, d), Some(e));
-        } else if e != ds.op(1, d).unwrap() {
+        if e != ds.op(1, d).unwrap() {
             result.push((d, e));
         }
 
