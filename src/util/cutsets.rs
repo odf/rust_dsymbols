@@ -1,8 +1,14 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 
+pub struct EdgeCut {
+    pub cut_edges: Vec<(usize, usize)>,
+    pub inside_vertices: Vec<usize>,
+}
+
+
 pub fn min_edge_cut<I>(edges: I, source: usize, sink: usize)
-    -> Vec<(usize, usize)>
+    -> EdgeCut
     where I: IntoIterator<Item=(usize, usize)>
 {
     let edges: BTreeSet<_> = edges.into_iter().collect();
@@ -20,17 +26,19 @@ pub fn min_edge_cut<I>(edges: I, source: usize, sink: usize)
         if let Some(next) = next {
             path_edges = next;
         } else {
-            return edges.iter()
+            let cut_edges = edges.iter()
                 .filter(|&(v, w)| seen.contains(v) && !seen.contains(w))
                 .cloned()
                 .collect();
+            let inside_vertices = seen.iter().cloned().collect();
+            return EdgeCut { cut_edges, inside_vertices };
         }
     }
 }
 
 
 pub fn min_edge_cut_undirected<I>(edges: I, source: usize, sink: usize)
-    -> Vec<(usize, usize)>
+    -> EdgeCut
     where I: IntoIterator<Item=(usize, usize)>
 {
     let edges: BTreeSet<_> = edges.into_iter()
@@ -41,8 +49,14 @@ pub fn min_edge_cut_undirected<I>(edges: I, source: usize, sink: usize)
 }
 
 
+pub struct VertexCut {
+    pub cut_vertices: Vec<usize>,
+    pub inside_vertices: Vec<usize>,
+}
+
+
 pub fn min_vertex_cut<I>(edges: I, source: usize, sink: usize)
-    -> Vec<usize>
+    -> VertexCut
     where I: IntoIterator<Item=(usize, usize)>
 {
     let edges: BTreeSet<_> = edges.into_iter().collect();
@@ -58,14 +72,21 @@ pub fn min_vertex_cut<I>(edges: I, source: usize, sink: usize)
         .chain(vertices.iter().map(|&v| (v, v + offset)))
         .collect();
 
-    min_edge_cut(x_edges, source + offset, sink).iter()
+    let edge_cut = min_edge_cut(x_edges, source + offset, sink);
+    let cut_vertices: Vec<_> = edge_cut.cut_edges.iter()
         .map(|&(v, w)| v.min(w))
-        .collect()
+        .collect();
+    let inside_vertices = edge_cut.inside_vertices.iter()
+        .filter(|&&v| v < offset && !cut_vertices.contains(&v))
+        .cloned()
+        .collect();
+
+    VertexCut { cut_vertices, inside_vertices }
 }
 
 
 pub fn min_vertex_cut_undirected<I>(edges: I, source: usize, sink: usize)
-    -> Vec<usize>
+    -> VertexCut
     where I: IntoIterator<Item=(usize, usize)>
 {
     let edges: BTreeSet<_> = edges.into_iter()
@@ -172,24 +193,24 @@ mod test {
     #[test]
     fn test_min_edge_cut() {
         let cut = min_edge_cut(example(), 1, 11);
-        assert_eq!(nice_es(cut), [(1, 4), (7, 11)]);
+        assert_eq!(nice_es(cut.cut_edges), [(1, 4), (7, 11)]);
     }
 
     #[test]
     fn test_min_edge_cut_undirected() {
         let cut = min_edge_cut_undirected(example(), 1, 11);
-        assert_eq!(nice_es(cut), [(1, 4), (4, 9), (7, 11), (9, 11)]);
+        assert_eq!(nice_es(cut.cut_edges), [(1, 4), (4, 9), (7, 11), (9, 11)]);
     }
 
     #[test]
     fn test_min_vertex_cut() {
         let cut = min_vertex_cut(example(), 1, 11);
-        assert_eq!(nice_vs(cut), [4, 7]);
+        assert_eq!(nice_vs(cut.cut_vertices), [4, 7]);
     }
 
     #[test]
     fn test_min_vertex_cut_undirected() {
         let cut = min_vertex_cut_undirected(example(), 1, 11);
-        assert_eq!(nice_vs(cut), [4, 7, 9]);
+        assert_eq!(nice_vs(cut.cut_vertices), [4, 7, 9]);
     }
 }

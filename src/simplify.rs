@@ -550,7 +550,8 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
             .chain(v_in.iter().map(|&v| (source, v)))
             .chain(v_out.iter().map(|&v| (v, sink)));
 
-        let cut: Vec<_> = min_vertex_cut_undirected(edges, source, sink).iter()
+        let cut: Vec<_> = min_vertex_cut_undirected(edges, source, sink)
+            .cut_vertices.iter()
             .map(|&v| reps[v])
             .collect();
         let (n, m) = (v_in.len(), cut.len());
