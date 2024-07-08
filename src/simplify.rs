@@ -8,6 +8,61 @@ use crate::fundamental_group::inner_edges;
 use crate::util::cutsets::min_vertex_cut_undirected;
 
 
+struct DrawingInstructions<'a>
+{
+    ds: &'a PartialDSet
+}
+
+
+impl<'a> DrawingInstructions<'a>
+{
+    pub fn new(ds: &'a PartialDSet) -> Self {
+        assert_eq!(canonical(&as_dsym(ds)), as_dsym(ds));
+        assert!(ds.is_oriented());
+        assert!(ds.is_complete());
+
+        Self { ds }
+    }
+}
+
+
+impl<'a> fmt::Display for DrawingInstructions<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ds = self.ds;
+        let mut seen= HashSet::new();
+        let mut queue = VecDeque::from([(0, 1)]);
+
+        let r = |d| ds.orbit([0, 1], d).len() / 2;
+
+        while let Some((c, d)) = queue.pop_front() {
+            if !seen.contains(&d) {
+                write!(f, "{}-gon from {d}", r(d))?;
+                if c != 0 {
+                    write!(f, " connected to {c}")?;
+                }
+                writeln!(f, "")?;
+
+                seen.extend(ds.orbit([0, 1], d));
+
+                let mut e = d;
+                loop {
+                    queue.push_back((e, ds.op(2, e).unwrap()));
+                    e = ds.walk(e, [0, 1]).unwrap();
+                    if e == d {
+                        break;
+                    }
+                }
+            } else if d > c {
+                writeln!(f, "connect {c} to {d}")?;
+            }
+        }
+        writeln!(f, "")?;
+
+        Ok(())
+    }
+}
+
+
 #[derive(Clone)]
 enum DSetOrEmpty {
     DSet(PartialDSet),
@@ -390,7 +445,16 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
             let ds = as_dset(&canonical(&as_dsym(ds)));
 
             if let Some((glue_chamber, cut_vertex_reps)) = small_tile_cut(&ds) {
-                split_and_glue_attempt(&ds, glue_chamber, cut_vertex_reps)
+                //eprint!("split_and_glue(ds) -");
+                //eprint!(" trying {glue_chamber}, {cut_vertex_reps:?}");
+                //eprintln!(" where ds:\n\n{}", DrawingInstructions::new(&ds));
+
+                let ordered = ordered_cut(&cut_vertex_reps, &ds);
+                assert_eq!(
+                    ordered.len(), cut_vertex_reps.len(),
+                    "got {:?} from {:?} in {}", ordered, cut_vertex_reps, ds
+                );
+                split_and_glue_attempt(&ds, glue_chamber, ordered)
             } else {
                 None
             }
@@ -399,94 +463,45 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-struct DrawingInstructions<'a>
-{
-    ds: &'a PartialDSet
-}
+fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
+    let (elm_to_index, reps, edges) = make_skeleton(ds);
+    let source = reps.len();
+    let sink = source + 1;
 
+    let mut best = None;
 
-impl<'a> DrawingInstructions<'a>
-{
-    pub fn new(ds: &'a PartialDSet) -> Self {
-        assert_eq!(canonical(&as_dsym(ds)), as_dsym(ds));
-        assert!(ds.is_oriented());
-        assert!(ds.is_complete());
+    for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
+        let d3 = ds.op(3, d).unwrap();
+        let v_in: HashSet<_> = ds.orbit([0, 1], d).iter()
+            .map(|&e| elm_to_index[e])
+            .collect();
+        let v_out: HashSet<_> = ds.orbit([0, 1], d3).iter()
+            .map(|&e| elm_to_index[e])
+            .collect();
 
-        Self { ds }
-    }
-}
+        let edges = edges.iter().cloned()
+            .chain(v_in.iter().map(|&v| (source, v)))
+            .chain(v_out.iter().map(|&v| (v, sink)));
 
+        let cut: Vec<_> = min_vertex_cut_undirected(edges, source, sink)
+            .cut_vertices.iter()
+            .map(|&v| reps[v])
+            .collect();
+        let (n, m) = (v_in.len(), cut.len());
 
-impl<'a> fmt::Display for DrawingInstructions<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let ds = self.ds;
-        let mut seen= HashSet::new();
-        let mut queue = VecDeque::from([(0, 1)]);
-
-        let r = |d| ds.orbit([0, 1], d).len() / 2;
-
-        while let Some((c, d)) = queue.pop_front() {
-            if !seen.contains(&d) {
-                write!(f, "{}-gon from {d}", r(d))?;
-                if c != 0 {
-                    write!(f, " connected to {c}")?;
+        if m < n {
+            let key = (m, -(n as isize));
+            if let Some((best_key, _, _)) = best {
+                if key < best_key {
+                    best = Some((key, d, cut));
                 }
-                writeln!(f, "")?;
-
-                seen.extend(ds.orbit([0, 1], d));
-
-                let mut e = d;
-                loop {
-                    queue.push_back((e, ds.op(2, e).unwrap()));
-                    e = ds.walk(e, [0, 1]).unwrap();
-                    if e == d {
-                        break;
-                    }
-                }
-            } else if d > c {
-                writeln!(f, "connect {c} to {d}")?;
-            }
-        }
-        writeln!(f, "")?;
-
-        Ok(())
-    }
-}
-
-
-fn split_and_glue_attempt(
-    ds: &PartialDSet, glue_chamber: usize, cut_vertex_reps: Vec<usize>
-) -> Option<DSetOrEmpty>
-{
-    //eprint!("split_and_glue_attempt(ds, {glue_chamber}, {cut_vertex_reps:?})");
-    //eprintln!(" where ds:\n\n{}", DrawingInstructions::new(&ds));
-
-    let ordered = ordered_cut(&cut_vertex_reps, &ds);
-    let mut ds = as_dset(ds);
-
-    assert_eq!(
-        ordered.len(), cut_vertex_reps.len(),
-        "got {:?} from {:?} in {}", ordered, cut_vertex_reps, ds
-    );
-
-    let mut cut_chambers = vec![];
-
-    for (d, e) in ordered {
-        if ds.walk(d, [1, 0, 1]) != Some(e) {
-            if ds.orbit([0, 1], d).contains(&e) {
-                ds = cut_face(&ds, d, e);
             } else {
-                return None;
+                best = Some((key, d, cut));
             }
         }
-        cut_chambers.push(ds.op(1, d).unwrap());
-        cut_chambers.push(ds.op(1, e).unwrap());
     }
 
-    ds = cut_tile(&ds, &cut_chambers);
-
-    let junk = ds.orbit([0, 1, 3], glue_chamber);
-    collapse(&DSetOrEmpty::DSet(ds), junk, 3)
+    best.and_then(|(_, d, cut)| Some((d, cut)))
 }
 
 
@@ -530,45 +545,29 @@ fn ordered_cut(cut: &Vec<usize>, ds: &PartialDSet) -> Vec<(usize, usize)> {
 }
 
 
-fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>)> {
-    let (elm_to_index, reps, edges) = make_skeleton(ds);
-    let source = reps.len();
-    let sink = source + 1;
+fn split_and_glue_attempt(
+    ds: &PartialDSet, glue_chamber: usize, ordered: Vec<(usize, usize)>
+) -> Option<DSetOrEmpty>
+{
+    let mut ds = as_dset(ds);
+    let mut cut_chambers = vec![];
 
-    let mut best = None;
-
-    for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
-        let d3 = ds.op(3, d).unwrap();
-        let v_in: HashSet<_> = ds.orbit([0, 1], d).iter()
-            .map(|&e| elm_to_index[e])
-            .collect();
-        let v_out: HashSet<_> = ds.orbit([0, 1], d3).iter()
-            .map(|&e| elm_to_index[e])
-            .collect();
-
-        let edges = edges.iter().cloned()
-            .chain(v_in.iter().map(|&v| (source, v)))
-            .chain(v_out.iter().map(|&v| (v, sink)));
-
-        let cut: Vec<_> = min_vertex_cut_undirected(edges, source, sink)
-            .cut_vertices.iter()
-            .map(|&v| reps[v])
-            .collect();
-        let (n, m) = (v_in.len(), cut.len());
-
-        if m < n {
-            let key = (m, -(n as isize));
-            if let Some((best_key, _, _)) = best {
-                if key < best_key {
-                    best = Some((key, d, cut));
-                }
+    for (d, e) in ordered {
+        if ds.walk(d, [1, 0, 1]) != Some(e) {
+            if ds.orbit([0, 1], d).contains(&e) {
+                ds = cut_face(&ds, d, e);
             } else {
-                best = Some((key, d, cut));
+                return None;
             }
         }
+        cut_chambers.push(ds.op(1, d).unwrap());
+        cut_chambers.push(ds.op(1, e).unwrap());
     }
 
-    best.and_then(|(_, d, cut)| Some((d, cut)))
+    ds = cut_tile(&ds, &cut_chambers);
+
+    let junk = ds.orbit([0, 1, 3], glue_chamber);
+    collapse(&DSetOrEmpty::DSet(ds), junk, 3)
 }
 
 
