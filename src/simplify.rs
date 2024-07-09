@@ -457,7 +457,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
                 );
                 assert_eq!(
                     ordered.len(), cut_vertex_reps.len(),
-                    "got {:?} from {:?} in\n\n{}",
+                    "split_and_glue(): got {:?} from {:?} in\n\n{}",
                     ordered, cut_vertex_reps, DrawingInstructions::new(&ds)
                 );
                 split_and_glue_attempt(&ds, glue_chamber, ordered)
@@ -567,6 +567,11 @@ fn split_and_glue_attempt(
     ds: &PartialDSet, glue_chamber: usize, ordered: Vec<(usize, usize)>
 ) -> Option<DSetOrEmpty>
 {
+    eprintln!(
+        "# INFO: attempting {}-split with {}-glue",
+        ordered.len(), ds.orbit([0, 1], glue_chamber).len() / 2
+    );
+
     let mut ds = as_dset(ds);
     let mut cut_chambers = vec![];
 
@@ -575,12 +580,14 @@ fn split_and_glue_attempt(
             if ds.orbit([0, 1], d).contains(&e) {
                 ds = cut_face(&ds, d, e);
             } else {
+                eprintln!("# INFO: invalid split-and-glue attempt");
                 return None;
             }
         }
         cut_chambers.push(ds.op(1, d).unwrap());
         cut_chambers.push(ds.op(1, e).unwrap());
     }
+    eprintln!("# INFO: valid split-and-glue attempt");
 
     ds = cut_tile(&ds, &cut_chambers);
 
