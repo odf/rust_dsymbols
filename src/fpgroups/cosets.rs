@@ -13,8 +13,7 @@ pub type CosetTable = Vec<BTreeMap<isize, usize>>;
 #[derive(Clone)]
 struct DynamicCosetTable {
     nr_gens: usize,
-    top_row: usize,
-    table: BTreeMap<(usize, isize), usize>,
+    table: Vec<Vec<isize>>,
     part: IntPartition
 }
 
@@ -23,8 +22,7 @@ impl DynamicCosetTable {
     fn new(nr_gens: usize) -> Self {
         Self {
             nr_gens,
-            top_row: 0,
-            table: BTreeMap::new(),
+            table: vec![vec![-1; nr_gens * 2 + 1]],
             part: IntPartition::new(),
         }
     }
@@ -35,19 +33,27 @@ impl DynamicCosetTable {
     }
 
     fn len(&self) -> usize {
-        self.top_row + 1
+        self.table.len()
     }
 
     fn get(&self, c: usize, g: isize) -> Option<usize> {
-        self.table.get(&(c, g)).map(|&d| self.canon(d))
+        if c < self.len() {
+            let r = self.table[c][(g + self.nr_gens as isize) as usize];
+            if r >= 0 {
+                Some(self.canon(r as usize))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
     fn set(&mut self, c: usize, g: isize, d: usize) {
-        let n = self.nr_gens as isize;
-        assert!(g >= -n && g <= n);
-
-        self.top_row = self.top_row.max(c).max(d);
-        self.table.insert((c, g), d);
+        while c >= self.len() {
+            self.table.push(vec![-1; self.nr_gens * 2 + 1]);
+        }
+        self.table[c][(g + self.nr_gens as isize) as usize] = d as isize;
     }
 
     fn join(&mut self, c: usize, d: usize, g: isize) {
@@ -79,11 +85,6 @@ impl DynamicCosetTable {
                     }
                 }
                 self.part.unite(a, b);
-
-                let c = if self.canon(a) == a { b } else { a };
-                for g in self.all_gens() {
-                    self.table.remove(&(c, g));
-                }
             }
         }
     }
@@ -116,7 +117,7 @@ impl fmt::Display for DynamicCosetTable {
         for c in 0..self.len() {
             write!(f, "{}: ", c)?;
             for g in self.all_gens() {
-                if let Some(d) = self.table.get(&(c, g)) {
+                if let Some(d) = self.get(c, g) {
                     write!(f, "{} -> {}, ", g, d)?;
                 }
             }
