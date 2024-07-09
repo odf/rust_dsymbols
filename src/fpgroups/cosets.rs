@@ -153,12 +153,31 @@ fn scan(table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize)
 }
 
 
+fn scan_inverse(
+    table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize
+)
+    -> (usize, usize)
+{
+    let n = w.len();
+    let mut row = start;
+
+    for index in 0..limit {
+        if let Some(next) = table.get(row, -w[n - 1 - index]) {
+            row = next;
+        } else {
+            return (row, index);
+        }
+    }
+    (row, limit)
+}
+
+
 fn scan_both_ways(table: &DynamicCosetTable, w: &FreeWord, start: usize)
     -> (usize, usize, usize, isize)
 {
     let n = w.len();
     let (head, i) = scan(table, w, start, n);
-    let (tail, j) = scan(table, &w.inverse(), start, n - i);
+    let (tail, j) = scan_inverse(table, w, start, n - i);
     (head, tail, n - i - j, if i < n { w[i] } else { w[0] })
 }
 
