@@ -443,8 +443,9 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds) => {
             let ds = as_dset(&canonical(&as_dsym(ds)));
+            let mut result = None;
 
-            if let Some(cut) = small_tile_cut(&ds) {
+            for cut in small_tile_cuts(&ds) {
                 let (glue_chamber, cut_vertex_reps, inside_vertex_reps) = cut;
                 let special_chamber = ds.op(3, glue_chamber).unwrap();
                 let marked_vertex_reps = std::iter::empty()
@@ -460,21 +461,25 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
                     "split_and_glue(): got {:?} from {:?} in\n\n{}",
                     ordered, cut_vertex_reps, DrawingInstructions::new(&ds)
                 );
-                split_and_glue_attempt(&ds, glue_chamber, ordered)
-            } else {
-                None
+
+                result = split_and_glue_attempt(&ds, glue_chamber, ordered);
+                if result.is_some() {
+                    break;
+                }
             }
+
+            result
         }
     }
 }
 
 
-fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>, Vec<usize>)> {
+fn small_tile_cuts(ds: &PartialDSet) -> Vec<(usize, Vec<usize>, Vec<usize>)> {
     let (elm_to_index, reps, edges) = make_skeleton(ds);
     let source = reps.len();
     let sink = source + 1;
 
-    let mut best = None;
+    let mut cuts = vec![];
 
     for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
         let d3 = ds.op(3, d).unwrap();
@@ -501,19 +506,18 @@ fn small_tile_cut(ds: &PartialDSet) -> Option<(usize, Vec<usize>, Vec<usize>)> {
                 .map(|&v| reps[v])
                 .collect();
             let key = (m, -(n as isize));
-            if let Some((best_key, _, _, _)) = best {
-                if key < best_key {
-                    best = Some((key, d, cut_vertices, inside_vertices));
-                }
-            } else {
-                best = Some((key, d, cut_vertices, inside_vertices));
-            }
+            cuts.push((key, d, cut_vertices, inside_vertices));
         }
     }
 
-    best.and_then(|(_, d, cut_vertices, inside_vertices)|
-        Some((d, cut_vertices, inside_vertices))
-    )
+    cuts.sort();
+
+    cuts.iter()
+        .cloned()
+        .map(|(_, d, cut_vertices, inside_vertices)|
+            (d, cut_vertices, inside_vertices)
+        )
+        .collect()
 }
 
 
