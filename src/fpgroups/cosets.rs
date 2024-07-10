@@ -90,21 +90,26 @@ impl DynamicCosetTable {
     }
 
     fn compact(&self) -> CosetTable {
-        let to_idx: BTreeMap<_, _> = (0..self.len())
-            .filter(|&k| self.canon(k) == k)
-            .enumerate()
-            .map(|(i, k)| (k, i))
-            .collect();
+        let mut n = 0;
+        let mut old_to_new = vec![0; self.len()];
+        for k in 0..self.len() {
+            if self.canon(k) == k {
+                old_to_new[k] = n;
+                n += 1;
+            }
+        }
 
         let mut result = vec![];
-        for &k in to_idx.keys() {
-            let mut row = BTreeMap::new();
-            for g in self.all_gens() {
-                if let Some(c) = self.get(k, g) {
-                    row.insert(g, to_idx[&c]);
+        for k in 0..self.len() {
+            if self.canon(k) == k {
+                let mut row = BTreeMap::new();
+                for g in self.all_gens() {
+                    if let Some(c) = self.get(k, g) {
+                        row.insert(g, old_to_new[c]);
+                    }
                 }
+                result.push(row);
             }
-            result.push(row);
         }
 
         result
