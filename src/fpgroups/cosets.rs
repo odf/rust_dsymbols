@@ -89,7 +89,7 @@ impl DynamicCosetTable {
         }
     }
 
-    fn compact(&self) -> CosetTable {
+    fn compact(&self) -> DynamicCosetTable {
         let mut n = 0;
         let mut old_to_new = vec![0; self.len()];
         for k in 0..self.len() {
@@ -99,17 +99,31 @@ impl DynamicCosetTable {
             }
         }
 
-        let mut result = vec![];
+        let mut result = DynamicCosetTable::new(self.nr_gens);
         for k in 0..self.len() {
             if self.canon(k) == k {
-                let mut row = BTreeMap::new();
                 for g in self.all_gens() {
                     if let Some(c) = self.get(k, g) {
-                        row.insert(g, old_to_new[c]);
+                        result.set(old_to_new[k], g, old_to_new[c]);
                     }
                 }
-                result.push(row);
             }
+        }
+
+        result
+    }
+
+    fn as_map(&self) -> CosetTable {
+        let mut result = vec![];
+
+        for k in 0..self.len() {
+            let mut row = BTreeMap::new();
+            for g in self.all_gens() {
+                if let Some(c) = self.get(k, g) {
+                    row.insert(g, c);
+                }
+            }
+            result.push(row);
         }
 
         result
@@ -235,7 +249,7 @@ pub fn coset_table(
         }
     }
 
-    table.compact()
+    table.compact().as_map()
 }
 
 
@@ -279,7 +293,7 @@ fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
         }
     }
 
-    table.compact()
+    table.compact().as_map()
 }
 
 
@@ -429,7 +443,7 @@ impl BackTracking for CosetTableBacktracking {
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
         if first_free_in_table(state).is_none() {
-            Some(state.compact())
+            Some(state.compact().as_map())
         } else {
             None
         }
