@@ -35,7 +35,7 @@ fn trace_word(
 
     for &g in w.iter() {
         result *= &edge_to_word.get(&(p, g)).unwrap_or(&FreeWord::empty());
-        p = ct[p][&g];
+        p = ct.get(p, g).unwrap();
     }
 
     result
@@ -53,7 +53,7 @@ fn close_relations_in_place(
     let mut queue = VecDeque::from([(p, g, wd.clone())]);
 
     while let Some((point, gen, w)) = queue.pop_front() {
-        edge_to_word.insert((ct[point][&gen], -gen), w.inverse());
+        edge_to_word.insert((ct.get(point, gen).unwrap(), -gen), w.inverse());
         edge_to_word.insert((point, gen), w);
 
         for r in rels_by_gen[&gen].iter() {
@@ -66,7 +66,7 @@ fn close_relations_in_place(
                     let w = (r.rotated(i as isize + 1) * -h).inverse();
                     cuts.push((x, h, w));
                 }
-                x = ct[x][&h];
+                x = ct.get(x, h).unwrap();
             }
 
             if cuts.len() == 1 {
@@ -80,14 +80,13 @@ fn close_relations_in_place(
 
 
 fn spanning_tree(base_point: usize, ct: &CosetTable) -> Vec<(usize, isize)> {
-    let nr_gens = *ct[0].keys().max().unwrap_or(&0) as usize;
     let mut edges = vec![];
     let mut queue = VecDeque::from([base_point]);
     let mut seen = HashSet::from([base_point]);
 
     while let Some(point) = queue.pop_front() {
-        for gen in (1..=nr_gens as isize).flat_map(|i| [i, -i]) {
-            let p = ct[point][&gen];
+        for gen in ct.all_gens() {
+            let p = ct.get(point, gen).unwrap();
             if !seen.contains(&p) {
                 queue.push_back(p);
                 seen.insert(p);
@@ -104,7 +103,6 @@ pub fn stabilizer<I>(base_point: usize, rels: I, ct: &CosetTable)
     where I: IntoIterator<Item=FreeWord> + Clone
 {
     let rels: Vec<_> = rels.into_iter().collect();
-    let nr_gens = *ct[0].keys().max().unwrap_or(&0) as usize;
     let rels_by_gen = relators_by_start_gen(&rels);
 
     let mut point_to_word = HashMap::from([(base_point, FreeWord::empty())]);
@@ -114,16 +112,16 @@ pub fn stabilizer<I>(base_point: usize, rels: I, ct: &CosetTable)
         close_relations_in_place(
             &mut edge_to_word, (pt, gen), &FreeWord::empty(), &rels_by_gen, ct
         );
-        point_to_word.insert(ct[pt][&gen], &point_to_word[&pt] * gen);
+        point_to_word.insert(ct.get(pt, gen).unwrap(), &point_to_word[&pt] * gen);
     }
 
     let mut generators = vec![];
 
     for px in 0..ct.len() {
-        for g in (1..=nr_gens as isize).flat_map(|i| [i, -i]) {
+        for g in (1..=ct.nr_gens() as isize).flat_map(|i| [i, -i]) {
             if edge_to_word.get(&(px, g)).is_none() {
                 let wx = &point_to_word[&px];
-                let wy = &point_to_word[&ct[px][&g]];
+                let wy = &point_to_word[&ct.get(px, g).unwrap()];
                 generators.push(wx * g * wy.inverse());
 
                 let w = FreeWord::from([generators.len() as isize]);
@@ -157,8 +155,6 @@ pub fn stabilizer<I>(base_point: usize, rels: I, ct: &CosetTable)
 
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
-
     use super::*;
 
     fn ct_from_table<const N: usize, const M: usize>(
@@ -168,7 +164,17 @@ mod test {
     {
         assert!(t.iter().enumerate().all(|(i, &(c, _))| c == i));
 
-        t.iter().map(|(_, r)| BTreeMap::from(*r)).collect()
+        let nr_gens = t[0].1.iter()
+            .map(|(i, _)| i).cloned()
+            .max().unwrap() as usize;
+        let mut result = CosetTable::new(nr_gens);
+
+        for (row, entries) in t {
+            for (g, r) in entries {
+                result.set(row, g, r);
+            }
+        }
+        result
     }
 
     fn fw<const N: usize>(w: [isize; N]) -> FreeWord {

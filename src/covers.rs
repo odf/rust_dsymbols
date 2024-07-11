@@ -9,7 +9,7 @@ use crate::fundamental_group::fundamental_group;
 
 
 fn trace_word(table: &CosetTable, start: usize, word: &FreeWord) -> usize {
-    word.iter().fold(start, |row, g| table[row][g])
+    word.iter().fold(start, |row, g| table.get(row, *g).unwrap())
 }
 
 

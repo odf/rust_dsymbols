@@ -36,7 +36,14 @@ fn core_type_by_size(n: usize) -> String {
 
 
 fn is_fully_involutive(ct: &CosetTable) -> bool {
-    ct.iter().all(|row| row.keys().all(|g| row[&g] == row[&-g]))
+    for row in 0..ct.len() {
+        for g in ct.all_gens() {
+            if ct.get(row, g) != ct.get(row, -g) {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 
@@ -56,7 +63,7 @@ fn core_type(ct: &CosetTable) -> String {
 fn degree(ct: &CosetTable, w: &FreeWord) -> usize {
     successors(
         Some((0, 0)),
-        |&(i, row)| Some((i + 1, w.iter().fold(row, |a, g| ct[a][g])))
+        |&(i, row)| Some((i + 1, w.iter().fold(row, |a, g| ct.get(a, *g).unwrap())))
     )
         .skip(1)
         .skip_while(|&(_, row)| row != 0)

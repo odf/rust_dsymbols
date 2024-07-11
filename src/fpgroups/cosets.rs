@@ -7,19 +7,16 @@ use crate::util::partitions::IntPartition;
 use super::free_words::{relator_permutations, FreeWord};
 
 
-pub type CosetTable = Vec<BTreeMap<isize, usize>>;
-
-
 #[derive(Clone)]
-struct DynamicCosetTable {
+pub struct CosetTable {
     nr_gens: usize,
     table: Vec<Vec<isize>>,
     part: IntPartition
 }
 
 
-impl DynamicCosetTable {
-    fn new(nr_gens: usize) -> Self {
+impl CosetTable {
+    pub fn new(nr_gens: usize) -> Self {
         Self {
             nr_gens,
             table: vec![vec![-1; nr_gens * 2 + 1]],
@@ -27,16 +24,20 @@ impl DynamicCosetTable {
         }
     }
 
-    fn all_gens(&self) -> Vec<isize> {
+    pub fn nr_gens(&self) -> usize {
+        self.nr_gens
+    }
+
+    pub fn all_gens(&self) -> Vec<isize> {
         let tmp: Vec<_> = (1..=self.nr_gens).map(|g| g as isize).collect();
         tmp.iter().cloned().chain(tmp.iter().map(|g| -g)).collect()
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.table.len()
     }
 
-    fn get(&self, c: usize, g: isize) -> Option<usize> {
+    pub fn get(&self, c: usize, g: isize) -> Option<usize> {
         if c < self.len() {
             let r = self.table[c][(g + self.nr_gens as isize) as usize];
             if r >= 0 {
@@ -49,7 +50,7 @@ impl DynamicCosetTable {
         }
     }
 
-    fn set(&mut self, c: usize, g: isize, d: usize) {
+    pub fn set(&mut self, c: usize, g: isize, d: usize) {
         while c >= self.len() {
             self.table.push(vec![-1; self.nr_gens * 2 + 1]);
         }
@@ -89,7 +90,7 @@ impl DynamicCosetTable {
         }
     }
 
-    fn compact(&self) -> DynamicCosetTable {
+    fn compact(&self) -> CosetTable {
         let mut n = 0;
         let mut old_to_new = vec![0; self.len()];
         for k in 0..self.len() {
@@ -99,7 +100,7 @@ impl DynamicCosetTable {
             }
         }
 
-        let mut result = DynamicCosetTable::new(self.nr_gens);
+        let mut result = CosetTable::new(self.nr_gens);
         for k in 0..self.len() {
             if self.canon(k) == k {
                 for g in self.all_gens() {
@@ -113,7 +114,7 @@ impl DynamicCosetTable {
         result
     }
 
-    fn as_map(&self) -> CosetTable {
+    fn as_map(&self) -> Vec<BTreeMap<isize, usize>> {
         let mut result = vec![];
 
         for k in 0..self.len() {
@@ -131,7 +132,7 @@ impl DynamicCosetTable {
 }
 
 
-impl fmt::Display for DynamicCosetTable {
+impl fmt::Display for CosetTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for c in 0..self.len() {
             write!(f, "{}: ", c)?;
@@ -156,7 +157,7 @@ fn expanded_relator_set(relators: &Vec<FreeWord>) -> BTreeSet<FreeWord> {
 }
 
 
-fn scan(table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize)
+fn scan(table: &CosetTable, w: &FreeWord, start: usize, limit: usize)
     -> (usize, usize)
 {
     let mut row = start;
@@ -173,7 +174,7 @@ fn scan(table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize)
 
 
 fn scan_inverse(
-    table: &DynamicCosetTable, w: &FreeWord, start: usize, limit: usize
+    table: &CosetTable, w: &FreeWord, start: usize, limit: usize
 )
     -> (usize, usize)
 {
@@ -191,7 +192,7 @@ fn scan_inverse(
 }
 
 
-fn scan_both_ways(table: &DynamicCosetTable, w: &FreeWord, start: usize)
+fn scan_both_ways(table: &CosetTable, w: &FreeWord, start: usize)
     -> (usize, usize, usize, isize)
 {
     let n = w.len();
@@ -202,7 +203,7 @@ fn scan_both_ways(table: &DynamicCosetTable, w: &FreeWord, start: usize)
 
 
 fn scan_and_connect(
-    table: &mut DynamicCosetTable, w: &FreeWord, start: usize
+    table: &mut CosetTable, w: &FreeWord, start: usize
 ) {
     let (head, tail, gap, c) = scan_both_ways(table, w, start);
 
@@ -219,7 +220,7 @@ pub fn coset_table(
 ) -> CosetTable
 {
     let rels = expanded_relator_set(relators);
-    let mut table = DynamicCosetTable::new(nr_gens);
+    let mut table = CosetTable::new(nr_gens);
 
     for i in 0.. {
         if i >= table.len() {
@@ -249,7 +250,7 @@ pub fn coset_table(
         }
     }
 
-    table.compact().as_map()
+    table.compact()
 }
 
 
@@ -260,10 +261,12 @@ pub fn coset_representative(table: &CosetTable) -> BTreeMap<usize, FreeWord> {
     while let Some(i) = queue.pop_front() {
         let w = result[&i].clone();
 
-        for (&g, &k) in table[i].iter() {
-            if !result.contains_key(&k) {
-                result.insert(k, &w * g);
-                queue.push_back(k);
+        for k in 0..table.len() {
+            for g in table.all_gens() {
+                if !result.contains_key(&k) {
+                    result.insert(k, &w * g);
+                    queue.push_back(k);
+                }
             }
         }
     }
@@ -277,7 +280,7 @@ fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
         T: Clone + Eq + std::hash::Hash,
         F: Fn(&T, isize) -> T
 {
-    let mut table = DynamicCosetTable::new(nr_gens);
+    let mut table = CosetTable::new(nr_gens);
     let mut o2n = HashMap::from([(start.clone(), 0)]);
     let mut n2o = HashMap::from([(0, start.clone())]);
 
@@ -293,31 +296,33 @@ fn induced_table<T, F>(nr_gens: usize, img: F, start: &T) -> CosetTable
         }
     }
 
-    table.compact().as_map()
+    table.compact()
 }
 
 
 pub fn core_table(base: &CosetTable) -> CosetTable {
-    let nr_gens = *base[0].keys().max().unwrap() as usize;
-    let img = |es: &Vec<usize>, g| es.iter().map(|&e| base[e][&g]).collect();
+    let img = |es: &Vec<usize>, g| es.iter()
+        .map(|&e| base.get(e, g).unwrap())
+        .collect();
     let start = &(0..base.len()).collect();
 
-    induced_table(nr_gens, img, start)
+    induced_table(base.nr_gens, img, start)
 }
 
 
 pub fn intersection_table(ta: &CosetTable, tb: &CosetTable) -> CosetTable {
-    let nr_gens = *ta[0].keys().max().unwrap() as usize;
-    assert_eq!(nr_gens, *tb[0].keys().max().unwrap() as usize);
+    assert_eq!(ta.nr_gens, tb.nr_gens);
 
-    let img = |&(a, b): &(usize, usize), g| (ta[a][&g], tb[b][&g]);
+    let img = |&(a, b): &(usize, usize), g| {
+        (ta.get(a, g).unwrap(), tb.get(b, g).unwrap())
+    };
     let start = &(0 as usize, 0 as usize);
 
-    induced_table(nr_gens, img, start)
+    induced_table(ta.nr_gens, img, start)
 }
 
 
-fn first_free_in_table(table: &DynamicCosetTable) -> Option<(usize, isize)> {
+fn first_free_in_table(table: &CosetTable) -> Option<(usize, isize)> {
     for k in 0..table.len() {
         for g in table.all_gens() {
             if table.get(k, g).is_none() {
@@ -330,13 +335,13 @@ fn first_free_in_table(table: &DynamicCosetTable) -> Option<(usize, isize)> {
 
 
 fn derived_table(
-    table: &DynamicCosetTable,
+    table: &CosetTable,
     expanded_rels: &Vec<FreeWord>,
     from: usize,
     to: usize,
     g: isize
 )
-    -> Option<DynamicCosetTable>
+    -> Option<CosetTable>
 {
     if table.get(from, g).is_some() || table.get(to, -g).is_some() {
         return None;
@@ -364,9 +369,9 @@ fn derived_table(
 
 
 fn potential_children(
-    table: &DynamicCosetTable, expanded_rels: &Vec<FreeWord>, max_rows: usize
+    table: &CosetTable, expanded_rels: &Vec<FreeWord>, max_rows: usize
 )
-    -> Vec<DynamicCosetTable>
+    -> Vec<CosetTable>
 {
     let mut result = vec![];
 
@@ -383,7 +388,7 @@ fn potential_children(
 }
 
 
-fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
+fn compare_renumbered_from(table: &CosetTable, start: usize) -> isize {
     let n = table.len();
     let mut n2o = HashMap::from([(0, start)]);
     let mut o2n = HashMap::from([(start, 0)]);
@@ -416,7 +421,7 @@ fn compare_renumbered_from(table: &DynamicCosetTable, start: usize) -> isize {
 }
 
 
-fn is_canonical(table: &DynamicCosetTable) -> bool {
+fn is_canonical(table: &CosetTable) -> bool {
     for start in 1..table.len() {
         if compare_renumbered_from(table, start) < 0 {
             return false;
@@ -434,16 +439,16 @@ struct CosetTableBacktracking {
 
 
 impl BackTracking for CosetTableBacktracking {
-    type State = DynamicCosetTable;
+    type State = CosetTable;
     type Item = CosetTable;
 
     fn root(&self) -> Self::State {
-        DynamicCosetTable::new(self.nr_gens)
+        CosetTable::new(self.nr_gens)
     }
 
     fn extract(&self, state: &Self::State) -> Option<Self::Item> {
         if first_free_in_table(state).is_none() {
-            Some(state.compact().as_map())
+            Some(state.compact())
         } else {
             None
         }
@@ -513,7 +518,7 @@ mod coset_tests {
     #[test]
     fn test_coset_table() {
         assert_eq!(
-            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[]),
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[]).as_map(),
             vec![
                 BTreeMap::from([(1, 1), (2, 2), (-1, 1), (-2, 2)]),
                 BTreeMap::from([(1, 0), (2, 3), (-1, 0), (-2, 3)]),
@@ -522,21 +527,21 @@ mod coset_tests {
             ]
         );
         assert_eq!(
-            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1]]),
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1]]).as_map(),
             vec![
                 BTreeMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
                 BTreeMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
             ]
         );
         assert_eq!(
-            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[2]]),
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[2]]).as_map(),
             vec![
                 BTreeMap::from([(1, 1), (2, 0), (-1, 1), (-2, 0)]),
                 BTreeMap::from([(1, 0), (2, 1), (-1, 0), (-2, 1)]),
             ]
         );
         assert_eq!(
-            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1], &[2]]),
+            make_table(2, &[&[1, 1], &[2, 2], &[1, 2, 1, 2]], &[&[1], &[2]]).as_map(),
             vec![
                 BTreeMap::from([(1, 0), (2, 0), (-1, 0), (-2, 0)]),
             ]
