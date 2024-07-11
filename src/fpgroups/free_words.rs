@@ -4,7 +4,7 @@ use std::ops::{Index, Mul, MulAssign};
 
 
 fn normalized<I>(w: I) -> Vec<isize> where I: IntoIterator<Item=isize> {
-    let mut buffer = vec![];
+    let mut buffer = Vec::with_capacity(64);
 
     for x in w.into_iter() {
         if buffer.last().is_some_and(|y| x == -y) {
@@ -60,9 +60,13 @@ impl FreeWord {
     pub fn rotated(&self, i: isize) -> Self {
         let n = self.w.len() as isize;
         let i = i.rem_euclid(n) as usize;
-        let front = self.w[i..].iter().cloned();
-        let back = self.w[..i].iter().cloned();
-        Self::new(front) * Self::new(back)
+
+        let r = std::iter::empty()
+            .chain(self.w.iter().skip(i))
+            .chain(self.w.iter().take(i))
+            .cloned();
+
+        Self::new(r)
     }
 }
 
@@ -192,7 +196,23 @@ pub fn relator_permutations(fw: &FreeWord) -> BTreeSet<FreeWord> {
 
 
 pub fn relator_representative(fw: &FreeWord) -> FreeWord {
-    relator_permutations(fw).iter().min().unwrap().clone()
+    if fw.w.len() == 0 {
+        fw.clone()
+    } else {
+        let mut best = fw.clone();
+
+        for i in 0..fw.w.len() {
+            let w = fw.rotated(i as isize);
+            let winv = w.inverse();
+            if winv < best {
+                best = winv;
+            }
+            if w < best {
+                best = w;
+            }
+        }
+        best
+    }
 }
 
 
