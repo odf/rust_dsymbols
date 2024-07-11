@@ -313,12 +313,30 @@ pub fn core_table(base: &CosetTable) -> CosetTable {
 pub fn intersection_table(ta: &CosetTable, tb: &CosetTable) -> CosetTable {
     assert_eq!(ta.nr_gens, tb.nr_gens);
 
-    let img = |&(a, b): &(usize, usize), g| {
-        (ta.get(a, g).unwrap(), tb.get(b, g).unwrap())
-    };
-    let start = &(0 as usize, 0 as usize);
+    let mut table = CosetTable::new(ta.nr_gens);
+    let mut o2n = vec![vec![-1; tb.len()]; ta.len()];
+    let mut n2o = vec![];
 
-    induced_table(ta.nr_gens, img, start)
+    o2n[0][0] = 0;
+    n2o.push((0, 0));
+
+    for i in 0.. {
+        if i >= table.len() {
+            break;
+        }
+        let (a, b) = n2o[i];
+        for g in table.all_gens() {
+            let ag = ta.get(a, g).unwrap();
+            let bg = tb.get(b, g).unwrap();
+            if o2n[ag][bg] < 0 {
+                o2n[ag][bg] = table.len() as isize;
+                n2o.push((ag, bg));
+            }
+            table.join(i, o2n[ag][bg] as usize, g);
+        }
+    }
+
+    table.compact()
 }
 
 
