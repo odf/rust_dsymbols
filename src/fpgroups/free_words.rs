@@ -4,7 +4,7 @@ use std::ops::{Index, Mul, MulAssign};
 
 
 fn normalized<I>(w: I) -> Vec<isize> where I: IntoIterator<Item=isize> {
-    let mut buffer = Vec::with_capacity(64);
+    let mut buffer = Vec::with_capacity(32);
 
     for x in w.into_iter() {
         if buffer.last().is_some_and(|y| x == -y) {
