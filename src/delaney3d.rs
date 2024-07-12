@@ -1,8 +1,9 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::iter::successors;
 
 use crate::covers::cover_for_table;
-use crate::derived::oriented_cover;
+use crate::delaney2d::orbifold_symbol;
+use crate::derived::{oriented_cover, subsymbol};
 use crate::dsyms::{DSym, PartialDSym};
 use crate::fpgroups::cosets::{
     core_table, coset_tables, intersection_table, CosetTable
@@ -156,6 +157,107 @@ pub fn pseudo_toroidal_cover<T: DSym>(ds: &T) -> Option<PartialDSym> {
 }
 
 
+pub fn orbifold_graph<T: DSym>(ds: &T) -> (Vec<String>, Vec<(usize, usize)>) {
+    assert!(ds.dim() == 3, "must be three-dimensional");
+    assert!(ds.is_complete(), "must be complete");
+
+    let mut orbit_nr = HashMap::new();
+    let mut orbit_type = vec![];
+    let mut edges: Vec<(usize, usize)> = vec![];
+
+    for i in 0..=3 {
+        for d in 1..=ds.size() {
+            if ds.op(i, d) == Some(d) {
+                let n = orbit_type.len();
+                orbit_nr.insert((vec![i], d), n);
+                orbit_type.push("1*".to_string());
+            }
+        }
+    }
+
+    for (i, j) in [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)] {
+        for d in ds.orbit_reps([i, j], 1..=ds.size()) {
+            let t = orbit_type_1d(ds, i, j, d);
+            if t != "1" {
+                let n = orbit_type.len();
+                for e in ds.orbit([i, j], d) {
+                    orbit_nr.insert((vec![i, j], e), n);
+                }
+                orbit_type.push(t);
+
+                for m in suborbit_numbers([i, j], d, ds, &orbit_nr) {
+                    edges.push((n, m));
+                }
+            }
+        }
+    }
+
+    for idcs in [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]] {
+        for d in ds.orbit_reps(idcs, 1..=ds.size()) {
+            let t = orbifold_symbol(&subsymbol(ds, idcs, d));
+            if t != "1" {
+                let n = orbit_type.len();
+                for e in ds.orbit(idcs, d) {
+                    orbit_nr.insert((Vec::from(idcs), e), n);
+                }
+                let t = if t == "*423" { "*432".to_string() } else { t };
+                orbit_type.push(t);
+
+                for m in suborbit_numbers(idcs, d, ds, &orbit_nr) {
+                    edges.push((n, m));
+                }
+            }
+        }
+    }
+
+    (orbit_type, edges)
+}
+
+
+fn suborbit_numbers<T, I>(
+    idcs: I,
+    d: usize,
+    ds: &T,
+    orbit_nr: &HashMap<(Vec<usize>, usize), usize>,
+)
+    -> Vec<usize>
+    where
+        T: DSym,
+        I: IntoIterator<Item=usize>
+{
+    let idcs: Vec<_> = idcs.into_iter().collect();
+    let mut result = BTreeSet::new();
+
+    for &k in &idcs {
+        let subidcs: Vec<_> = idcs.iter().cloned()
+            .filter(|&i| i != k)
+            .collect();
+        for e in ds.orbit(idcs.iter().cloned(), d) {
+            if let Some(&m) = orbit_nr.get(&(subidcs.clone(), e)) {
+                result.insert(m);
+            }
+        }
+    }
+
+    result.iter().cloned().collect()
+}
+
+
+fn orbit_type_1d<T: DSym>(ds: &T, i: usize, j: usize, d: usize) -> String {
+    let v = ds.v(i, j, d).unwrap();
+    let s = if v > 9 { format!("({v})({v})") } else { format!("{v}{v}") };
+
+    let on_mirror = ds.orbit([i, j], d).iter()
+        .any(|&e| ds.op(i, e) == Some(e) || ds.op(j, e) == Some(e));
+
+    if on_mirror {
+        if v == 1 { "1*".to_string() } else { format!("*{s}") }
+    } else {
+        if v == 1 { "1".to_string() } else { s }
+    }.to_string()
+}
+
+
 #[test]
 fn test_toroidal_cover() {
     let check_pseudo_toroidal = |src: &str, out: &str| {
@@ -217,4 +319,19 @@ fn test_toroidal_cover_edgecase() {
     check_pseudo_toroidal(
         "<2872.1:7 3:1 3 4 6 7,2 3 5 7,4 5 6 7,1 2 3 7 6:3 4,2 6,18 4>",
     );
+}
+
+
+#[test]
+fn test_orbifold_graph() {
+    let check_graph = |src: &str| {
+        let (types, edges) = src.parse::<PartialDSym>()
+            .map(|ds| orbifold_graph(&ds))
+            .unwrap();
+        eprintln!("types = {types:?}");
+        eprintln!("edges = {edges:?}");
+        assert!(false);
+    };
+
+    check_graph("<1.1:1 3:1,1,1,1:4,3,4>");
 }
