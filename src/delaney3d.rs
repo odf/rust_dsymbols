@@ -213,13 +213,39 @@ pub fn orbifold_graph<T: DSym>(ds: &T) -> (Vec<String>, Vec<(usize, usize)>) {
         }
     }
 
-    compress_graph(&orbit_type, &edges)
+    sort_nodes(&compress_graph(&(orbit_type, edges)))
 }
 
 
-fn compress_graph(node_type: &Vec<String>, edges: &Vec<(usize, usize)>)
+fn sort_nodes(graph: &(Vec<String>, Vec<(usize, usize)>))
     -> (Vec<String>, Vec<(usize, usize)>)
 {
+    let (node_type, edges) = graph;
+
+    let mut new_to_old: Vec<_> = (0..node_type.len()).collect();
+    new_to_old.sort_by_key(|&i| &node_type[i]);
+
+    let mut old_to_new = vec![0; new_to_old.len()];
+    for n in 0..new_to_old.len() {
+        old_to_new[new_to_old[n]] = n;
+    }
+
+    let res_types = new_to_old.iter()
+        .map(|&i| &node_type[i]).cloned()
+        .collect();
+    let res_edges = edges.iter()
+        .map(|&(v, w)| (old_to_new[v], old_to_new[w]))
+        .collect();
+
+    (res_types, res_edges)
+}
+
+
+fn compress_graph(graph: &(Vec<String>, Vec<(usize, usize)>))
+    -> (Vec<String>, Vec<(usize, usize)>)
+{
+    let (node_type, edges) = graph;
+
     let mut p = IntPartition::new();
     for &(v, w) in edges {
         if node_type[v] == node_type[w] {
