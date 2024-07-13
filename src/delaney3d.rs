@@ -195,12 +195,14 @@ pub fn orbifold_graph<T: DSym>(ds: &T) -> (Vec<String>, Vec<(usize, usize)>) {
     for idcs in [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]] {
         for d in ds.orbit_reps(idcs, 1..=ds.size()) {
             let t = orbifold_symbol(&subsymbol(ds, idcs, d));
+            // only relevant case that may not get fully normalized:
+            let t = if t == "*423" { "*432".to_string() } else { t };
+
             if t != "1" {
                 let n = orbit_type.len();
                 for e in ds.orbit(idcs, d) {
                     orbit_nr.insert((Vec::from(idcs), e), n);
                 }
-                let t = if t == "*423" { "*432".to_string() } else { t };
                 orbit_type.push(t);
 
                 for m in suborbit_numbers(idcs, d, ds, &orbit_nr) {

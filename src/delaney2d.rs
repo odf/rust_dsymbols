@@ -204,6 +204,7 @@ pub fn orbifold_symbol<T: DSym>(ds: &T) -> String {
 
     let mut parts = vec![degree_list_as_string(cones)];
 
+    // TODO consider flipping all boundary components for full normalization
     for corners in bnd_comps {
         parts.push("*".to_string());
         parts.push(degree_list_as_string(corners));
