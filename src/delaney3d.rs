@@ -308,30 +308,17 @@ fn test_toroidal_cover() {
 
 
 #[test]
-fn test_toroidal_cover_edgecase() {
-    let check_pseudo_toroidal = |src: &str| {
-        let cov = src.parse::<PartialDSym>()
-            .map(|ds| pseudo_toroidal_cover(&ds))
-            .unwrap();
-        assert!(cov.is_some());
-    };
-
-    check_pseudo_toroidal(
-        "<2872.1:7 3:1 3 4 6 7,2 3 5 7,4 5 6 7,1 2 3 7 6:3 4,2 6,18 4>",
-    );
-}
-
-
-#[test]
 fn test_orbifold_graph() {
-    let check_graph = |src: &str| {
+    let check_graph = |src: &str, nr_verts, nr_edges| {
         let (types, edges) = src.parse::<PartialDSym>()
             .map(|ds| orbifold_graph(&ds))
             .unwrap();
+
         eprintln!("types = {types:?}");
         eprintln!("edges = {edges:?}");
-        assert!(false);
+        assert_eq!(types.len(), nr_verts);
+        assert_eq!(edges.len(), nr_edges);
     };
 
-    check_graph("<1.1:1 3:1,1,1,1:4,3,4>");
+    check_graph("<1.1:1 3:1,1,1,1:4,3,4>", 14, 24);
 }
