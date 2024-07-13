@@ -12,6 +12,7 @@ use crate::fpgroups::free_words::FreeWord;
 use crate::fpgroups::invariants::abelian_invariants;
 use crate::fpgroups::stabilizer::stabilizer;
 use crate::fundamental_group::{fundamental_group, FundamentalGroup};
+use crate::util::partitions::IntPartition;
 
 
 fn point_groups() -> Vec<String> {
@@ -212,7 +213,38 @@ pub fn orbifold_graph<T: DSym>(ds: &T) -> (Vec<String>, Vec<(usize, usize)>) {
         }
     }
 
-    (orbit_type, edges)
+    compress_graph(&orbit_type, &edges)
+}
+
+
+fn compress_graph(node_type: &Vec<String>, edges: &Vec<(usize, usize)>)
+    -> (Vec<String>, Vec<(usize, usize)>)
+{
+    let mut p = IntPartition::new();
+    for &(v, w) in edges {
+        if node_type[v] == node_type[w] {
+            p.unite(v, w);
+        }
+    }
+
+    let mut old_to_new = vec![0; node_type.len()];
+    let mut res_types = vec![];
+    for i in 0..node_type.len() {
+        if p.find(i) == i {
+            old_to_new[i] = res_types.len();
+            res_types.push(node_type[i].clone());
+        }
+    }
+    for i in 0..node_type.len() {
+        old_to_new[i] = old_to_new[p.find(i)];
+    }
+
+    let res_edges = edges.iter()
+        .map(|&(v, w)| (old_to_new[v], old_to_new[w]))
+        .collect::<BTreeSet<_>>().into_iter()
+        .collect();
+
+    (res_types, res_edges)
 }
 
 
