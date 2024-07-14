@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use crate::delaney3d::pseudo_toroidal_cover;
-use crate::derived::{canonical, minimal_image, subsymbol};
+use crate::delaney3d::{orbifold_graph, pseudo_toroidal_cover};
+use crate::derived::{as_partial_dsym, canonical, minimal_image, subsymbol};
 use crate::dsets::DSet;
 use crate::dsyms::{DSym, PartialDSym, SimpleDSym};
 use crate::fpgroups::cosets::coset_tables;
@@ -66,6 +66,30 @@ fn bad_subgroup_count(fg: &FundamentalGroup, index: usize, expected: usize)
 }
 
 
+fn orbifold_invariant<T: DSym>(ds: &T) -> String {
+    let (labels, edges) = orbifold_graph(ds);
+    let fg = fundamental_group(ds);
+    let nr_gens = fg.gen_to_edge.len();
+    let invars = abelian_invariants(nr_gens, fg.relators.clone());
+
+    let mut parts = vec![labels.len().to_string()];
+    parts.extend(labels);
+    parts.push(if ds.is_oriented() {
+        "2".to_string()
+    } else if ds.is_weakly_oriented() {
+        "1".to_string()
+    } else {
+        "0".to_string()
+    });
+    parts.push(edges.len().to_string());
+    parts.push(invars.len().to_string());
+    parts.extend(invars.iter().map(|n| n.to_string()));
+    parts.push("".to_string());
+
+    parts.join("/")
+}
+
+
 pub enum Euclidean {
     Yes,
     No(String),
@@ -88,6 +112,7 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
         "<1.1:1 3:1,1,1,1:4,3,4>",
         "<1.1:8 3:2 4 6 8,6 3 5 7 8,2 7 8 5 6,4 3 6 8:3 4,5 3,3 4>",
     ]);
+    //let orb = orbifold_invariant(ds);
 
     if let Some(cov) = pseudo_toroidal_cover(ds) {
         if let Some(simp) = simplify(&cov) {
