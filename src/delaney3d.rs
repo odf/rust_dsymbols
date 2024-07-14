@@ -267,10 +267,20 @@ fn compress_graph(graph: &(Vec<String>, Vec<(usize, usize)>))
 
     let res_edges = edges.iter()
         .map(|&(v, w)| (old_to_new[v], old_to_new[w]))
+        .filter(|&e| valid_edge(e, &res_types))
         .collect::<BTreeSet<_>>().into_iter()
         .collect();
 
     (res_types, res_edges)
+}
+
+
+fn valid_edge(edge: (usize, usize), types: &Vec<String>) -> bool {
+    let (v, w) = edge;
+    let tv = &types[v];
+    let tw = &types[w];
+
+    v != w && (tw != "1*" || (tv.len() == 3 && tv.starts_with("*")))
 }
 
 
