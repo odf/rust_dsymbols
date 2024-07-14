@@ -79,7 +79,7 @@ impl<'a, T: DSym> Boundary<'a, T> {
 
             let good = if let Some(j) = j {
                 let t = if self.ds.op(i, d) == Some(d) { 1 } else { 2 };
-                let m = self.ds.m(i, j, d).unwrap() * t;
+                let m = self.ds.m(i, j, d).unwrap_or(0) * t;
                 self.opposite(d, i, j).is_some_and(|(_, n)| n == m)
             } else {
                 true
