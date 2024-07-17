@@ -479,11 +479,18 @@ fn small_tile_cuts(ds: &PartialDSet) -> Vec<(usize, Vec<(usize, usize)>)> {
             .chain(v_out.iter().map(|&v| (v, sink)));
 
         let cut_raw = min_vertex_cut_undirected(edges, source, sink);
-        let (n, m) = (v_in.len(), cut_raw.cut_vertices.len());
+        let (glue_chamber, ordered) = process_cut(cut_raw, &reps, d, ds);
+        let glue_length = v_in.len();
+        let cut_length = ordered.len();
+        let nr_face_cuts = ordered.iter()
+            .filter(|&&(d, e)| ds.walk(d, [1, 0, 1]) != Some(e))
+            .count();
+        let nr_face_glues = ds.orbit([0, 1], d).iter()
+            .filter(|&&d| ds.m(2, 3, d) == Some(3))
+            .count() / 2;
 
-        if m < n {
-            let (glue_chamber, ordered) = process_cut(cut_raw, &reps, d, ds);
-            let key = (m, -(n as isize));
+        if (cut_length, nr_face_cuts) < (glue_length, nr_face_glues) {
+            let key = (cut_length, -(glue_length as isize));
             cuts.push((key, (glue_chamber, ordered)));
         }
     }
