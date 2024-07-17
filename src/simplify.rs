@@ -5,7 +5,7 @@ use crate::derived::{build_set, build_sym_using_vs, canonical};
 use crate::dsets::{DSet, PartialDSet};
 use crate::dsyms::{DSym, PartialDSym};
 use crate::fundamental_group::inner_edges;
-use crate::util::cutsets::min_vertex_cut_undirected;
+use crate::util::cutsets::{min_vertex_cut_undirected, VertexCut};
 
 
 struct DrawingInstructions<'a>
@@ -445,23 +445,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
             let ds = as_dset(&canonical(&as_dsym(ds)));
             let mut result = None;
 
-            for cut in small_tile_cuts(&ds) {
-                let (glue_chamber, cut_vertex_reps, inside_vertex_reps) = cut;
-                let special_chamber = ds.op(3, glue_chamber).unwrap();
-                let marked_vertex_reps = std::iter::empty()
-                    .chain(ds.orbit([0, 1], glue_chamber))
-                    .chain(cut_vertex_reps.iter().cloned())
-                    .chain(inside_vertex_reps.iter().cloned())
-                    .collect();
-                let ordered = ordered_cut(
-                    special_chamber, &marked_vertex_reps, &ds
-                );
-                assert_eq!(
-                    ordered.len(), cut_vertex_reps.len(),
-                    "split_and_glue(): got {:?} from {:?} in\n\n{}",
-                    ordered, cut_vertex_reps, DrawingInstructions::new(&ds)
-                );
-
+            for (glue_chamber, ordered) in small_tile_cuts(&ds) {
                 result = split_and_glue_attempt(&ds, glue_chamber, ordered);
                 if result.is_some() {
                     break;
@@ -474,7 +458,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-fn small_tile_cuts(ds: &PartialDSet) -> Vec<(usize, Vec<usize>, Vec<usize>)> {
+fn small_tile_cuts(ds: &PartialDSet) -> Vec<(usize, Vec<(usize, usize)>)> {
     let (elm_to_index, reps, edges) = make_skeleton(ds);
     let source = reps.len();
     let sink = source + 1;
@@ -498,26 +482,52 @@ fn small_tile_cuts(ds: &PartialDSet) -> Vec<(usize, Vec<usize>, Vec<usize>)> {
         let (n, m) = (v_in.len(), cut_raw.cut_vertices.len());
 
         if m < n {
-            let cut_vertices: Vec<_> = cut_raw.cut_vertices.iter()
-                .map(|&v| reps[v])
-                .collect();
-            let inside_vertices: Vec<_> = cut_raw.inside_vertices.iter()
-                .filter(|&&v| v < reps.len())
-                .map(|&v| reps[v])
-                .collect();
+            let (glue_chamber, ordered) = process_cut(cut_raw, &reps, d, ds);
             let key = (m, -(n as isize));
-            cuts.push((key, d, cut_vertices, inside_vertices));
+            cuts.push((key, (glue_chamber, ordered)));
         }
     }
 
     cuts.sort();
 
-    cuts.iter()
-        .cloned()
-        .map(|(_, d, cut_vertices, inside_vertices)|
-            (d, cut_vertices, inside_vertices)
-        )
-        .collect()
+    cuts.into_iter().map(|(_, data)| data).collect()
+}
+
+
+fn process_cut(
+    cut: VertexCut,
+    vertex_reps: &Vec<usize>,
+    glue_chamber: usize,
+    ds: &PartialDSet
+)
+    -> (usize, Vec<(usize, usize)>)
+{
+    let cut_vertex_reps: Vec<_> = cut.cut_vertices.iter()
+        .map(|&v| vertex_reps[v])
+        .collect();
+
+    let inside_vertex_reps: Vec<_> = cut.inside_vertices.iter()
+        .filter(|&&v| v < vertex_reps.len())
+        .map(|&v| vertex_reps[v])
+        .collect();
+
+    let marked_vertex_reps = std::iter::empty()
+        .chain(ds.orbit([0, 1], glue_chamber))
+        .chain(cut_vertex_reps.iter().cloned())
+        .chain(inside_vertex_reps.iter().cloned())
+        .collect();
+
+    let ordered = ordered_cut(
+        ds.op(3, glue_chamber).unwrap(), &marked_vertex_reps, ds
+    );
+
+    assert_eq!(
+        ordered.len(), cut_vertex_reps.len(),
+        "split_and_glue(): got {:?} from {:?} in\n\n{}",
+        ordered, cut_vertex_reps, DrawingInstructions::new(&ds)
+    );
+
+    (glue_chamber, ordered)
 }
 
 
