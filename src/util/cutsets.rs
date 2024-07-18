@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 
+#[derive(Debug)]
 pub struct EdgeCut {
     pub cut_edges: Vec<(usize, usize)>,
     pub inside_vertices: Vec<usize>,
@@ -49,6 +50,7 @@ pub fn min_edge_cut_undirected<I>(edges: I, source: usize, sink: usize)
 }
 
 
+#[derive(Debug)]
 pub struct VertexCut {
     pub cut_vertices: Vec<usize>,
     pub inside_vertices: Vec<usize>,
