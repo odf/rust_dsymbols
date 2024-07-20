@@ -468,14 +468,14 @@ fn small_tile_cuts(ds: &PartialDSet) -> Vec<(usize, Vec<(usize, usize)>)> {
     let mut cuts = vec![];
 
     for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
-        let ordered = find_cut(ds, d, &skel);
+        if let Some(ordered) = find_cut(ds, d, &skel) {
+            let glue_length = ds.orbit([0, 1], d).len() / 2;
+            let cut_length = ordered.len();
 
-        let glue_length = ds.orbit([0, 1], d).len() / 2;
-        let cut_length = ordered.len();
-
-        if cut_length < glue_length {
-            let key = (cut_length, -(glue_length as isize));
-            cuts.push((key, (d, ordered)));
+            if cut_length < glue_length {
+                let key = (cut_length, -(glue_length as isize));
+                cuts.push((key, (d, ordered)));
+            }
         }
     }
 
@@ -490,7 +490,7 @@ fn find_cut(
     d: usize,
     skel: &(Vec<usize>, Vec<usize>, Vec<(usize, usize)>)
 )
-    -> Vec<(usize, usize)>
+    -> Option<Vec<(usize, usize)>>
 {
     let (elm_to_index, reps, edges) = skel;
     let source = reps.len();
@@ -544,20 +544,20 @@ fn special_small_tile_cuts(ds: &PartialDSet)
 
     for d in ds.orbit_reps([0], 1..=ds.size()) {
         if ds.orbit([2, 3], d).len() == 6 {
-            let ordered = find_special_cut(ds, d, &skel);
+            if let Some(ordered) = find_special_cut(ds, d, &skel) {
+                let glue_length = ds.orbit([0, 1], d).len() / 2;
+                let cut_length = ordered.len();
+                let nr_edge_glues = ds.orbit([0, 1], d).iter()
+                    .filter(|&&e| ds.orbit([2, 3], e).len() == 6)
+                    .count() / 2;
+                let nr_edge_cuts = ordered.iter()
+                    .filter(|&&(d, e)| ds.walk(d, [1, 0, 1]) != Some(e))
+                    .count();
 
-            let glue_length = ds.orbit([0, 1], d).len() / 2;
-            let cut_length = ordered.len();
-            let nr_edge_glues = ds.orbit([0, 1], d).iter()
-                .filter(|&&e| ds.orbit([2, 3], e).len() == 6)
-                .count() / 2;
-            let nr_edge_cuts = ordered.iter()
-                .filter(|&&(d, e)| ds.walk(d, [1, 0, 1]) != Some(e))
-                .count();
-
-            if cut_length == glue_length && nr_edge_cuts == 0 {
-                let key = (cut_length, nr_edge_cuts);
-                cuts.push((key, (d, ordered)));
+                if cut_length == glue_length && nr_edge_cuts == 0 {
+                    let key = (cut_length, nr_edge_cuts);
+                    cuts.push((key, (d, ordered)));
+                }
             }
         }
     }
@@ -573,7 +573,7 @@ fn find_special_cut(
     d: usize,
     skel: &(Vec<usize>, Vec<usize>, Vec<(usize, usize)>)
 )
-    -> Vec<(usize, usize)>
+    -> Option<Vec<(usize, usize)>>
 {
     let (elm_to_index, reps, edges) = skel;
     let source = reps.len();
@@ -606,7 +606,7 @@ fn process_cut(
     glue_chamber: usize,
     ds: &PartialDSet
 )
-    -> Vec<(usize, usize)>
+    -> Option<Vec<(usize, usize)>>
 {
     let cut_vertex_reps: Vec<_> = cut.cut_vertices.iter()
         .map(|&v| vertex_reps[v])
@@ -623,17 +623,7 @@ fn process_cut(
         .chain(inside_vertex_reps.iter().cloned())
         .collect();
 
-    let ordered = ordered_cut(
-        ds.op(3, glue_chamber).unwrap(), &marked_vertex_reps, ds
-    );
-
-    assert_eq!(
-        ordered.len(), cut_vertex_reps.len(),
-        "split_and_glue(): got {:?} from {:?} in\n\n{}",
-        ordered, cut_vertex_reps, DrawingInstructions::new(&ds)
-    );
-
-    ordered
+    ordered_cut(ds.op(3, glue_chamber).unwrap(), &marked_vertex_reps, ds)
 }
 
 
@@ -641,7 +631,7 @@ fn ordered_cut(
     special_chamber: usize,
     marked_vertex_reps: &Vec<usize>,
     ds: &PartialDSet
-) -> Vec<(usize, usize)>
+) -> Option<Vec<(usize, usize)>>
 {
     let special: HashSet<_> = ds.orbit([0, 1], special_chamber).iter()
         .cloned()
@@ -649,37 +639,40 @@ fn ordered_cut(
     let marked: HashSet<_> = marked_vertex_reps.iter()
         .flat_map(|&e| ds.orbit([1, 2], e))
         .collect();
-    let start = *marked.iter()
+
+    if let Some(&start) = marked.iter()
         .find(|&&e| !marked.contains(&ds.op(0, e).unwrap()))
-        .unwrap();
+    {
+        let mut result = vec![];
+        let mut d = start;
 
-    let mut result = vec![];
-    let mut d = start;
-
-    while result.len() < ds.size() + 1 { // avoid looping forever in error case
-        let mut e = ds.op(1, d).unwrap();
-        while marked.contains(&ds.op(0, e).unwrap()) {
-            e = ds.walk(e, [0, 1]).unwrap();
-        }
-
-        if special.contains(&d) {
-            let mut d = d;
-            while ds.op(1, d) != Some(e) {
-                result.push((d, ds.walk(d, [1, 0, 1]).unwrap()));
-                d = ds.walk(d, [1, 0]).unwrap();
+        while result.len() < ds.size() + 1 { // avoid looping forever in error case
+            let mut e = ds.op(1, d).unwrap();
+            while marked.contains(&ds.op(0, e).unwrap()) {
+                e = ds.walk(e, [0, 1]).unwrap();
             }
-        } else if ds.op(1, d) != Some(e) {
-            result.push((d, e));
+
+            if special.contains(&d) {
+                let mut d = d;
+                while ds.op(1, d) != Some(e) {
+                    result.push((d, ds.walk(d, [1, 0, 1]).unwrap()));
+                    d = ds.walk(d, [1, 0]).unwrap();
+                }
+            } else if ds.op(1, d) != Some(e) {
+                result.push((d, e));
+            }
+
+            d = ds.op(2, e).unwrap();
+
+            if d == start {
+                break;
+            }
         }
 
-        d = ds.op(2, e).unwrap();
-
-        if d == start {
-            break;
-        }
+        Some(result)
+    } else {
+        None
     }
-
-    result
 }
 
 
