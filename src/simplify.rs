@@ -519,8 +519,9 @@ fn split_and_glue_special(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
     match input {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds_in) => {
+            let ds_in = as_dset(&canonical(&as_dsym(ds_in)));
+
             for (glue_chamber, ordered) in special_small_tile_cuts(&ds_in) {
-                let ds_in = as_dset(&canonical(&as_dsym(ds_in)));
                 let t = split_and_glue_attempt(&ds_in, glue_chamber, ordered)
                     .and_then(|r| merge_facets(&r));
                 if let Some(result) = t {
