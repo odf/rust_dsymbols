@@ -558,7 +558,7 @@ fn special_small_tile_cuts(ds: &PartialDSet)
                     .filter(|&&(d, e)| ds.walk(d, [1, 0, 1]) != Some(e))
                     .count();
 
-                if cut_length == glue_length && nr_edge_cuts == 0 {
+                if cut_length == glue_length {
                     let key = (cut_length, nr_edge_cuts);
                     cuts.push((key, (d, ordered)));
                 }
@@ -684,12 +684,6 @@ fn split_and_glue_attempt(
     ds: &PartialDSet, glue_chamber: usize, ordered: Vec<(usize, usize)>
 ) -> Option<DSetOrEmpty>
 {
-    eprintln!(
-        "# INFO: attempting {}-split with {}-glue, cutting along {:?}, gluing at {}",
-        ordered.len(), ds.orbit([0, 1], glue_chamber).len() / 2,
-        &ordered, glue_chamber
-    );
-
     let mut ds = as_dset(ds);
     let mut cut_chambers = vec![];
 
@@ -698,14 +692,12 @@ fn split_and_glue_attempt(
             if ds.orbit([0, 1], d).contains(&e) {
                 ds = cut_face(&ds, d, e);
             } else {
-                eprintln!("# INFO: invalid split-and-glue attempt");
                 return None;
             }
         }
         cut_chambers.push(ds.op(1, d).unwrap());
         cut_chambers.push(ds.op(1, e).unwrap());
     }
-    eprintln!("# INFO: valid split-and-glue attempt");
 
     ds = cut_tile(&ds, &cut_chambers);
 
