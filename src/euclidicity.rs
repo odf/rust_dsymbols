@@ -124,11 +124,6 @@ fn fail(s: &str) -> Euclidean {
 
 
 pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
-    let good = HashSet::from([
-        "<1.1:1 3:1,1,1,1:4,3,4>",
-        //"<1.1:8 3:2 4 6 8,6 3 5 7 8,2 7 8 5 6,4 3 6 8:3 4,5 3,3 4>",
-    ]);
-
     if !INVARIANTS.contains(&orbifold_invariant(ds)) {
         fail("orbifold invariants do not match")
     } else if let Some(cov) = pseudo_toroidal_cover(ds) {
@@ -136,7 +131,7 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
             let simp = canonical(&simp);
             let key = canonical(&minimal_image(&simp));
 
-            if good.contains(&key.to_string()[..]) {
+            if key.to_string() == "<1.1:1 3:1,1,1,1:4,3,4>" {
                 Euclidean::Yes
             } else if !simp.is_connected() {
                 if bad_connected_components(&simp) {

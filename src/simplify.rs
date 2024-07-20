@@ -518,18 +518,24 @@ fn find_cut(
 fn split_and_glue_special(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
     match input {
         DSetOrEmpty::Empty => None,
-        DSetOrEmpty::DSet(ds) => {
-            let ds = as_dset(&canonical(&as_dsym(ds)));
-            let mut result = None;
-
-            for (glue_chamber, ordered) in special_small_tile_cuts(&ds) {
-                result = split_and_glue_attempt(&ds, glue_chamber, ordered);
-                if result.is_some() {
-                    break;
+        DSetOrEmpty::DSet(ds_in) => {
+            for (glue_chamber, ordered) in special_small_tile_cuts(&ds_in) {
+                let ds_in = as_dset(&canonical(&as_dsym(ds_in)));
+                let t = split_and_glue_attempt(&ds_in, glue_chamber, ordered)
+                    .and_then(|r| merge_facets(&r));
+                if let Some(result) = t {
+                    match result {
+                        DSetOrEmpty::Empty => {},
+                        DSetOrEmpty::DSet(ds_out) => {
+                            if ds_out.size() < ds_in.size() {
+                                return Some(DSetOrEmpty::DSet(ds_out));
+                            }
+                        }
+                    };
                 }
             }
 
-            result
+            None
         }
     }
 }
@@ -547,9 +553,6 @@ fn special_small_tile_cuts(ds: &PartialDSet)
             if let Some(ordered) = find_special_cut(ds, d, &skel) {
                 let glue_length = ds.orbit([0, 1], d).len() / 2;
                 let cut_length = ordered.len();
-                let nr_edge_glues = ds.orbit([0, 1], d).iter()
-                    .filter(|&&e| ds.orbit([2, 3], e).len() == 6)
-                    .count() / 2;
                 let nr_edge_cuts = ordered.iter()
                     .filter(|&&(d, e)| ds.walk(d, [1, 0, 1]) != Some(e))
                     .count();
