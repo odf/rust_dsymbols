@@ -149,12 +149,14 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
                     fail("cover has at least one handle")
                 } else if fg.relators.is_empty() {
                     fail("cover has free fundamental group")
+                } else if bad_subgroup_count(&fg, 2, 8) {
+                    fail("bad subgroup count for cover")
                 } else if bad_subgroup_invariants(&fg, 2, vec![0, 0, 0]) {
                     fail("bad subgroups for cover")
-                } else if bad_subgroup_count(&fg, 3, 21) {
-                    fail("bad subgroup count for cover")
-                } else if bad_subgroup_count(&fg, 4, 56) {
-                    fail("bad subgroup count for cover")
+                //} else if bad_subgroup_count(&fg, 3, 21) {
+                //    fail("bad subgroup count for cover")
+                //} else if bad_subgroup_count(&fg, 4, 56) {
+                //    fail("bad subgroup count for cover")
                 } else {
                     give_up("no decision found", key)
                 }
