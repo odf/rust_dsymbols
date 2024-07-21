@@ -445,85 +445,54 @@ fn fix_non_disk_face(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
     match input {
         DSetOrEmpty::Empty => None,
-        DSetOrEmpty::DSet(ds) => {
-            let ds = as_dset(&canonical(&as_dsym(ds)));
-            let mut result = None;
+        DSetOrEmpty::DSet(ds_in) => {
+            let ds_in = as_dset(&canonical(&as_dsym(ds_in)));
+            let (elm_to_index, reps, edges) = make_skeleton(&ds_in);
+            let source = reps.len();
+            let sink = source + 1;
 
-            for (glue_chamber, ordered) in small_tile_cuts(&ds) {
-                result = split_and_glue_attempt(&ds, glue_chamber, ordered);
-                if result.is_some() {
-                    break;
+            let mut cuts = vec![];
+
+            for d in ds_in.orbit_reps([0, 1, 3], 1..=ds_in.size()) {
+                let edges = network_edges(
+                    &ds_in, d, &elm_to_index, &edges, source, sink
+                );
+                let cut_raw = min_vertex_cut_undirected(edges, source, sink);
+
+                if let Some(ordered) = process_cut(cut_raw, &reps, d, &ds_in) {
+                    let key = make_key(&ds_in, d, &ordered);
+                    if key.0 < 0 {
+                        cuts.push((key, (d, ordered)));
+                    }
                 }
             }
 
-            result
-        }
-    }
-}
+            for d in ds_in.orbit_reps([0], 1..=ds_in.size()) {
+                if ds_in.orbit([2, 3], d).len() != 6 {
+                    continue;
+                }
+                let edges = extended_network_edges(
+                    &ds_in, d, &elm_to_index, &edges, source, sink
+                );
+                let cut_raw = min_vertex_cut_undirected(edges, source, sink);
 
-
-fn small_tile_cuts(ds: &PartialDSet) -> Vec<(usize, Vec<(usize, usize)>)> {
-    let skel = make_skeleton(ds);
-
-    let mut cuts = vec![];
-
-    for d in ds.orbit_reps([0, 1, 3], 1..=ds.size()) {
-        if let Some(ordered) = find_cut(ds, d, &skel) {
-            let glue_length = ds.orbit([0, 1], d).len() / 2;
-            let cut_length = ordered.len();
-
-            if cut_length < glue_length {
-                let key = (cut_length, -(glue_length as isize));
-                cuts.push((key, (d, ordered)));
+                if let Some(ordered) = process_cut(cut_raw, &reps, d, &ds_in) {
+                    let key = make_key(&ds_in, d, &ordered);
+                    if key.0 == 0 {
+                        cuts.push((key, (d, ordered)));
+                    }
+                }
             }
-        }
-    }
 
-    cuts.sort();
+            cuts.sort();
 
-    cuts.into_iter().map(|(_, data)| data).collect()
-}
-
-
-fn find_cut(
-    ds: &PartialDSet,
-    d: usize,
-    skel: &(Vec<usize>, Vec<usize>, Vec<(usize, usize)>)
-)
-    -> Option<Vec<(usize, usize)>>
-{
-    let (elm_to_index, reps, edges) = skel;
-    let source = reps.len();
-    let sink = source + 1;
-    let d3 = ds.op(3, d).unwrap();
-
-    let v_in: HashSet<_> = ds.orbit([0, 1], d).iter()
-        .map(|&e| elm_to_index[e])
-        .collect();
-
-    let v_out: HashSet<_> = ds.orbit([0, 1], d3).iter()
-        .map(|&e| elm_to_index[e])
-        .collect();
-
-    let edges = edges.iter().cloned()
-        .chain(v_in.iter().map(|&v| (source, v)))
-        .chain(v_out.iter().map(|&v| (v, sink)));
-
-    let cut_raw = min_vertex_cut_undirected(edges, source, sink);
-
-    process_cut(cut_raw, reps, d, ds)
-}
-
-
-fn split_and_glue_special(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
-    match input {
-        DSetOrEmpty::Empty => None,
-        DSetOrEmpty::DSet(ds_in) => {
-            let ds_in = as_dset(&canonical(&as_dsym(ds_in)));
-
-            for (glue_chamber, ordered) in special_small_tile_cuts(&ds_in) {
-                let t = split_and_glue_attempt(&ds_in, glue_chamber, ordered)
-                    .and_then(|r| merge_facets(&r));
+            for (key, (glue_chamber, ordered)) in cuts {
+                let t = if key.0 == 0 {
+                    split_and_glue_attempt(&ds_in, glue_chamber, ordered)
+                        .and_then(|r| merge_facets(&r))
+                } else {
+                    split_and_glue_attempt(&ds_in, glue_chamber, ordered)
+                };
                 if let Some(result) = t {
                     match result {
                         DSetOrEmpty::Empty => {},
@@ -542,55 +511,67 @@ fn split_and_glue_special(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 }
 
 
-fn special_small_tile_cuts(ds: &PartialDSet)
-    -> Vec<(usize, Vec<(usize, usize)>)>
+fn make_key(ds_in: &PartialDSet, d: usize, ordered: &Vec<(usize, usize)>)
+    -> (isize, usize, usize)
 {
-    let skel = make_skeleton(ds);
+    let glue_length = ds_in.orbit([0, 1], d).len() / 2;
+    let cut_length = ordered.len();
+    let nr_edge_cuts = ordered.iter()
+        .filter(|&&(d, e)| ds_in.walk(d, [1, 0, 1]) != Some(e))
+        .count();
 
-    let mut cuts = vec![];
-
-    for d in ds.orbit_reps([0], 1..=ds.size()) {
-        if ds.orbit([2, 3], d).len() == 6 {
-            if let Some(ordered) = find_special_cut(ds, d, &skel) {
-                let glue_length = ds.orbit([0, 1], d).len() / 2;
-                let cut_length = ordered.len();
-                let nr_edge_cuts = ordered.iter()
-                    .filter(|&&(d, e)| ds.walk(d, [1, 0, 1]) != Some(e))
-                    .count();
-
-                if cut_length == glue_length {
-                    let key = (cut_length, nr_edge_cuts);
-                    cuts.push((key, (d, ordered)));
-                }
-            }
-        }
-    }
-
-    cuts.sort();
-
-    cuts.into_iter().map(|(_, data)| data).collect()
+    (
+        (cut_length as isize) - (glue_length as isize),
+        cut_length,
+        nr_edge_cuts
+    )
 }
 
 
-fn find_special_cut(
+fn network_edges(
     ds: &PartialDSet,
     d: usize,
-    skel: &(Vec<usize>, Vec<usize>, Vec<(usize, usize)>)
+    elm_to_index: &Vec<usize>,
+    edges: &Vec<(usize, usize)>, 
+    source: usize,
+    sink: usize
 )
-    -> Option<Vec<(usize, usize)>>
+    -> Vec<(usize, usize)>
 {
-    let (elm_to_index, reps, edges) = skel;
-    let source = reps.len();
-    let sink = source + 1;
-    let d3 = ds.op(3, d).unwrap();
+    let v_in: HashSet<_> = std::iter::empty()
+        .chain(ds.orbit([0, 1], d).iter())
+        .map(|&e| elm_to_index[e])
+        .collect();
+    
+    let v_out: HashSet<_> = ds.orbit([0, 1], ds.op(3, d).unwrap()).iter()
+        .map(|&e| elm_to_index[e])
+        .collect();
+    
+    let edges = edges.iter().cloned()
+        .chain(v_in.iter().map(|&v| (source, v)))
+        .chain(v_out.iter().map(|&v| (v, sink)));
 
+    edges.collect()
+}
+
+
+fn extended_network_edges(
+    ds: &PartialDSet,
+    d: usize,
+    elm_to_index: &Vec<usize>,
+    edges: &Vec<(usize, usize)>,
+    source: usize,
+    sink: usize
+)
+    -> Vec<(usize, usize)>
+{
     let v_in: HashSet<_> = std::iter::empty()
         .chain(ds.orbit([0, 1], d).iter())
         .chain(ds.orbit([0, 1], ds.op(2, d).unwrap()).iter())
         .map(|&e| elm_to_index[e])
         .collect();
 
-    let v_out: HashSet<_> = ds.orbit([0, 1], d3).iter()
+    let v_out: HashSet<_> = ds.orbit([0, 1], ds.op(3, d).unwrap()).iter()
         .map(|&e| elm_to_index[e])
         .collect();
 
@@ -598,9 +579,7 @@ fn find_special_cut(
         .chain(v_in.iter().map(|&v| (source, v)))
         .chain(v_out.iter().map(|&v| (v, sink)));
 
-    let cut_raw = min_vertex_cut_undirected(edges, source, sink);
-
-    process_cut(cut_raw, reps, d, ds)
+    edges.collect()
 }
 
 
@@ -650,7 +629,8 @@ fn ordered_cut(
         let mut result = vec![];
         let mut d = start;
 
-        while result.len() < ds.size() + 1 { // avoid looping forever in error case
+        // a loop should do here, but let's be safe
+        while result.len() < ds.size() + 1 {
             let mut e = ds.op(1, d).unwrap();
             while marked.contains(&ds.op(0, e).unwrap()) {
                 e = ds.walk(e, [0, 1]).unwrap();
@@ -741,7 +721,6 @@ pub fn simplify<T: DSet>(ds: &T) -> Option<PartialDSym> {
             fix_local_2_vertex,
             fix_non_disk_face,
             split_and_glue,
-            split_and_glue_special,
         ] {
             if let Some(out) = op(&ds) {
                 ds = merge_all(&out).or(Some(out)).unwrap();
