@@ -515,17 +515,109 @@ fn make_key(ds_in: &PartialDSet, d: usize, ordered: &Vec<(usize, usize)>)
 }
 
 
-fn network_cut(
-    ds: &PartialDSet,
-    d: usize,
-    edge_mode: bool
-)
+fn network_cut(ds: &PartialDSet, d: usize, edge_mode: bool)
     -> Option<Vec<(usize, usize)>>
 {
     let (elm_to_index, reps, edges) = make_skeleton(ds);
     let source = elm_to_index.iter().cloned().max().unwrap_or(0) + 1;
     let sink = source + 1;
 
+    let edges = network_edges(
+        ds, d, edge_mode, elm_to_index, edges, source, sink
+    );
+
+    let cut_raw = min_vertex_cut_undirected(edges, source, sink);
+
+    let marked: HashSet<_> = cut_with_insides(cut_raw, reps, ds, d).iter()
+        .flat_map(|&e| ds.orbit([1, 2], e))
+        .collect();
+
+    let special: HashSet<_> = ds.orbit([0, 1], ds.op(3, d).unwrap())
+        .into_iter()
+        .collect();
+
+    if let Some(&start) = marked.iter()
+        .find(|&&e| !marked.contains(&ds.op(0, e).unwrap()))
+    {
+        Some(cut_pairs_in_order(ds, start, marked, special))
+    } else {
+        None
+    }
+}
+
+
+fn cut_pairs_in_order(
+    ds: &PartialDSet,
+    start: usize,
+    marked: HashSet<usize>,
+    special: HashSet<usize>
+)
+    -> Vec<(usize, usize)>
+{
+    let mut result = vec![];
+    let mut d = start;
+
+    // a loop should do here, but let's be safe
+    while result.len() < ds.size() + 1 {
+        let mut e = ds.op(1, d).unwrap();
+        while marked.contains(&ds.op(0, e).unwrap()) {
+            e = ds.walk(e, [0, 1]).unwrap();
+        }
+
+        if special.contains(&d) {
+            let mut d = d;
+            while ds.op(1, d) != Some(e) {
+                result.push((d, ds.walk(d, [1, 0, 1]).unwrap()));
+                d = ds.walk(d, [1, 0]).unwrap();
+            }
+        } else if ds.op(1, d) != Some(e) {
+            result.push((d, e));
+        }
+
+        d = ds.op(2, e).unwrap();
+
+        if d == start {
+            break;
+        }
+    }
+
+    result
+}
+
+
+fn cut_with_insides(
+    cut_raw: VertexCut, reps: Vec<usize>, ds: &PartialDSet, d: usize
+)
+    -> Vec<usize>
+{
+    let cut_vertex_reps: Vec<_> = cut_raw.cut_vertices.iter()
+        .map(|&v| reps[v])
+        .collect();
+
+    let inside_vertex_reps: Vec<_> = cut_raw.inside_vertices.iter()
+        .filter(|&&v| v < reps.len())
+        .map(|&v| reps[v])
+        .collect();
+
+    std::iter::empty()
+        .chain(ds.orbit([0, 1], d))
+        .chain(cut_vertex_reps.iter().cloned())
+        .chain(inside_vertex_reps.iter().cloned())
+        .collect()
+}
+
+
+fn network_edges(
+    ds: &PartialDSet,
+    d: usize,
+    edge_mode: bool,
+    elm_to_index: Vec<usize>,
+    edges: Vec<(usize, usize)>,
+    source: usize,
+    sink: usize
+)
+    -> Vec<(usize, usize)>
+{
     let v_in: HashSet<_> = if edge_mode {
         std::iter::empty()
             .chain(ds.orbit([0, 1], d).iter())
@@ -538,96 +630,15 @@ fn network_cut(
             .map(|&e| elm_to_index[e])
             .collect()
     };
-    
+
     let v_out: HashSet<_> = ds.orbit([0, 1], ds.op(3, d).unwrap()).iter()
         .map(|&e| elm_to_index[e])
         .collect();
-    
-    let edges: Vec<_> = edges.iter().cloned()
+
+    edges.iter().cloned()
         .chain(v_in.iter().map(|&v| (source, v)))
         .chain(v_out.iter().map(|&v| (v, sink)))
-        .collect();
-
-    let cut_raw = min_vertex_cut_undirected(edges, source, sink);
-
-    process_cut(cut_raw, &reps, d, ds)
-}
-
-
-fn process_cut(
-    cut: VertexCut,
-    vertex_reps: &Vec<usize>,
-    glue_chamber: usize,
-    ds: &PartialDSet
-)
-    -> Option<Vec<(usize, usize)>>
-{
-    let cut_vertex_reps: Vec<_> = cut.cut_vertices.iter()
-        .map(|&v| vertex_reps[v])
-        .collect();
-
-    let inside_vertex_reps: Vec<_> = cut.inside_vertices.iter()
-        .filter(|&&v| v < vertex_reps.len())
-        .map(|&v| vertex_reps[v])
-        .collect();
-
-    let marked_vertex_reps = std::iter::empty()
-        .chain(ds.orbit([0, 1], glue_chamber))
-        .chain(cut_vertex_reps.iter().cloned())
-        .chain(inside_vertex_reps.iter().cloned())
-        .collect();
-
-    ordered_cut(ds.op(3, glue_chamber).unwrap(), &marked_vertex_reps, ds)
-}
-
-
-fn ordered_cut(
-    special_chamber: usize,
-    marked_vertex_reps: &Vec<usize>,
-    ds: &PartialDSet
-) -> Option<Vec<(usize, usize)>>
-{
-    let special: HashSet<_> = ds.orbit([0, 1], special_chamber).iter()
-        .cloned()
-        .collect();
-    let marked: HashSet<_> = marked_vertex_reps.iter()
-        .flat_map(|&e| ds.orbit([1, 2], e))
-        .collect();
-
-    if let Some(&start) = marked.iter()
-        .find(|&&e| !marked.contains(&ds.op(0, e).unwrap()))
-    {
-        let mut result = vec![];
-        let mut d = start;
-
-        // a loop should do here, but let's be safe
-        while result.len() < ds.size() + 1 {
-            let mut e = ds.op(1, d).unwrap();
-            while marked.contains(&ds.op(0, e).unwrap()) {
-                e = ds.walk(e, [0, 1]).unwrap();
-            }
-
-            if special.contains(&d) {
-                let mut d = d;
-                while ds.op(1, d) != Some(e) {
-                    result.push((d, ds.walk(d, [1, 0, 1]).unwrap()));
-                    d = ds.walk(d, [1, 0]).unwrap();
-                }
-            } else if ds.op(1, d) != Some(e) {
-                result.push((d, e));
-            }
-
-            d = ds.op(2, e).unwrap();
-
-            if d == start {
-                break;
-            }
-        }
-
-        Some(result)
-    } else {
-        None
-    }
+        .collect()
 }
 
 
