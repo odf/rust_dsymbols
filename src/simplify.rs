@@ -447,19 +447,11 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds_in) => {
             let ds_in = as_dset(&canonical(&as_dsym(ds_in)));
-            let (elm_to_index, reps, edges) = make_skeleton(&ds_in);
-            let source = reps.len();
-            let sink = source + 1;
 
             let mut cuts = vec![];
 
             for d in ds_in.orbit_reps([0, 1, 3], 1..=ds_in.size()) {
-                let edges = network_edges(
-                    &ds_in, d, &elm_to_index, &edges, source, sink
-                );
-                let cut_raw = min_vertex_cut_undirected(edges, source, sink);
-
-                if let Some(ordered) = process_cut(cut_raw, &reps, d, &ds_in) {
+                if let Some(ordered) = network_cut(&ds_in, d, false) {
                     let key = make_key(&ds_in, d, &ordered);
                     if key.0 < 0 {
                         cuts.push((key, (d, ordered)));
@@ -471,12 +463,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
                 if ds_in.orbit([2, 3], d).len() != 6 {
                     continue;
                 }
-                let edges = extended_network_edges(
-                    &ds_in, d, &elm_to_index, &edges, source, sink
-                );
-                let cut_raw = min_vertex_cut_undirected(edges, source, sink);
-
-                if let Some(ordered) = process_cut(cut_raw, &reps, d, &ds_in) {
+                if let Some(ordered) = network_cut(&ds_in, d, true) {
                     let key = make_key(&ds_in, d, &ordered);
                     if key.0 == 0 {
                         cuts.push((key, (d, ordered)));
@@ -528,58 +515,42 @@ fn make_key(ds_in: &PartialDSet, d: usize, ordered: &Vec<(usize, usize)>)
 }
 
 
-fn network_edges(
+fn network_cut(
     ds: &PartialDSet,
     d: usize,
-    elm_to_index: &Vec<usize>,
-    edges: &Vec<(usize, usize)>, 
-    source: usize,
-    sink: usize
+    edge_mode: bool
 )
-    -> Vec<(usize, usize)>
+    -> Option<Vec<(usize, usize)>>
 {
-    let v_in: HashSet<_> = std::iter::empty()
-        .chain(ds.orbit([0, 1], d).iter())
-        .map(|&e| elm_to_index[e])
-        .collect();
+    let (elm_to_index, reps, edges) = make_skeleton(ds);
+    let source = elm_to_index.iter().cloned().max().unwrap_or(0) + 1;
+    let sink = source + 1;
+
+    let v_in: HashSet<_> = if edge_mode {
+        std::iter::empty()
+            .chain(ds.orbit([0, 1], d).iter())
+            .chain(ds.orbit([0, 1], ds.op(2, d).unwrap()).iter())
+            .map(|&e| elm_to_index[e])
+            .collect()
+    } else {
+        std::iter::empty()
+            .chain(ds.orbit([0, 1], d).iter())
+            .map(|&e| elm_to_index[e])
+            .collect()
+    };
     
     let v_out: HashSet<_> = ds.orbit([0, 1], ds.op(3, d).unwrap()).iter()
         .map(|&e| elm_to_index[e])
         .collect();
     
-    let edges = edges.iter().cloned()
+    let edges: Vec<_> = edges.iter().cloned()
         .chain(v_in.iter().map(|&v| (source, v)))
-        .chain(v_out.iter().map(|&v| (v, sink)));
-
-    edges.collect()
-}
-
-
-fn extended_network_edges(
-    ds: &PartialDSet,
-    d: usize,
-    elm_to_index: &Vec<usize>,
-    edges: &Vec<(usize, usize)>,
-    source: usize,
-    sink: usize
-)
-    -> Vec<(usize, usize)>
-{
-    let v_in: HashSet<_> = std::iter::empty()
-        .chain(ds.orbit([0, 1], d).iter())
-        .chain(ds.orbit([0, 1], ds.op(2, d).unwrap()).iter())
-        .map(|&e| elm_to_index[e])
+        .chain(v_out.iter().map(|&v| (v, sink)))
         .collect();
 
-    let v_out: HashSet<_> = ds.orbit([0, 1], ds.op(3, d).unwrap()).iter()
-        .map(|&e| elm_to_index[e])
-        .collect();
+    let cut_raw = min_vertex_cut_undirected(edges, source, sink);
 
-    let edges = edges.iter().cloned()
-        .chain(v_in.iter().map(|&v| (source, v)))
-        .chain(v_out.iter().map(|&v| (v, sink)));
-
-    edges.collect()
+    process_cut(cut_raw, &reps, d, ds)
 }
 
 
