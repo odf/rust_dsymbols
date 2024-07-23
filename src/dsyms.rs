@@ -84,7 +84,6 @@ fn compare_codes<T: DSym>(
 
 
 pub trait DSym : DSet {
-    fn r(&self, i: usize, j: usize, d: usize) -> Option<usize>;
     fn v(&self, i: usize, j: usize, d: usize) -> Option<usize>;
 }
 
@@ -211,12 +210,6 @@ impl DSet for PartialDSym {
         self.dset.is_complete() && self.orbit_vs.iter().all(|&v| v > 0)
     }
 
-    fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
-        Some(self.r(i, j, d)? * self.v(i, j, d)?)
-    }
-}
-
-impl DSym for PartialDSym {
     fn r(&self, i: usize, j: usize, d: usize) -> Option<usize> {
         if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
             None
@@ -233,6 +226,12 @@ impl DSym for PartialDSym {
         }
     }
 
+    fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        Some(self.r(i, j, d)? * self.v(i, j, d)?)
+    }
+}
+
+impl DSym for PartialDSym {
     fn v(&self, i: usize, j: usize, d: usize) -> Option<usize> {
         if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
             None
@@ -410,12 +409,6 @@ impl DSet for SimpleDSym {
         true
     }
 
-    fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
-        Some(self.r(i, j, d)? * self.v(i, j, d)?)
-    }
-}
-
-impl DSym for SimpleDSym {
     fn r(&self, i: usize, j: usize, d: usize) -> Option<usize> {
         if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
             None
@@ -432,6 +425,12 @@ impl DSym for SimpleDSym {
         }
     }
 
+    fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        Some(self.r(i, j, d)? * self.v(i, j, d)?)
+    }
+}
+
+impl DSym for SimpleDSym {
     fn v(&self, i: usize, j: usize, d: usize) -> Option<usize> {
         if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
             None

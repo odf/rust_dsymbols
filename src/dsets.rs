@@ -27,7 +27,28 @@ pub trait DSet: Sized {
         -> Option<usize>
         where I: IntoIterator<Item=usize>
     {
-        path.into_iter().fold(Some(d), |d, i| d.and(self.op(i, d.unwrap())))
+        path.into_iter().fold(Some(d), |d, i| d.and_then(|d| self.op(i, d)))
+    }
+
+    fn r(&self, i: usize, j: usize, d: usize) -> Option<usize> {
+        if i > self.dim() || j > self.dim() || d < 1 || d > self.size() {
+            None
+        } else {
+            let mut e = d;
+            let mut r = 0;
+
+            loop {
+                if let Some(c) = self.walk(e, [i, j]) {
+                    e = c;
+                    r += 1;
+                    if e == d {
+                        return Some(r);
+                    }
+                } else {
+                    return None;
+                }
+            }
+        }
     }
 
     fn m(&self, i: usize, j: usize, d: usize) -> Option<usize> {
@@ -659,6 +680,8 @@ mod partial_dset_tests {
         assert_eq!(dset.size(), 1);
         assert_eq!(dset.op(0, 0), None);
         assert_eq!(dset.op(0, 1), None);
+        assert_eq!(dset.r(0, 1, 0), None);
+        assert_eq!(dset.r(0, 1, 1), None);
         assert!(dset.is_connected());
         assert!(!dset.is_complete());
         assert!(dset.is_loopless());
@@ -676,6 +699,9 @@ mod partial_dset_tests {
         assert_eq!(dset.op(0, 0), None);
         assert_eq!(dset.op(0, 2), None);
         assert_eq!(dset.op(2, 1), None);
+        assert_eq!(dset.r(0, 1, 0), None);
+        assert_eq!(dset.r(0, 1, 1), Some(1));
+        assert_eq!(dset.r(0, 2, 1), None);
         assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
@@ -700,6 +726,11 @@ mod partial_dset_tests {
         assert_eq!(dset.op(0, 0), None);
         assert_eq!(dset.op(0, 2), Some(2));
         assert_eq!(dset.op(2, 1), None);
+        assert_eq!(dset.r(0, 1, 0), None);
+        assert_eq!(dset.r(0, 1, 1), Some(1));
+        assert_eq!(dset.r(1, 1, 1), Some(1));
+        assert_eq!(dset.r(0, 1, 2), Some(1));
+        assert_eq!(dset.r(0, 2, 1), None);
         assert!(!dset.is_connected());
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
@@ -723,6 +754,11 @@ mod partial_dset_tests {
         );
 
         assert_eq!(dset.op(0, 0), None);
+        assert_eq!(dset.r(0, 1, 0), None);
+        assert_eq!(dset.r(0, 1, 1), Some(3));
+        assert_eq!(dset.r(1, 1, 1), Some(1));
+        assert_eq!(dset.r(0, 1, 2), Some(3));
+        assert_eq!(dset.r(0, 2, 1), Some(1));
         assert!(dset.is_connected());
         assert!(dset.is_complete());
         assert!(!dset.is_loopless());
