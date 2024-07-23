@@ -446,8 +446,6 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
     match input {
         DSetOrEmpty::Empty => None,
         DSetOrEmpty::DSet(ds_in) => {
-            let ds_in = as_dset(&canonical(&as_dsym(ds_in)));
-
             let mut cuts = vec![];
 
             for d in ds_in.orbit_reps([0, 1, 3], 1..=ds_in.size()) {
