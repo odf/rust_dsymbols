@@ -3,6 +3,7 @@ pub mod fpgroups;
 pub mod dsets;
 pub mod dsyms;
 pub mod derived;
+pub mod drawing;
 pub mod fundamental_group;
 pub mod covers;
 pub mod simplify;

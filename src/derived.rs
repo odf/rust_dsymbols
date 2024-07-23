@@ -128,6 +128,16 @@ pub fn as_partial_dsym<T: DSym>(ds: &T) -> PartialDSym {
 }
 
 
+pub fn as_dset<T: DSet>(ds: &T) -> PartialDSet {
+    build_set(ds.size(), ds.dim(), |i, d| ds.op(i, d))
+}
+
+
+pub fn as_dsym<T: DSet>(ds: &T) -> PartialDSym {
+    build_sym_using_vs(as_dset(ds), |_, _| Some(1))
+}
+
+
 pub fn oriented_cover<T: DSym>(ds: &T) -> PartialDSym {
     if ds.is_oriented() {
         as_partial_dsym(ds)
