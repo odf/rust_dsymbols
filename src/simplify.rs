@@ -32,7 +32,7 @@ impl<'a> fmt::Display for DrawingInstructions<'a> {
         let mut seen= HashSet::new();
         let mut queue = VecDeque::from([(0, 1)]);
 
-        let r = |d| ds.orbit([0, 1], d).len() / 2;
+        let r = |d| ds.r(0, 1, d).unwrap();
 
         while let Some((c, d)) = queue.pop_front() {
             if !seen.contains(&d) {
@@ -460,7 +460,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
             }
 
             for d in ds_in.orbit_reps([0], 1..=ds_in.size()) {
-                if ds_in.orbit([2, 3], d).len() != 6 {
+                if ds_in.r(2, 3, d) != Some(3) {
                     continue;
                 }
                 if let Some(ordered) = network_cut(&ds_in, d, true) {
@@ -501,7 +501,7 @@ fn split_and_glue(input: &DSetOrEmpty) -> Option<DSetOrEmpty> {
 fn make_key(ds_in: &PartialDSet, d: usize, ordered: &Vec<(usize, usize)>)
     -> (isize, usize, usize)
 {
-    let glue_length = ds_in.orbit([0, 1], d).len() / 2;
+    let glue_length = ds_in.r(0, 1, d).unwrap();
     let cut_length = ordered.len();
     let nr_edge_cuts = ordered.iter()
         .filter(|&&(d, e)| ds_in.walk(d, [1, 0, 1]) != Some(e))
