@@ -14,10 +14,6 @@ struct Matrix<T, const N: usize, const M: usize> {
 
 
 impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
-    fn new(data: [[T; M]; N]) -> Self {
-        Self { data }
-    }
-
     fn transpose(self) -> Matrix<T, M, N> {
         let mut result = [[T::zero(); N]; M];
         for i in 0..M {
@@ -25,7 +21,34 @@ impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
                 result[i][j] = self.data[j][i];
             }
         }
-        Matrix::new(result)
+        Matrix::from(result)
+    }
+}
+
+
+impl<T: Scalar, const N: usize, const M: usize>
+    From<[[T; M]; N]> for Matrix<T, N, M>
+{
+    fn from(data: [[T; M]; N]) -> Self {
+        Self { data }
+    }
+}
+
+
+impl<T: Scalar, const M: usize>
+    From<[T; M]> for Matrix<T, 1, M>
+{
+    fn from(data: [T; M]) -> Self {
+        Self { data: [data] }
+    }
+}
+
+
+impl<T: Scalar>
+    From<T> for Matrix<T, 1, 1>
+{
+    fn from(data: T) -> Self {
+        Self { data: [[data]] }
     }
 }
 
@@ -48,34 +71,6 @@ impl<T: Scalar, const N: usize, const M: usize>
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.data[index]
-    }
-}
-
-
-trait AsMatrix<T, const N: usize, const M: usize> {
-    fn matrix(self) -> Matrix<T, N, M>;
-}
-
-
-impl<T: Scalar, const N: usize, const M: usize>
-    AsMatrix<T, N, M> for [[T; M]; N]
-{
-    fn matrix(self) -> Matrix<T, N, M> {
-        Matrix::new(self)
-    }
-}
-
-
-impl<T: Scalar, const M: usize> AsMatrix<T, 1, M> for [T; M] {
-    fn matrix(self) -> Matrix<T, 1, M> {
-        Matrix::new([self])
-    }
-}
-
-
-impl<T: Scalar> AsMatrix<T, 1, 1> for T {
-    fn matrix(self) -> Matrix<T, 1, 1> {
-        Matrix::new([[self]])
     }
 }
 
@@ -111,7 +106,7 @@ impl<T: Scalar, const N: usize, const M: usize, const L: usize>
                 result[i][j] = x;
             }
         }
-        Matrix::new(result)
+        Matrix::from(result)
     }
 }
 
@@ -134,33 +129,33 @@ impl Scalar for f64 {}
 #[test]
 fn test_matrix_mul() {
     assert_eq!(
-        (Matrix::new([[1, 2, 3]]) * [[3], [2], [1]]).scalar(),
+        (Matrix::from([[1, 2, 3]]) * [[3], [2], [1]]).scalar(),
         10
     );
     assert_eq!(
-        [1, 2, 3].matrix() * [3, 2, 1].matrix().transpose(),
-        10.matrix()
+        Matrix::from([1, 2, 3]) * Matrix::from([3, 2, 1]).transpose(),
+        10.into()
     );
     assert_eq!(
-        Matrix::new([[1.0, 1.0], [0.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]],
-        Matrix::new([[1.0, 3.0], [0.0, 1.0]])
+        Matrix::from([[1.0, 1.0], [0.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]],
+        [[1.0, 3.0], [0.0, 1.0]].into()
     );
     assert_eq!(
         (
-            Matrix::new([[1.0, 1.0], [0.0, 1.0]]) *
+            Matrix::from([[1.0, 1.0], [0.0, 1.0]]) *
             [[1.0, 2.0], [0.0, 1.0]]
         )[(0, 1)],
         3.0
     );
     assert_eq!(
         (
-            Matrix::new([[1.0, 1.0], [0.0, 1.0]]) *
+            Matrix::from([[1.0, 1.0], [0.0, 1.0]]) *
             [[1.0, 2.0], [0.0, 1.0]]
         )[0],
         [1.0, 3.0]
     );
     assert_eq!(
-        (Matrix::new([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]]).array(),
+        (Matrix::from([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]]).array(),
         [1.0, 3.0]
     );
 }
