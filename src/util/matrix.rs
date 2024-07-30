@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Index, Mul};
 
 use num_traits::Zero;
 
@@ -26,6 +26,28 @@ impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
             }
         }
         Matrix::new(result)
+    }
+}
+
+
+impl<T: Scalar, const N: usize, const M: usize>
+    Index<(usize, usize)> for Matrix<T, N, M>
+{
+    type Output = T;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        &self.data[index.0][index.1]
+    }
+}
+
+
+impl<T: Scalar, const N: usize, const M: usize>
+    Index<usize> for Matrix<T, N, M>
+{
+    type Output = [T; M];
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
     }
 }
 
@@ -66,7 +88,7 @@ impl<T: Scalar> Matrix<T, 1, 1> {
 
 
 impl<T: Scalar, const M: usize> Matrix<T, 1, M> {
-    fn vector(self) -> [T; M] {
+    fn array(self) -> [T; M] {
         self.data[0]
     }
 }
@@ -124,7 +146,21 @@ fn test_matrix_mul() {
         Matrix::new([[1.0, 3.0], [0.0, 1.0]])
     );
     assert_eq!(
-        (Matrix::new([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]]).vector(),
+        (
+            Matrix::new([[1.0, 1.0], [0.0, 1.0]]) *
+            [[1.0, 2.0], [0.0, 1.0]]
+        )[(0, 1)],
+        3.0
+    );
+    assert_eq!(
+        (
+            Matrix::new([[1.0, 1.0], [0.0, 1.0]]) *
+            [[1.0, 2.0], [0.0, 1.0]]
+        )[0],
+        [1.0, 3.0]
+    );
+    assert_eq!(
+        (Matrix::new([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]]).array(),
         [1.0, 3.0]
     );
 }
