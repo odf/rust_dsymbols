@@ -1,4 +1,4 @@
-use std::ops::{Add, Index, Mul};
+use std::ops::{Add, Index, IndexMut, Mul};
 
 use num_traits::Zero;
 
@@ -59,7 +59,20 @@ impl<T: Scalar, const N: usize, const M: usize>
     type Output = T;
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
+        assert!(index.0 < N);
+        assert!(index.0 < M);
         &self.data[index.0][index.1]
+    }
+}
+
+
+impl<T: Scalar, const N: usize, const M: usize>
+    IndexMut<(usize, usize)> for Matrix<T, N, M>
+{
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
+        assert!(index.0 < N);
+        assert!(index.0 < M);
+        &mut self.data[index.0][index.1]
     }
 }
 
@@ -70,7 +83,18 @@ impl<T: Scalar, const N: usize, const M: usize>
     type Output = [T; M];
 
     fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < N);
         &self.data[index]
+    }
+}
+
+
+impl<T: Scalar, const N: usize, const M: usize>
+    IndexMut<usize> for Matrix<T, N, M>
+{
+    fn index_mut(&mut self, index: usize) -> &mut [T; M] {
+        assert!(index < N);
+        &mut self.data[index]
     }
 }
 
@@ -158,4 +182,13 @@ fn test_matrix_mul() {
         (Matrix::from([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]]).array(),
         [1.0, 3.0]
     );
+}
+
+
+#[test]
+fn test_matrix_indexing() {
+    let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
+    m[0] = [1.0, 2.0];
+    m[(1, 0)] = m[(1, 0)] + 3.0;
+    assert_eq!(m, [[1.0, 2.0], [3.0, 1.0]].into());
 }
