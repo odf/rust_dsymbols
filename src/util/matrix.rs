@@ -135,6 +135,24 @@ impl<T: Scalar, const N: usize, const M: usize, const L: usize>
 }
 
 
+impl<T: Scalar, const N: usize, const M: usize>
+    Mul<T> for Matrix<T, N, M>
+{
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        let mut result = [[T::zero(); M]; N];
+
+        for i in 0..N {
+            for j in 0..M {
+                result[i][j] = self.data[i][j] * rhs;
+            }
+        }
+        Matrix::from(result)
+    }
+}
+
+
 impl<T: Scalar, const N: usize, const M: usize, const L: usize>
     Mul<Matrix<T, M, L>> for Matrix<T, N, M>
 {
@@ -188,7 +206,7 @@ fn test_matrix_mul() {
 #[test]
 fn test_matrix_indexing() {
     let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
-    m[0] = [1.0, 2.0];
-    m[(1, 0)] = m[(1, 0)] + 3.0;
-    assert_eq!(m, [[1.0, 2.0], [3.0, 1.0]].into());
+    m[0] = (Matrix::from(m[0]) * 3.0).array();
+    m[(1, 0)] = m[(1, 0)] + 4.0;
+    assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
 }
