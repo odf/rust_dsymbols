@@ -99,20 +99,6 @@ impl<T: Scalar, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar> Matrix<T, 1, 1> {
-    fn scalar(self) -> T {
-        self.data[0][0]
-    }
-}
-
-
-impl<T: Scalar, const M: usize> Matrix<T, 1, M> {
-    fn array(self) -> [T; M] {
-        self.data[0]
-    }
-}
-
-
 impl<T: Scalar, const N: usize, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for Matrix<T, N, M>
 {
@@ -171,7 +157,7 @@ impl Scalar for f64 {}
 #[test]
 fn test_matrix_mul() {
     assert_eq!(
-        (Matrix::from([[1, 2, 3]]) * [[3], [2], [1]]).scalar(),
+        (Matrix::from([[1, 2, 3]]) * [[3], [2], [1]])[(0, 0)],
         10
     );
     assert_eq!(
@@ -197,7 +183,7 @@ fn test_matrix_mul() {
         [1.0, 3.0]
     );
     assert_eq!(
-        (Matrix::from([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]]).array(),
+        (Matrix::from([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]])[0],
         [1.0, 3.0]
     );
 }
@@ -206,7 +192,7 @@ fn test_matrix_mul() {
 #[test]
 fn test_matrix_indexing() {
     let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
-    m[0] = (Matrix::from(m[0]) * 3.0).array();
+    m[0] = (Matrix::from(m[0]) * 3.0)[0];
     m[(1, 0)] = m[(1, 0)] + 4.0;
     assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
 }
