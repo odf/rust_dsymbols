@@ -1,6 +1,6 @@
 use std::ops::{Add, Index, IndexMut, Mul};
 
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
 
 trait Scalar: Zero + Copy + Mul<Output=Self> + Add<Output=Self> {
@@ -48,6 +48,17 @@ impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
         for i in 0..N {
             self.data[i][j] = column.data[i][0];
         }
+    }
+}
+
+
+impl<T: Scalar + One, const N: usize> Matrix<T, N, N> {
+    fn identity() -> Self {
+        let mut data = [[T::zero(); N]; N];
+        for i in 0..N {
+            data[i][i] = T::one();
+        }
+        Self { data }
     }
 }
 
@@ -234,4 +245,11 @@ fn test_matrix_row_column_manipulation() {
     m.set_column(1, m.get_column(1) * 3.0);
 
     assert_eq!(m, [[2.0, 6.0], [0.0, 3.0]].into());
+}
+
+
+fn test_matrix_identity() {
+    let m = Matrix::<i64, 3, 3>::identity();
+    assert_eq!(m, [[1, 0, 0], [0, 1, 0], [0, 0, 1]].into());
+    assert_eq!(Matrix::identity(), [[1, 0], [0, 1]].into());
 }
