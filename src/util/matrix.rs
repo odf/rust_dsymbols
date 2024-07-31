@@ -1,4 +1,4 @@
-use std::ops::{Add, Index, IndexMut, Mul};
+use std::ops::{Add, Index, IndexMut, Mul, Sub};
 
 use num_traits::{One, Zero};
 
@@ -59,6 +59,27 @@ impl<T: Scalar + One, const N: usize> Matrix<T, N, N> {
             data[i][i] = T::one();
         }
         Self { data }
+    }
+}
+
+
+impl<T: Scalar + One + Sub<Output=T>, const N: usize> Matrix<T, N, N> {
+    fn determinant(&self) -> T {
+        let d = self.data;
+        match N {
+            0 => T::one(),
+            1 => d[0][0],
+            2 => d[0][0] * d[1][1] - d[0][1] * d[1][0],
+            3 => {
+                d[0][0] * d[1][1] * d[2][2] +
+                d[0][1] * d[1][2] * d[2][0] +
+                d[0][2] * d[1][0] * d[2][1] -
+                d[0][2] * d[1][1] * d[2][0] -
+                d[0][1] * d[1][0] * d[2][2] -
+                d[0][0] * d[1][2] * d[2][1]
+            },
+            _ => todo!()
+        }
     }
 }
 
@@ -248,8 +269,22 @@ fn test_matrix_row_column_manipulation() {
 }
 
 
+#[test]
 fn test_matrix_identity() {
     let m = Matrix::<i64, 3, 3>::identity();
     assert_eq!(m, [[1, 0, 0], [0, 1, 0], [0, 0, 1]].into());
     assert_eq!(Matrix::identity(), [[1, 0], [0, 1]].into());
+}
+
+
+#[test]
+fn test_matrix_determinant() {
+    assert_eq!(
+        Matrix::from([[1, 2], [3, 4]]).determinant(),
+        -2
+    );
+    assert_eq!(
+        Matrix::from([[1, 1, 1], [0, 1, 1], [0, 0, 1]]).determinant(),
+        1
+    );
 }
