@@ -14,7 +14,7 @@ struct Matrix<T, const N: usize, const M: usize> {
 
 
 impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
-    fn transpose(self) -> Matrix<T, M, N> {
+    fn transpose(&self) -> Matrix<T, M, N> {
         let mut result = [[T::zero(); N]; M];
         for i in 0..M {
             for j in 0..N {
@@ -22,6 +22,32 @@ impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
             }
         }
         Matrix::from(result)
+    }
+
+    fn get_row(&self, i: usize) -> Matrix<T, 1, M> {
+        assert!(i < N);
+        Matrix::from([self.data[i]])
+    }
+
+    fn set_row(&mut self, i: usize, row: Matrix<T, 1, M>) {
+        assert!(i < N);
+        self.data[i] = row.data[0];
+    }
+
+    fn get_column(&self, j: usize) -> Matrix<T, N, 1> {
+        assert!(j < M);
+        let mut result = [[T::zero(); 1]; N];
+        for i in 0..N {
+            result[i][0] = self.data[i][j];
+        }
+        Matrix::from(result)
+    }
+
+    fn set_column(&mut self, j: usize, column: Matrix<T, N, 1>) {
+        assert!(j < M);
+        for i in 0..N {
+            self.data[i][j] = column.data[i][0];
+        }
     }
 }
 
@@ -192,7 +218,20 @@ fn test_matrix_mul() {
 #[test]
 fn test_matrix_indexing() {
     let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
+
     m[0] = (Matrix::from(m[0]) * 3.0)[0];
     m[(1, 0)] = m[(1, 0)] + 4.0;
+
     assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
+}
+
+
+#[test]
+fn test_matrix_row_column_manipulation() {
+    let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
+
+    m.set_row(0, m.get_row(0) * 2.0);
+    m.set_column(1, m.get_column(1) * 3.0);
+
+    assert_eq!(m, [[2.0, 6.0], [0.0, 3.0]].into());
 }
