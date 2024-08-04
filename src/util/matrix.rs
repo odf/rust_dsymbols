@@ -85,6 +85,33 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
         }
         Matrix::from(result)
     }
+
+    pub fn submatrix<I, J, const K: usize, const L: usize>(
+        self, rows: I, columns: J
+    )
+        -> Matrix<T, K, L>
+        where
+            I: IntoIterator<Item=usize>,
+            J: IntoIterator<Item=usize>
+    {
+        let rows: Vec<_> = rows.into_iter().collect();
+        let columns: Vec<_> = columns.into_iter().collect();
+
+        assert!(rows.iter().all(|&i| i < N));
+        assert!(columns.iter().all(|&j| j < M));
+        assert_eq!(rows.len(), K);
+        assert_eq!(columns.len(), L);
+
+        let mut result = [[T::zero(); L]; K];
+
+        for i in 0..K {
+            for j in 0..L {
+                result[i][j] = self.data[rows[i]][columns[j]];
+            }
+        }
+
+        Matrix::from(result)
+    }
 }
 
 
@@ -303,4 +330,13 @@ fn test_matrix_stack() {
             .hstack(Matrix::from([[5, 6], [7, 8]])),
         [[1, 2, 5, 6], [3, 4, 7, 8]].into()
     );
+}
+
+
+#[test]
+fn test_matrix_submatrix() {
+    assert_eq!(
+        Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).submatrix(0..2, [0, 2]),
+        Matrix::from([[1, 3], [4, 6]])
+    )
 }
