@@ -14,6 +14,14 @@ pub struct Matrix<T, const N: usize, const M: usize> {
 
 
 impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
+    pub fn nr_rows(&self) -> usize {
+        N
+    }
+
+    pub fn nr_columns(&self) -> usize {
+        M
+    }
+
     pub fn transpose(&self) -> Matrix<T, M, N> {
         let mut result = [[T::zero(); N]; M];
         for i in 0..M {
@@ -116,7 +124,7 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 
 
 impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
-    fn identity() -> Self {
+    pub fn identity() -> Self {
         let mut data = [[T::zero(); N]; N];
         for i in 0..N {
             data[i][i] = T::one();
