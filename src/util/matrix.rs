@@ -1,9 +1,9 @@
-use std::ops::{Add, Index, IndexMut, Mul, Sub};
+use std::ops::{Add, Index, IndexMut, Mul};
 
 use num_traits::{One, Zero};
 
 
-trait Scalar: Zero + Copy + Mul<Output=Self> + Add<Output=Self> {
+trait Scalar: Zero + One + Mul<Output=Self> + Add<Output=Self> {
 }
 
 
@@ -13,7 +13,7 @@ struct Matrix<T, const N: usize, const M: usize> {
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
+impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
     fn transpose(&self) -> Matrix<T, M, N> {
         let mut result = [[T::zero(); N]; M];
         for i in 0..M {
@@ -52,34 +52,13 @@ impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
 }
 
 
-impl<T: Scalar + One, const N: usize> Matrix<T, N, N> {
+impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
     fn identity() -> Self {
         let mut data = [[T::zero(); N]; N];
         for i in 0..N {
             data[i][i] = T::one();
         }
         Self { data }
-    }
-}
-
-
-impl<T: Scalar + One + Sub<Output=T>, const N: usize> Matrix<T, N, N> {
-    fn determinant(&self) -> T {
-        let d = self.data;
-        match N {
-            0 => T::one(),
-            1 => d[0][0],
-            2 => d[0][0] * d[1][1] - d[0][1] * d[1][0],
-            3 => {
-                d[0][0] * d[1][1] * d[2][2] +
-                d[0][1] * d[1][2] * d[2][0] +
-                d[0][2] * d[1][0] * d[2][1] -
-                d[0][2] * d[1][1] * d[2][0] -
-                d[0][1] * d[1][0] * d[2][2] -
-                d[0][0] * d[1][2] * d[2][1]
-            },
-            _ => todo!()
-        }
     }
 }
 
@@ -157,7 +136,7 @@ impl<T: Scalar, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize, const L: usize>
+impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, L>;
@@ -179,7 +158,7 @@ impl<T: Scalar, const N: usize, const M: usize, const L: usize>
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize>
+impl<T: Scalar + Copy, const N: usize, const M: usize>
     Mul<T> for Matrix<T, N, M>
 {
     type Output = Self;
@@ -197,7 +176,7 @@ impl<T: Scalar, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize, const L: usize>
+impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
     Mul<Matrix<T, M, L>> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, L>;
@@ -274,17 +253,4 @@ fn test_matrix_identity() {
     let m = Matrix::<i64, 3, 3>::identity();
     assert_eq!(m, [[1, 0, 0], [0, 1, 0], [0, 0, 1]].into());
     assert_eq!(Matrix::identity(), [[1, 0], [0, 1]].into());
-}
-
-
-#[test]
-fn test_matrix_determinant() {
-    assert_eq!(
-        Matrix::from([[1, 2], [3, 4]]).determinant(),
-        -2
-    );
-    assert_eq!(
-        Matrix::from([[1, 1, 1], [0, 1, 1], [0, 0, 1]]).determinant(),
-        1
-    );
 }
