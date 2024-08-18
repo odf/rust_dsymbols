@@ -470,17 +470,21 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
             }
         }
     }
+
+    fn vectors(&self) -> Vec<[T; N]> {
+        (0..self.rank).map(|i| self.vectors[i]).collect()
+    }
 }
 
 
 impl<T: Entry + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
-    fn reduced_basis(&self) -> Basis<T, M> {
+    fn reduced_basis(&self) -> Vec<[T; M]> {
         let mut b = Basis::new();
         for i in 0..self.nr_rows() {
             b.extend(&self[i]);
         }
         b.reduce();
-        b
+        b.vectors()
     }
 }
 
@@ -576,25 +580,18 @@ fn test_matrix_submatrix() {
 #[test]
 fn test_matrix_reduced_basis() {
     assert_eq!(
-        Matrix::from([[1, 4, 7], [2, 5, 8], [3, 6, 8]]).reduced_basis(),
-        Basis {
-            vectors: Matrix::from([[1, 1, 0], [0, 3, 0], [0, 0, 1]]),
-            rank: 3
-        }
+        Matrix::from([[1, 4, 7], [2, 5, 8], [3, 6, 8]])
+            .reduced_basis(),
+        vec![[1, 1, 0], [0, 3, 0], [0, 0, 1]]
     );
     assert_eq!(
         Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 8.0]])
             .reduced_basis(),
-        Basis { vectors: Matrix::identity(), rank: 3 }
+        vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
     );
     assert_eq!(
         Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
             .reduced_basis(),
-        Basis {
-            vectors: Matrix::from(
-                [[1.0, 0.0, -1.0], [0.0, 1.0, 2.0], [0.0, 0.0, 0.0]]
-            ),
-            rank: 2
-        }
+        vec![[1.0, 0.0, -1.0], [0.0, 1.0, 2.0]]
     );
 }
