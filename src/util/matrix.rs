@@ -280,7 +280,7 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 }
 
 
-pub trait Entry: Scalar {
+pub trait Entry: Scalar + Sub<Output=Self> {
     fn clear_column<const N: usize>(
         col: usize, v: &mut [Self; N], b: &mut [Self; N]
     );
@@ -471,6 +471,10 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
         }
     }
 
+    fn rank(&self) -> usize {
+        self.rank
+    }
+
     fn vectors(&self) -> Vec<[T; N]> {
         (0..self.rank).map(|i| self.vectors[i]).collect()
     }
@@ -478,6 +482,14 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
 
 
 impl<T: Entry + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
+    fn rank(&self) -> usize {
+        let mut b = Basis::new();
+        for i in 0..self.nr_rows() {
+            b.extend(&self[i]);
+        }
+        b.rank()
+    }
+
     fn reduced_basis(&self) -> Vec<[T; M]> {
         let mut b = Basis::new();
         for i in 0..self.nr_rows() {
@@ -485,6 +497,39 @@ impl<T: Entry + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
         }
         b.reduce();
         b.vectors()
+    }
+}
+
+
+impl<T: Entry + Copy , const N: usize> Matrix<T, N, N> {
+    fn determinant(&self) -> T {
+        match self.nr_rows() {
+            0 => T::one(),
+            1 => self[(0, 0)],
+            2 => {
+                self[(0, 0)] * self[(1, 1)] - self[(0, 1)] * self[(1, 0)]
+            },
+            3 => {
+                self[(0, 0)] * self[(1, 1)] * self[(2, 2)] +
+                self[(0, 1)] * self[(1, 2)] * self[(2, 0)] +
+                self[(0, 2)] * self[(1, 0)] * self[(2, 1)] -
+                self[(0, 2)] * self[(1, 1)] * self[(2, 0)] -
+                self[(0, 0)] * self[(1, 2)] * self[(2, 1)] -
+                self[(0, 1)] * self[(1, 0)] * self[(2, 2)]
+            },
+            _ => {
+                let mut b = Basis::new();
+                for i in 0..self.nr_rows() {
+                    b.extend(&self[i]);
+                }
+                let b = b.vectors();
+
+                (0..b.len())
+                    .map(|i| b[i][i])
+                    .reduce(|a, b| a * b)
+                    .unwrap_or(T::zero())
+            }
+        }
     }
 }
 
@@ -594,4 +639,24 @@ fn test_matrix_reduced_basis() {
             .reduced_basis(),
         vec![[1.0, 0.0, -1.0], [0.0, 1.0, 2.0]]
     );
+}
+
+
+#[test]
+fn test_matrix_determinant() {
+    assert_eq!(
+        Matrix::from([[1.0, 0.3, 0.7], [0.0, 2.0, 1.2], [0.0, 0.0, 0.25]])
+            .determinant(),
+        0.5
+    );
+
+    assert_eq!(Matrix::<f64, 1, 1>::identity().determinant(), 1.0);
+    assert_eq!(Matrix::<f64, 2, 2>::identity().determinant(), 1.0);
+    assert_eq!(Matrix::<f64, 3, 3>::identity().determinant(), 1.0);
+    assert_eq!(Matrix::<f64, 4, 4>::identity().determinant(), 1.0);
+
+    assert_eq!((Matrix::<f64, 1, 1>::identity() * 2.0).determinant(), 2.0);
+    assert_eq!((Matrix::<f64, 2, 2>::identity() * 2.0).determinant(), 4.0);
+    assert_eq!((Matrix::<f64, 3, 3>::identity() * 2.0).determinant(), 8.0);
+    assert_eq!((Matrix::<f64, 4, 4>::identity() * 2.0).determinant(), 16.0);
 }
