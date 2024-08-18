@@ -407,6 +407,7 @@ impl Entry for i64 {
 }
 
 
+#[derive(Debug, PartialEq)]
 struct Basis<T: Entry, const N: usize> {
     vectors: Matrix<T, N, N>,
     rank: usize
@@ -452,6 +453,34 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
             self.vectors[self.rank] = v;
             self.rank += 1;
         }
+    }
+
+    fn reduce(&mut self) {
+        let mut col = 0;
+        for row in 0..self.rank {
+            while self.vectors[(row, col)].is_zero() {
+                col += 1;
+            }
+
+            Entry::normalize_column(col, &mut self.vectors[row]);
+
+            let b = self.vectors[row];
+            for i in 0..row {
+                Entry::reduce_column(col, &mut self.vectors[i], &b);
+            }
+        }
+    }
+}
+
+
+impl<T: Entry + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
+    fn reduced_basis(&self) -> Basis<T, M> {
+        let mut b = Basis::new();
+        for i in 0..self.nr_rows() {
+            b.extend(&self[i]);
+        }
+        b.reduce();
+        b
     }
 }
 
@@ -541,4 +570,31 @@ fn test_matrix_submatrix() {
         Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).submatrix(0..2, [0, 2]),
         Matrix::from([[1, 3], [4, 6]])
     )
+}
+
+
+#[test]
+fn test_matrix_reduced_basis() {
+    assert_eq!(
+        Matrix::from([[1, 4, 7], [2, 5, 8], [3, 6, 8]]).reduced_basis(),
+        Basis {
+            vectors: Matrix::from([[1, 1, 0], [0, 3, 0], [0, 0, 1]]),
+            rank: 3
+        }
+    );
+    assert_eq!(
+        Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 8.0]])
+            .reduced_basis(),
+        Basis { vectors: Matrix::identity(), rank: 3 }
+    );
+    assert_eq!(
+        Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+            .reduced_basis(),
+        Basis {
+            vectors: Matrix::from(
+                [[1.0, 0.0, -1.0], [0.0, 1.0, 2.0], [0.0, 0.0, 0.0]]
+            ),
+            rank: 2
+        }
+    );
 }
