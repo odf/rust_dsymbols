@@ -498,6 +498,34 @@ impl<T: Entry + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
         b.reduce();
         b.vectors()
     }
+
+    fn null_space<const S: usize>(&self) -> Vec<Matrix<T, M, 1>> {
+        assert_eq!(S, N + M);
+
+        let t: Vec<[T; S]> = self.transpose().hstack(Matrix::identity())
+            .reduced_basis();
+
+        let mut lft = Basis::new();
+        for i in 0..t.len() {
+            let mut v = [T::zero(); N];
+            for j in 0..N {
+                v[j] = t[i][j];
+            }
+            lft.extend(&v);
+        }
+        let k = lft.rank();
+
+        let mut result = vec![];
+        for i in k..M {
+            let mut v = [T::zero(); M];
+            for j in 0..M {
+                v[j] = t[i][j + N];
+            }
+            result.push(Matrix::from(v).transpose())
+        }
+
+        result
+    }
 }
 
 
@@ -659,4 +687,24 @@ fn test_matrix_determinant() {
     assert_eq!((Matrix::<f64, 2, 2>::identity() * 2.0).determinant(), 4.0);
     assert_eq!((Matrix::<f64, 3, 3>::identity() * 2.0).determinant(), 8.0);
     assert_eq!((Matrix::<f64, 4, 4>::identity() * 2.0).determinant(), 16.0);
+}
+
+
+#[test]
+fn test_linalg_nullspace() {
+    let a = Matrix::from([[1, 2], [3, 4]]);
+    let n = a.null_space::<4>();
+    assert_eq!(n, vec![]);
+
+    let a = Matrix::from([[1.0, 2.0], [3.0, 6.0]]);
+    for v in a.null_space::<4>() {
+        assert_eq!(a * v, Matrix::from([[0.0], [0.0]]));
+    }
+
+    let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
+    let n = a.null_space::<4>();
+    assert_eq!(n, vec![]);
+
+    //let a = Matrix::from([[0.0, 1.0, 0.0]]);
+    //let n = a.null_space::<4>();
 }
