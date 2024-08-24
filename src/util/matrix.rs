@@ -700,12 +700,14 @@ fn test_matrix_determinant() {
 
 
 #[test]
-fn test_linalg_nullspace() {
+fn test_matrix_nullspace() {
     let a = Matrix::from([[1, 2], [3, 4]]);
     let n = a.null_space::<4>();
     assert_eq!(n, vec![]);
 
     let a = Matrix::from([[1.0, 2.0], [3.0, 6.0]]);
+    let n = a.null_space::<4>();
+    assert_eq!(n.len(), 1);
     for v in a.null_space::<4>() {
         assert_eq!(a * v, Matrix::from([[0.0], [0.0]]));
     }
@@ -714,6 +716,10 @@ fn test_linalg_nullspace() {
     let n = a.null_space::<4>();
     assert_eq!(n, vec![]);
 
-    //let a = Matrix::from([[0.0, 1.0, 0.0]]);
-    //let n = a.null_space::<4>();
+    let a = Matrix::from([[0.0, 1.0, 0.0]]);
+    let n = a.null_space::<4>();
+    assert_eq!(n.len(), 2);
+    for v in n {
+        assert_eq!(a * v, Matrix::from([[0.0]]));
+    }
 }
