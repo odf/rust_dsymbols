@@ -439,7 +439,11 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
                             v[j] = -v[j];
                         }
                     }
+                    for k in (i..self.rank).rev() {
+                        self.vectors[k + 1] = self.vectors[k];
+                    }
                     self.vectors[i] = v;
+                    self.rank += 1;
                     return;
                 } else if col == col_b {
                     Entry::clear_column(col, &mut v, &mut b);
@@ -481,7 +485,7 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
 }
 
 
-impl<T: Entry + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
+impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
     fn rank(&self) -> usize {
         let mut b = Basis::new();
         for i in 0..self.nr_rows() {
@@ -529,7 +533,7 @@ impl<T: Entry + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 }
 
 
-impl<T: Entry + Copy , const N: usize> Matrix<T, N, N> {
+impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
     fn determinant(&self) -> T {
         match self.nr_rows() {
             0 => T::one(),
@@ -667,6 +671,11 @@ fn test_matrix_reduced_basis() {
             .reduced_basis(),
         vec![[1.0, 0.0, -1.0], [0.0, 1.0, 2.0]]
     );
+    assert_eq!(
+        Matrix::from([[0, 1, 0, 0], [1, 0, 1, 0], [0, 0, 0, 1]])
+            .reduced_basis(),
+        vec![[1, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]
+    )
 }
 
 
