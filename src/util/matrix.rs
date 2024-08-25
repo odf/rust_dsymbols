@@ -502,34 +502,6 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         b.reduce();
         b.vectors()
     }
-
-    fn null_space<const S: usize>(&self) -> Vec<Matrix<T, M, 1>> {
-        assert_eq!(S, N + M);
-
-        let t: Vec<[T; S]> = self.transpose().hstack(Matrix::identity())
-            .reduced_basis();
-
-        let mut lft = Basis::new();
-        for i in 0..t.len() {
-            let mut v = [T::zero(); N];
-            for j in 0..N {
-                v[j] = t[i][j];
-            }
-            lft.extend(&v);
-        }
-        let k = lft.rank();
-
-        let mut result = vec![];
-        for i in k..M {
-            let mut v = [T::zero(); M];
-            for j in 0..M {
-                v[j] = t[i][j + N];
-            }
-            result.push(Matrix::from(v).transpose())
-        }
-
-        result
-    }
 }
 
 
@@ -562,6 +534,34 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
                     .unwrap_or(T::zero())
             }
         }
+    }
+
+    fn null_space<const S: usize>(&self) -> Vec<Matrix<T, N, 1>> {
+        assert_eq!(S, N + N);
+
+        let t: Vec<[T; S]> = self.transpose().hstack(Matrix::identity())
+            .reduced_basis();
+
+        let mut lft = Basis::new();
+        for i in 0..t.len() {
+            let mut v = [T::zero(); N];
+            for j in 0..N {
+                v[j] = t[i][j];
+            }
+            lft.extend(&v);
+        }
+        let k = lft.rank();
+
+        let mut result = vec![];
+        for i in k..N {
+            let mut v = [T::zero(); N];
+            for j in 0..N {
+                v[j] = t[i][j + N];
+            }
+            result.push(Matrix::from(v).transpose())
+        }
+
+        result
     }
 }
 
@@ -716,10 +716,10 @@ fn test_matrix_nullspace() {
     let n = a.null_space::<4>();
     assert_eq!(n, vec![]);
 
-    let a = Matrix::from([[0.0, 1.0, 0.0]]);
-    let n = a.null_space::<4>();
+    let a = Matrix::from([[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+    let n = a.null_space::<6>();
     assert_eq!(n.len(), 2);
     for v in n {
-        assert_eq!(a * v, Matrix::from([[0.0]]));
+        assert_eq!(a * v, Matrix::from([[0.0], [0.0], [0.0]]));
     }
 }
