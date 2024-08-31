@@ -282,13 +282,15 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 
 pub trait Entry: Scalar + Sub<Output=Self> {
     fn clear_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &mut [Self; N]
+        col: usize, v: &mut [Self; N], b: &mut [Self; N],
+        vx: Option<&mut [Self; N]>, bx: Option<&mut [Self; N]>
     );
     fn normalize_column<const N: usize>(
-        col: usize, v: &mut [Self; N]
+        col: usize, v: &mut [Self; N], vx: Option<&mut [Self; N]>
     );
     fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N]
+        col: usize, v: &mut [Self; N], b: &[Self; N],
+        vx: Option<&mut [Self; N]>, bx: Option<&[Self; N]>
     );
     fn solve_row<const N: usize>(
         a: &[Self; N], x: &Vec<&[Self; N]>, b: &[Self; N]
@@ -301,7 +303,8 @@ impl Scalar for f64 {}
 
 impl Entry for f64 {
     fn clear_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &mut [Self; N]
+        col: usize, v: &mut [Self; N], b: &mut [Self; N],
+        vx: Option<&mut [Self; N]>, bx: Option<&mut [Self; N]>
     ) {
         let f = v[col] / b[col];
         v[col] = 0.0;
@@ -309,10 +312,18 @@ impl Entry for f64 {
         for k in (col + 1)..v.len() {
             v[k] -= b[k] * f;
         }
+
+        if let Some(vx) = vx {
+            if let Some(bx) = bx {
+                for k in 0..vx.len() {
+                    vx[k] -= bx[k] * f;
+                }
+            }
+        }
     }
 
     fn normalize_column<const N: usize>(
-        col: usize, v: &mut [Self; N]
+        col: usize, v: &mut [Self; N], vx: Option<&mut [Self; N]>
     ) {
         let f = v[col];
         v[col] = 1.0;
@@ -320,16 +331,31 @@ impl Entry for f64 {
         for k in (col + 1)..v.len() {
             v[k] /= f;
         }
+
+        if let Some(vx) = vx {
+            for k in 0..vx.len() {
+                vx[k] /= f;
+            }
+        }
     }
 
     fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N]
+        col: usize, v: &mut [Self; N], b: &[Self; N],
+        vx: Option<&mut [Self; N]>, bx: Option<&[Self; N]>
     ) {
         let f = v[col];
         v[col] = 0.0;
 
         for k in (col + 1)..v.len() {
             v[k] -= b[k] * f;
+        }
+
+        if let Some(vx) = vx {
+            if let Some(bx) = bx {
+                for k in 0..vx.len() {
+                    vx[k] -= bx[k] * f;
+                }
+            }
         }
     }
 
@@ -347,7 +373,8 @@ impl Scalar for i64 {}
 
 impl Entry for i64 {
     fn clear_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &mut [Self; N]
+        col: usize, v: &mut [Self; N], b: &mut [Self; N],
+        vx: Option<&mut [Self; N]>, bx: Option<&mut [Self; N]>
     ) {
         let (_, r, s, t, u) = gcdx(b[col], v[col]);
         let det = r * u - s * t;
@@ -357,20 +384,37 @@ impl Entry for i64 {
             v[k] = b[k] * t + v[k] * u;
             b[k] = tmp;
         }
+
+        if let Some(vx) = vx {
+            if let Some(bx) = bx {
+                for k in 0..vx.len() {
+                    let tmp = det * (bx[k] * r + vx[k] * s);
+                    vx[k] = bx[k] * t + vx[k] * u;
+                    bx[k] = tmp;
+                }
+            }
+        }
     }
 
     fn normalize_column<const N: usize>(
-        col: usize, v: &mut [Self; N]
+        col: usize, v: &mut [Self; N], vx: Option<&mut [Self; N]>
     ) {
         if v[col] < 0 {
             for k in col..v.len() {
                 v[k] = -v[k];
             }
+
+            if let Some(vx) = vx {
+                for k in 0..vx.len() {
+                    vx[k] = -vx[k];
+                }
+            }
         }
     }
 
     fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N]
+        col: usize, v: &mut [Self; N], b: &[Self; N],
+        vx: Option<&mut [Self; N]>, bx: Option<&[Self; N]>
     ) {
         let f = v[col] / b[col] - (
             if v[col] < 0 { 1 } else { 0 }
@@ -379,6 +423,14 @@ impl Entry for i64 {
         if f != 0 {
             for k in col..v.len() {
                 v[k] -= b[k] * f;
+            }
+
+            if let Some(vx) = vx {
+                if let Some(bx) = bx {
+                    for k in col..vx.len() {
+                        vx[k] -= bx[k] * f;
+                    }
+                }
             }
         }
     }
@@ -407,6 +459,11 @@ impl Entry for i64 {
 }
 
 
+fn pivot_column<T: Zero>(v: &[T]) -> Option<usize> {
+    v.iter().position(|x| !x.is_zero())
+}
+
+
 #[derive(Debug, PartialEq)]
 struct Basis<T: Entry, const N: usize> {
     vectors: Matrix<T, N, N>,
@@ -423,8 +480,6 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
     }
 
     fn extend(&mut self, v: &[T; N]) {
-        let pivot_column = |v: &[T]| { v.iter().position(|x| !x.is_zero()) };
-
         let mut v = v.clone();
 
         for i in 0..self.rank {
@@ -446,7 +501,7 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
                     self.rank += 1;
                     return;
                 } else if col == col_b {
-                    Entry::clear_column(col, &mut v, &mut b);
+                    Entry::clear_column(col, &mut v, &mut b, None, None);
                 }
             } else {
                 break;
@@ -466,11 +521,11 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
                 col += 1;
             }
 
-            Entry::normalize_column(col, &mut self.vectors[row]);
+            Entry::normalize_column(col, &mut self.vectors[row], None);
 
             let b = self.vectors[row];
             for i in 0..row {
-                Entry::reduce_column(col, &mut self.vectors[i], &b);
+                Entry::reduce_column(col, &mut self.vectors[i], &b, None, None);
             }
         }
     }
@@ -534,6 +589,53 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
                     .unwrap_or(T::zero())
             }
         }
+    }
+
+    fn inverse(&self) -> Option<Self> {
+        // TODO rough sketch, will not work
+
+        let mut tmp = self.clone();
+        let mut inv = Self::identity();
+
+        for row in 0..N {
+            let mut v = tmp[row].clone();
+            let mut vx = inv[row].clone();
+
+            for i in 0..row {
+                if let Some(col) = pivot_column(&v) {
+                    let col_b = pivot_column(&tmp[i]).unwrap();
+
+                    if col < col_b {
+                        if (N - i) % 2 > 0 {
+                            for j in 0..N {
+                                v[j] = -v[j];
+                                vx[j] = -vx[j];
+                            }
+                        }
+                        for k in (i..row).rev() {
+                            tmp[k + 1] = tmp[k];
+                            inv[k + 1] = inv[k];
+                        }
+                        tmp[i] = v;
+                        inv[i] = vx;
+                        break;
+                    } else if col == col_b {
+                        Entry::clear_column(
+                            col, &mut v, &mut tmp[i],
+                            Some(&mut vx), Some(&mut inv[i])
+                        );
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            if pivot_column(&v).is_none() {
+                return None
+            }
+        }
+
+        Some(inv)
     }
 
     fn null_space<const S: usize>(&self) -> Vec<Matrix<T, N, 1>> {
