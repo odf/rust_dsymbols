@@ -558,10 +558,11 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         b.vectors()
     }
 
-    fn row_echelon_form(&self) -> (Self, Matrix<T, N, N>, usize) {
+    fn row_echelon_form(&self) -> (Self, Matrix<T, N, N>, [usize; N]) {
         let mut u = self.clone();
         let mut s = Matrix::identity();
         let mut row = 0;
+        let mut cols = [N; N];
 
         for col in 0..M {
             let pivot_row = (row..N).find(|&r| !u[(r, col)].is_zero());
@@ -586,11 +587,12 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
                 u[row] = vu;
                 s[row] = vs;
 
+                cols[row] = col;
                 row += 1;
             }
         }
 
-        (u, s, row)
+        (u, s, cols)
     }
 }
 
@@ -817,33 +819,34 @@ fn test_matrix_nullspace() {
 
 #[test]
 fn test_matrix_row_echelon_form() {
-    fn is_row_echelon<T: Scalar, const N: usize, const M: usize>(
-        m: &Matrix<T, N, M>
+    fn check<T, const N: usize, const M: usize>(
+        a: Matrix<T, N, M>,
+        u: Matrix<T, N, M>, s: Matrix<T, N, N>, cols: [usize; N]
     )
-        -> bool
+        where T: Scalar + Copy + std::fmt::Debug + PartialEq
     {
-        let mut col: usize = 0;
+        assert!((0..(N - 1)).all(|i| cols[i + 1] > cols[i]));
+
         for i in 0..N {
-            if (0..col).any(|j| !m[(i, j)].is_zero()) {
-                return false;
-            }
-            while col < M && m[(i, col)].is_zero() {
-                col += 1;
-            }
+            assert!((0..cols[i]).all(|j| u[(i, j)].is_zero()));
+            assert!(cols[i] == M || !u[(i, cols[i])].is_zero());
         }
 
-        true
+        assert_eq!(s * a, u);
     }
 
     let a = Matrix::from([[1, 2], [3, 4]]);
-    let (u, s, rk) = a.row_echelon_form();
-    assert_eq!(rk, 2);
-    assert!(is_row_echelon(&u));
-    assert_eq!(s * a, u);
+    let (u, s, cs) = a.row_echelon_form();
+    check(a, u, s, cs);
+    assert_eq!(cs, [0, 1]);
+
+    let a = Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    let (u, s, cs) = a.row_echelon_form();
+    check(a, u, s, cs);
+    assert_eq!(cs, [0, 1, 3]);
 
     let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
-    let (u, s, rk) = a.row_echelon_form();
-    assert_eq!(rk, 2);
-    assert!(is_row_echelon(&u));
-    assert_eq!(s * a, u);
+    let (u, s, cs) = a.row_echelon_form();
+    check(a, u, s, cs);
+    assert_eq!(cs, [0, 1]);
 }
