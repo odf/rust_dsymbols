@@ -579,16 +579,25 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
     }
 
     fn reduced_basis(&self) -> Vec<[T; M]> {
-        let mut b = Basis::new();
-        for i in 0..self.nr_rows() {
-            b.extend(&self[i]);
+        let (u, _, cs) = self.row_echelon_form();
+        let rank = (0..N).find(|&i| cs[i] == M).unwrap_or(N);
+        let mut u = u.clone();
+
+        for row in 0..rank {
+            let col = cs[row];
+            Entry::normalize_column(col, &mut u[row], None);
+
+            let b = u[row];
+            for i in 0..row {
+                Entry::reduce_column(col, &mut u[i], &b, None, None);
+            }
         }
-        b.reduce();
-        b.vectors()
+
+        (0..rank).map(|i| u[i]).collect()
     }
 
     fn rank(&self) -> usize {
-        let (_, _, cs) = self.transpose().row_echelon_form();
+        let (_, _, cs) = self.row_echelon_form();
 
         (0..N).find(|&i| cs[i] == M).unwrap_or(N)
     }
@@ -619,7 +628,7 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
                 self[(0, 1)] * self[(1, 0)] * self[(2, 2)]
             },
             _ => {
-                let (u, _, _) = self.transpose().row_echelon_form();
+                let (u, _, _) = self.row_echelon_form();
                 (0..N).map(|i| u[(i, i)])
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())
