@@ -281,9 +281,9 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 
 
 pub trait Entry: Scalar + Sub<Output=Self> {
-    fn clear_column<const N: usize>(
+    fn clear_column<const N: usize, const M: usize>(
         col: usize, v: &mut [Self; N], b: &mut [Self; N],
-        vx: Option<&mut [Self; N]>, bx: Option<&mut [Self; N]>
+        vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
     );
     fn normalize_column<const N: usize>(
         col: usize, v: &mut [Self; N], vx: Option<&mut [Self; N]>
@@ -302,9 +302,9 @@ pub trait Entry: Scalar + Sub<Output=Self> {
 impl Scalar for f64 {}
 
 impl Entry for f64 {
-    fn clear_column<const N: usize>(
+    fn clear_column<const N: usize, const M: usize>(
         col: usize, v: &mut [Self; N], b: &mut [Self; N],
-        vx: Option<&mut [Self; N]>, bx: Option<&mut [Self; N]>
+        vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
     ) {
         let f = v[col] / b[col];
         v[col] = 0.0;
@@ -372,9 +372,9 @@ impl Entry for f64 {
 impl Scalar for i64 {}
 
 impl Entry for i64 {
-    fn clear_column<const N: usize>(
+    fn clear_column<const N: usize, const M: usize>(
         col: usize, v: &mut [Self; N], b: &mut [Self; N],
-        vx: Option<&mut [Self; N]>, bx: Option<&mut [Self; N]>
+        vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
     ) {
         let (_, r, s, t, u) = gcdx(b[col], v[col]);
         let det = r * u - s * t;
@@ -501,7 +501,7 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
                     self.rank += 1;
                     return;
                 } else if col == col_b {
-                    Entry::clear_column(col, &mut v, &mut b, None, None);
+                    Entry::clear_column::<N, N>(col, &mut v, &mut b, None, None);
                 }
             } else {
                 break;
@@ -557,6 +557,41 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         b.reduce();
         b.vectors()
     }
+
+    fn row_echelon_form(&self) -> (Self, Matrix<T, N, N>, usize) {
+        let mut u = self.clone();
+        let mut s = Matrix::identity();
+        let mut row = 0;
+
+        for col in 0..M {
+            let pivot_row = (row..N).find(|&r| !u[(r, col)].is_zero());
+
+            if let Some(pr) = pivot_row {
+                if pr != row {
+                    (u[pr], u[row]) = (u[row], u[pr]);
+                    (s[pr], s[row]) = (s[row], s[pr]);
+                }
+
+                let mut vu = u[row].clone();
+                let mut vs = s[row].clone();
+
+                for r in (row + 1)..N {
+                    Entry::clear_column(
+                        col,
+                        &mut u[r], &mut vu,
+                        Some(&mut s[r]), Some(&mut vs)
+                    );
+                }
+
+                u[row] = vu;
+                s[row] = vs;
+
+                row += 1;
+            }
+        }
+
+        (u, s, row)
+    }
 }
 
 
@@ -589,53 +624,6 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
                     .unwrap_or(T::zero())
             }
         }
-    }
-
-    fn inverse(&self) -> Option<Self> {
-        // TODO rough sketch, will not work
-
-        let mut tmp = self.clone();
-        let mut inv = Self::identity();
-
-        for row in 0..N {
-            let mut v = tmp[row].clone();
-            let mut vx = inv[row].clone();
-
-            for i in 0..row {
-                if let Some(col) = pivot_column(&v) {
-                    let col_b = pivot_column(&tmp[i]).unwrap();
-
-                    if col < col_b {
-                        if (N - i) % 2 > 0 {
-                            for j in 0..N {
-                                v[j] = -v[j];
-                                vx[j] = -vx[j];
-                            }
-                        }
-                        for k in (i..row).rev() {
-                            tmp[k + 1] = tmp[k];
-                            inv[k + 1] = inv[k];
-                        }
-                        tmp[i] = v;
-                        inv[i] = vx;
-                        break;
-                    } else if col == col_b {
-                        Entry::clear_column(
-                            col, &mut v, &mut tmp[i],
-                            Some(&mut vx), Some(&mut inv[i])
-                        );
-                    }
-                } else {
-                    break;
-                }
-            }
-
-            if pivot_column(&v).is_none() {
-                return None
-            }
-        }
-
-        Some(inv)
     }
 
     fn null_space<const S: usize>(&self) -> Vec<Matrix<T, N, 1>> {
@@ -824,4 +812,38 @@ fn test_matrix_nullspace() {
     for v in n {
         assert_eq!(a * v, Matrix::from([[0.0], [0.0], [0.0]]));
     }
+}
+
+
+#[test]
+fn test_matrix_row_echelon_form() {
+    fn is_row_echelon<T: Scalar, const N: usize, const M: usize>(
+        m: &Matrix<T, N, M>
+    )
+        -> bool
+    {
+        let mut col: usize = 0;
+        for i in 0..N {
+            if (0..col).any(|j| !m[(i, j)].is_zero()) {
+                return false;
+            }
+            while col < M && m[(i, col)].is_zero() {
+                col += 1;
+            }
+        }
+
+        true
+    }
+
+    let a = Matrix::from([[1, 2], [3, 4]]);
+    let (u, s, rk) = a.row_echelon_form();
+    assert_eq!(rk, 2);
+    assert!(is_row_echelon(&u));
+    assert_eq!(s * a, u);
+
+    let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
+    let (u, s, rk) = a.row_echelon_form();
+    assert_eq!(rk, 2);
+    assert!(is_row_echelon(&u));
+    assert_eq!(s * a, u);
 }
