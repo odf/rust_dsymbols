@@ -541,23 +541,6 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
 
 
 impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
-    fn rank(&self) -> usize {
-        let mut b = Basis::new();
-        for i in 0..self.nr_rows() {
-            b.extend(&self[i]);
-        }
-        b.rank()
-    }
-
-    fn reduced_basis(&self) -> Vec<[T; M]> {
-        let mut b = Basis::new();
-        for i in 0..self.nr_rows() {
-            b.extend(&self[i]);
-        }
-        b.reduce();
-        b.vectors()
-    }
-
     fn row_echelon_form(&self) -> (Self, Matrix<T, N, N>, [usize; N]) {
         let mut u = self.clone();
         let mut s = Matrix::identity();
@@ -593,6 +576,21 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         }
 
         (u, s, cols)
+    }
+
+    fn reduced_basis(&self) -> Vec<[T; M]> {
+        let mut b = Basis::new();
+        for i in 0..self.nr_rows() {
+            b.extend(&self[i]);
+        }
+        b.reduce();
+        b.vectors()
+    }
+
+    fn rank(&self) -> usize {
+        let (_, _, cs) = self.transpose().row_echelon_form();
+
+        (0..N).find(|&i| cs[i] == M).unwrap_or(N)
     }
 
     fn null_space(&self) -> Vec<Matrix<T, M, 1>> {
