@@ -599,12 +599,7 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         let (_, s, cs) = self.transpose().row_echelon_form();
         let rank = (0..N).find(|&i| cs[i] == M).unwrap_or(N);
 
-        let mut result = vec![];
-        for i in rank..M {
-            result.push(Matrix::from(s[i]).transpose());
-        }
-
-        result
+        (rank..M).map(|i| Matrix::from(s[i]).transpose()).collect()
     }
 }
 
