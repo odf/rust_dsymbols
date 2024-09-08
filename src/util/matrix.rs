@@ -619,14 +619,8 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
                 self[(0, 1)] * self[(1, 0)] * self[(2, 2)]
             },
             _ => {
-                let mut b = Basis::new();
-                for i in 0..self.nr_rows() {
-                    b.extend(&self[i]);
-                }
-                let b = b.vectors();
-
-                (0..b.len())
-                    .map(|i| b[i][i])
+                let (u, _, _) = self.transpose().row_echelon_form();
+                (0..N).map(|i| u[(i, i)])
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())
             }
