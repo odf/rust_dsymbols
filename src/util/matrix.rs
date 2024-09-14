@@ -209,6 +209,55 @@ impl<T: Scalar, const N: usize, const M: usize>
 }
 
 
+impl<T: Scalar + Copy, const N: usize, const M: usize>
+    Add<[[T; M]; N]> for Matrix<T, N, M>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn add(self, rhs: [[T; M]; N]) -> Self::Output {
+        let mut result = [[T::zero(); M]; N];
+
+        for i in 0..N {
+            for j in 0..M {
+                result[i][j] = self[(i, j)] + rhs[i][j];
+            }
+        }
+
+        Matrix::from(result)
+    }
+}
+
+
+impl<T: Scalar + Copy, const N: usize, const M: usize>
+    Add<Matrix<T, N, M>> for Matrix<T, N, M>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn add(self, rhs: Matrix<T, N, M>) -> Self::Output {
+        self + rhs.data
+    }
+}
+
+
+impl<T: Scalar + Copy, const N: usize, const M: usize> Zero for Matrix<T, N, M> {
+    fn zero() -> Self {
+        Matrix::from([[T::zero(); M]; N])
+    }
+
+    fn is_zero(&self) -> bool {
+        for i in 0..N {
+            for j in 0..M {
+                if !self[(i, j)].is_zero() {
+                    return false
+                }
+            }
+        }
+
+        true
+    }
+}
+
+
 impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for Matrix<T, N, M>
 {
@@ -665,6 +714,27 @@ fn test_matrix_identity() {
     let m = Matrix::<i64, 3, 3>::identity();
     assert_eq!(m, [[1, 0, 0], [0, 1, 0], [0, 0, 1]].into());
     assert_eq!(Matrix::identity(), [[1, 0], [0, 1]].into());
+}
+
+
+#[test]
+fn test_matrix_add() {
+    assert_eq!(
+        Matrix::from([[1, 2], [3, 4]]) + Matrix::from([[1, 2], [3, 4]]),
+        Matrix::from([[2, 4], [6, 8]])
+    );
+
+    assert_eq!(
+        Matrix::from([[1, 2], [3, 4]]) + [[4, 3], [2, 1]],
+        Matrix::from([[5, 5], [5, 5]])
+    );
+}
+
+
+#[test]
+fn test_matrix_zero() {
+    assert_eq!(Matrix::zero(), Matrix::from([[0; 3]; 2]));
+    assert!(Matrix::from([[0; 4]; 5]).is_zero());
 }
 
 
