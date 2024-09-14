@@ -623,6 +623,41 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
 
         (rank..M).map(|i| Matrix::from(s[i]).transpose()).collect()
     }
+
+    fn solve<const K: usize>(&self, rhs: Matrix<T, N, K>)
+        -> Option<Matrix<T, M, K>>
+        where T: Div<T, Output=T>
+    {
+        let (u, s, cs) = self.row_echelon_form();
+        let rank = (0..N).find(|&i| cs[i] == M).unwrap_or(N);
+        let y = s * rhs;
+
+        for i in rank..N {
+            for j in 0..M {
+                if !y[(i, j)].is_zero() {
+                    return None;
+                }
+            }
+        }
+
+        let mut result = Matrix::zero();
+
+        for row in (0..rank).rev() {
+            let a = (Matrix::from(u[row]) * result).data[0];
+            let b = y[row];
+            let x = u[(row, cs[row])];
+            for k in 0..K {
+                let t = b[k] - a[k];
+                if ((t / x) * x - t).is_zero() { // TODO tolerance for float
+                    result[(row, k)] = t / x;
+                } else {
+                    return None;
+                }
+            }
+        }
+
+        Some(result)
+    }
 }
 
 
@@ -864,4 +899,16 @@ fn test_matrix_nullspace() {
     for v in n {
         assert_eq!(a * v, Matrix::from([[0.0]]));
     }
+}
+
+#[test]
+fn test_matrix_solve() {
+    let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
+    let x = Matrix::from([[1.0, 0.0], [1.0, -3.0]]);
+    assert_eq!(a.solve(a * x), Some(x));
+    assert_eq!(a * a.solve(Matrix::identity()).unwrap(), Matrix::identity());
+
+    let a = Matrix::from([[1, 2], [3, 4]]);
+    let x = Matrix::from([[1, 0], [1, -3]]);
+    assert_eq!(a.solve(a * x), Some(x));
 }
