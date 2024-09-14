@@ -170,7 +170,7 @@ impl<T: Scalar, const N: usize, const M: usize>
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
         assert!(index.0 < N);
-        assert!(index.0 < M);
+        assert!(index.1 < M);
         &self.data[index.0][index.1]
     }
 }
@@ -181,7 +181,7 @@ impl<T: Scalar, const N: usize, const M: usize>
 {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
         assert!(index.0 < N);
-        assert!(index.0 < M);
+        assert!(index.1 < M);
         &mut self.data[index.0][index.1]
     }
 }
@@ -822,10 +822,10 @@ fn test_matrix_nullspace() {
     let n = a.null_space();
     assert_eq!(n, vec![]);
 
-    let a = Matrix::from([[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+    let a = Matrix::from([[0.0, 1.0, 0.0]]);
     let n = a.null_space();
     assert_eq!(n.len(), 2);
     for v in n {
-        assert_eq!(a * v, Matrix::from([[0.0], [0.0], [0.0]]));
+        assert_eq!(a * v, Matrix::from([[0.0]]));
     }
 }
