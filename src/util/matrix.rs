@@ -633,7 +633,7 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         let y = s * rhs;
 
         for i in rank..N {
-            for j in 0..M {
+            for j in 0..K {
                 if !y[(i, j)].is_zero() {
                     return None;
                 }
@@ -909,12 +909,46 @@ fn test_matrix_nullspace() {
 
 #[test]
 fn test_matrix_solve() {
-    let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
-    let x = Matrix::from([[1.0, 0.0], [1.0, -3.0]]);
-    assert_eq!(a.solve(a * x), Some(x));
-    assert_eq!(a * a.inverse().unwrap(), Matrix::identity());
+    fn test<T, const N: usize, const M: usize, const L: usize>(
+        a: [[T; M]; N], b: [[T; L]; M]
+    )
+        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+    {
+        let a = Matrix::from(a);
+        let b = Matrix::from(b);
+        let ab = a * b;
+        assert_eq!(a * a.solve(ab).unwrap(), ab);
 
-    let a = Matrix::from([[1, 2], [3, 4]]);
-    let x = Matrix::from([[1, 0], [1, -3]]);
-    assert_eq!(a.solve(a * x), Some(x));
+        if N == M && a.rank() == N {
+            assert_eq!(a.solve(ab), Some(b));
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]], [[1.0, 0.0], [1.0, -3.0]]);
+    test([[1, 2], [3, 4]], [[1, 0], [1, -3]]);
+    test([[1.0, 2.0], [3.0, 6.0]], [[1.0], [1.0]]);
+    test([[1, 2], [3, 6]], [[1], [1]]);
+}
+
+#[test]
+fn test_matrix_inverse() {
+    fn test<T, const N: usize>(a: [[T; N]; N])
+        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+    {
+        let a = Matrix::from(a);
+
+        if a.rank() == N {
+            assert_eq!(a * a.inverse().unwrap(), Matrix::identity());
+        } else {
+            assert_eq!(a.inverse(), None);
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]]);
+    test([[1.0, 2.0], [3.0, 6.0]]);
+
+    test([[1, 2], [3, 5]]);
+
+    // Inverse exists, but is not integral:
+    assert_eq!(Matrix::from([[1, 2], [3, 4]]).inverse(), None);
 }
