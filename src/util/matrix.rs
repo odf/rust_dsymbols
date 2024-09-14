@@ -685,6 +685,12 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
             }
         }
     }
+
+    fn inverse(&self) -> Option<Self>
+        where T: Div<T, Output=T>
+    {
+        self.solve(Matrix::identity())
+    }
 }
 
 
@@ -906,7 +912,7 @@ fn test_matrix_solve() {
     let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
     let x = Matrix::from([[1.0, 0.0], [1.0, -3.0]]);
     assert_eq!(a.solve(a * x), Some(x));
-    assert_eq!(a * a.solve(Matrix::identity()).unwrap(), Matrix::identity());
+    assert_eq!(a * a.inverse().unwrap(), Matrix::identity());
 
     let a = Matrix::from([[1, 2], [3, 4]]);
     let x = Matrix::from([[1, 0], [1, -3]]);
