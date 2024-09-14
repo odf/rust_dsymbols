@@ -259,6 +259,29 @@ impl<T: Scalar + Copy, const N: usize, const M: usize> Zero for Matrix<T, N, M> 
 
 
 impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
+    Mul<Matrix<T, M, L>> for [[T; M]; N]
+{
+    type Output = [[T; L]; N];
+
+    fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
+        let mut result = [[T::zero(); L]; N];
+
+        for i in 0..N {
+            for j in 0..L {
+                let mut x = T::zero();
+                for k in 0..M {
+                    x = x + self[i][k] * rhs.data[k][j];
+                }
+                result[i][j] = x;
+            }
+        }
+
+        result
+    }
+}
+
+
+impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, L>;
@@ -273,6 +296,42 @@ impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
                     x = x + self.data[i][k] * rhs[k][j];
                 }
                 result[i][j] = x;
+            }
+        }
+        Matrix::from(result)
+    }
+}
+
+
+impl<const N: usize, const M: usize>
+    Mul<Matrix<i64, N, M>> for i64
+{
+    type Output = Matrix<i64, N, M>;
+
+    fn mul(self, rhs: Matrix<i64, N, M>) -> Self::Output {
+        let mut result = [[i64::zero(); M]; N];
+
+        for i in 0..N {
+            for j in 0..M {
+                result[i][j] = self * rhs.data[i][j];
+            }
+        }
+        Matrix::from(result)
+    }
+}
+
+
+impl<const N: usize, const M: usize>
+    Mul<Matrix<f64, N, M>> for f64
+{
+    type Output = Matrix<f64, N, M>;
+
+    fn mul(self, rhs: Matrix<f64, N, M>) -> Self::Output {
+        let mut result = [[f64::zero(); M]; N];
+
+        for i in 0..N {
+            for j in 0..M {
+                result[i][j] = self * rhs.data[i][j];
             }
         }
         Matrix::from(result)
@@ -756,6 +815,10 @@ fn test_matrix_mul() {
         10.into()
     );
     assert_eq!(
+        [[1, 2, 3]] * Matrix::from([3, 2, 1]).transpose(),
+        [[10]]
+    );
+    assert_eq!(
         Matrix::from([[1.0, 1.0], [0.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]],
         [[1.0, 3.0], [0.0, 1.0]].into()
     );
@@ -776,6 +839,18 @@ fn test_matrix_mul() {
     assert_eq!(
         (Matrix::from([[1.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]])[0],
         [1.0, 3.0]
+    );
+    assert_eq!(
+        Matrix::from([[1, 2], [3, 4]]) * 2,
+        Matrix::from([[2, 4], [6, 8]])
+    );
+    assert_eq!(
+        Matrix::from([[1.0, 2.0], [3.0, 4.0]]) * 2.0,
+        Matrix::from([[2.0, 4.0], [6.0, 8.0]])
+    );
+    assert_eq!(
+        2.5 * Matrix::from([[1.0, 2.0], [3.0, 4.0]]),
+        Matrix::from([[2.5, 5.0], [7.5, 10.0]])
     );
 }
 
