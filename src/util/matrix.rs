@@ -341,10 +341,6 @@ pub trait Entry: Scalar + Sub<Output=Self> {
         col: usize, v: &mut [Self; N], b: &[Self; N],
         vx: Option<&mut [Self; N]>, bx: Option<&[Self; N]>
     );
-    fn solve_row<const N: usize>(
-        a: &[Self; N], x: &Vec<&[Self; N]>, b: &[Self; N]
-    )
-        -> Option<[Self; N]>;
 }
 
 
@@ -406,14 +402,6 @@ impl Entry for f64 {
                 }
             }
         }
-    }
-
-    fn solve_row<const N: usize>(
-        _a: &[Self; N], _x: &Vec<&[Self; N]>, b: &[Self; N]
-    )
-        -> Option<[Self; N]>
-    {
-        Some(b.clone())
     }
 }
 
@@ -482,28 +470,6 @@ impl Entry for i64 {
                 }
             }
         }
-    }
-
-    fn solve_row<const N: usize>(
-        a: &[Self; N], x: &Vec<&[Self; N]>, b: &[Self; N]
-    )
-        -> Option<[Self; N]>
-    {
-        let k = x.len();
-        let mut result = [0; N];
-
-        for col in 0..b.len() {
-            let mut t = b[col];
-            for i in 0..k {
-                t -= a[i] * x[i][col];
-            }
-            if t % a[k] == 0 {
-                result[col] = t / a[k];
-            } else {
-                return None;
-            }
-        }
-        Some(result)
     }
 }
 
