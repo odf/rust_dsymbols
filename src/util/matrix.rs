@@ -707,12 +707,8 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         let re = RowEchelonMatrix::from(self.clone());
         let y = re.multiplier * rhs;
 
-        for i in re.rank..N {
-            for j in 0..K {
-                if !y[(i, j)].is_zero() {
-                    return None;
-                }
-            }
+        if !(re.rank..N).all(|i| (0..K).all(|j| y[(i, j)].is_zero())) {
+            return None;
         }
 
         let mut result = Matrix::zero();
