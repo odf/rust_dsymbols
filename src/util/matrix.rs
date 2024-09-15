@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
+use std::{ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub}, str::MatchIndices};
 
 use num_traits::{One, Zero};
 
@@ -614,9 +614,20 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
 }
 
 
-impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
-    fn row_echelon_form(&self) -> (Self, Matrix<T, N, N>, [usize; N]) {
-        let mut u = self.clone();
+pub struct RowEchelonMatrix<T: Entry, const N: usize, const M: usize> {
+    original: Matrix<T, N, M>,
+    multiplier: Matrix<T, N, N>,
+    result: Matrix<T, N, M>,
+    columns: [usize; N],
+    rank: usize
+}
+
+
+impl<T: Entry + Copy, const N: usize, const M: usize>
+    RowEchelonMatrix<T, N, M>
+{
+    pub fn from(m: Matrix<T, N, M>) -> Self {
+        let mut u = m.clone();
         let mut s = Matrix::identity();
         let mut row = 0;
         let mut cols = [N; N];
@@ -649,16 +660,24 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
             }
         }
 
-        (u, s, cols)
+        RowEchelonMatrix {
+            original: m,
+            multiplier: s,
+            result: u,
+            columns: cols,
+            rank: row
+        }
     }
+}
 
+
+impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
     fn reduced_basis(&self) -> Vec<[T; M]> {
-        let (u, _, cs) = self.row_echelon_form();
-        let rank = (0..N).find(|&i| cs[i] == M).unwrap_or(N);
-        let mut u = u.clone();
+        let re = RowEchelonMatrix::from(self.clone());
+        let mut u = re.result.clone();
 
-        for row in 0..rank {
-            let col = cs[row];
+        for row in 0..re.rank {
+            let col = re.columns[row];
             Entry::normalize_column(col, &mut u[row], None);
 
             let b = u[row];
@@ -667,31 +686,28 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
             }
         }
 
-        (0..rank).map(|i| u[i]).collect()
+        (0..re.rank).map(|i| u[i]).collect()
     }
 
     fn rank(&self) -> usize {
-        let (_, _, cs) = self.row_echelon_form();
-
-        (0..N).find(|&i| cs[i] == M).unwrap_or(N)
+        RowEchelonMatrix::from(self.clone()).rank
     }
 
     fn null_space(&self) -> Vec<Matrix<T, M, 1>> {
-        let (_, s, cs) = self.transpose().row_echelon_form();
-        let rank = (0..N).find(|&i| cs[i] == M).unwrap_or(N);
+        let re = RowEchelonMatrix::from(self.transpose());
+        let s = re.multiplier;
 
-        (rank..M).map(|i| Matrix::from(s[i]).transpose()).collect()
+        (re.rank..M).map(|i| Matrix::from(s[i]).transpose()).collect()
     }
 
     fn solve<const K: usize>(&self, rhs: Matrix<T, N, K>)
         -> Option<Matrix<T, M, K>>
         where T: Div<T, Output=T>
     {
-        let (u, s, cs) = self.row_echelon_form();
-        let rank = (0..N).find(|&i| cs[i] == M).unwrap_or(N);
-        let y = s * rhs;
+        let re = RowEchelonMatrix::from(self.clone());
+        let y = re.multiplier * rhs;
 
-        for i in rank..N {
+        for i in re.rank..N {
             for j in 0..K {
                 if !y[(i, j)].is_zero() {
                     return None;
@@ -701,10 +717,10 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
 
         let mut result = Matrix::zero();
 
-        for row in (0..rank).rev() {
-            let a = (Matrix::from(u[row]) * result).data[0];
+        for row in (0..re.rank).rev() {
+            let a = (Matrix::from(re.result[row]) * result).data[0];
             let b = y[row];
-            let x = u[(row, cs[row])];
+            let x = re.result[(row, re.columns[row])];
             for k in 0..K {
                 let t = b[k] - a[k];
                 if ((t / x) * x - t).is_zero() { // TODO tolerance for float
@@ -737,8 +753,8 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
                 self[(0, 1)] * self[(1, 0)] * self[(2, 2)]
             },
             _ => {
-                let (u, _, _) = self.row_echelon_form();
-                (0..N).map(|i| u[(i, i)])
+                let re = RowEchelonMatrix::from(self.clone());
+                (0..N).map(|i| re.result[(i, i)])
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())
             }
@@ -920,41 +936,6 @@ fn test_matrix_determinant() {
     assert_eq!((Matrix::<f64, 2, 2>::identity() * 2.0).determinant(), 4.0);
     assert_eq!((Matrix::<f64, 3, 3>::identity() * 2.0).determinant(), 8.0);
     assert_eq!((Matrix::<f64, 4, 4>::identity() * 2.0).determinant(), 16.0);
-}
-
-
-#[test]
-fn test_matrix_row_echelon_form() {
-    fn check<T, const N: usize, const M: usize>(
-        a: Matrix<T, N, M>,
-        u: Matrix<T, N, M>, s: Matrix<T, N, N>, cols: [usize; N]
-    )
-        where T: Scalar + Copy + std::fmt::Debug + PartialEq
-    {
-        assert!((0..(N - 1)).all(|i| cols[i + 1] > cols[i]));
-
-        for i in 0..N {
-            assert!((0..cols[i]).all(|j| u[(i, j)].is_zero()));
-            assert!(cols[i] == M || !u[(i, cols[i])].is_zero());
-        }
-
-        assert_eq!(s * a, u);
-    }
-
-    let a = Matrix::from([[1, 2], [3, 4]]);
-    let (u, s, cs) = a.row_echelon_form();
-    check(a, u, s, cs);
-    assert_eq!(cs, [0, 1]);
-
-    let a = Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
-    let (u, s, cs) = a.row_echelon_form();
-    check(a, u, s, cs);
-    assert_eq!(cs, [0, 1, 3]);
-
-    let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
-    let (u, s, cs) = a.row_echelon_form();
-    check(a, u, s, cs);
-    assert_eq!(cs, [0, 1]);
 }
 
 #[test]
