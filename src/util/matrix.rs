@@ -393,12 +393,9 @@ pub trait Entry: Scalar + Sub<Output=Self> {
         col: usize, v: &mut [Self; N], b: &mut [Self; N],
         vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
     );
-    fn normalize_column<const N: usize>(
-        col: usize, v: &mut [Self; N], vx: Option<&mut [Self; N]>
-    );
+    fn normalize_column<const N: usize>(col: usize, v: &mut [Self; N]);
     fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N],
-        vx: Option<&mut [Self; N]>, bx: Option<&[Self; N]>
+        col: usize, v: &mut [Self; N], b: &[Self; N]
     );
 }
 
@@ -426,40 +423,23 @@ impl Entry for f64 {
         }
     }
 
-    fn normalize_column<const N: usize>(
-        col: usize, v: &mut [Self; N], vx: Option<&mut [Self; N]>
-    ) {
+    fn normalize_column<const N: usize>(col: usize, v: &mut [Self; N]) {
         let f = v[col];
         v[col] = 1.0;
 
         for k in (col + 1)..v.len() {
             v[k] /= f;
         }
-
-        if let Some(vx) = vx {
-            for k in 0..vx.len() {
-                vx[k] /= f;
-            }
-        }
     }
 
     fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N],
-        vx: Option<&mut [Self; N]>, bx: Option<&[Self; N]>
+        col: usize, v: &mut [Self; N], b: &[Self; N]
     ) {
         let f = v[col];
         v[col] = 0.0;
 
         for k in (col + 1)..v.len() {
             v[k] -= b[k] * f;
-        }
-
-        if let Some(vx) = vx {
-            if let Some(bx) = bx {
-                for k in 0..vx.len() {
-                    vx[k] -= bx[k] * f;
-                }
-            }
         }
     }
 }
@@ -492,25 +472,16 @@ impl Entry for i64 {
         }
     }
 
-    fn normalize_column<const N: usize>(
-        col: usize, v: &mut [Self; N], vx: Option<&mut [Self; N]>
-    ) {
+    fn normalize_column<const N: usize>(col: usize, v: &mut [Self; N]) {
         if v[col] < 0 {
             for k in col..v.len() {
                 v[k] = -v[k];
-            }
-
-            if let Some(vx) = vx {
-                for k in 0..vx.len() {
-                    vx[k] = -vx[k];
-                }
             }
         }
     }
 
     fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N],
-        vx: Option<&mut [Self; N]>, bx: Option<&[Self; N]>
+        col: usize, v: &mut [Self; N], b: &[Self; N]
     ) {
         let f = v[col] / b[col] - (
             if v[col] < 0 { 1 } else { 0 }
@@ -519,14 +490,6 @@ impl Entry for i64 {
         if f != 0 {
             for k in col..v.len() {
                 v[k] -= b[k] * f;
-            }
-
-            if let Some(vx) = vx {
-                if let Some(bx) = bx {
-                    for k in col..vx.len() {
-                        vx[k] -= bx[k] * f;
-                    }
-                }
             }
         }
     }
@@ -595,11 +558,11 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
                 col += 1;
             }
 
-            Entry::normalize_column(col, &mut self.vectors[row], None);
+            Entry::normalize_column(col, &mut self.vectors[row]);
 
             let b = self.vectors[row];
             for i in 0..row {
-                Entry::reduce_column(col, &mut self.vectors[i], &b, None, None);
+                Entry::reduce_column(col, &mut self.vectors[i], &b);
             }
         }
     }
@@ -672,23 +635,6 @@ impl<T: Entry + Copy, const N: usize, const M: usize>
 
 
 impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
-    fn reduced_basis(&self) -> Vec<[T; M]> {
-        let re = RowEchelonMatrix::from(self.clone());
-        let mut u = re.result.clone();
-
-        for row in 0..re.rank {
-            let col = re.columns[row];
-            Entry::normalize_column(col, &mut u[row], None);
-
-            let b = u[row];
-            for i in 0..row {
-                Entry::reduce_column(col, &mut u[i], &b, None, None);
-            }
-        }
-
-        (0..re.rank).map(|i| u[i]).collect()
-    }
-
     fn rank(&self) -> usize {
         RowEchelonMatrix::from(self.clone()).rank
     }
@@ -886,31 +832,6 @@ fn test_matrix_submatrix() {
     assert_eq!(
         Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).submatrix(0..2, [0, 2]),
         Matrix::from([[1, 3], [4, 6]])
-    )
-}
-
-
-#[test]
-fn test_matrix_reduced_basis() {
-    assert_eq!(
-        Matrix::from([[1, 4, 7], [2, 5, 8], [3, 6, 8]])
-            .reduced_basis(),
-        vec![[1, 1, 0], [0, 3, 0], [0, 0, 1]]
-    );
-    assert_eq!(
-        Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 8.0]])
-            .reduced_basis(),
-        vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-    );
-    assert_eq!(
-        Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-            .reduced_basis(),
-        vec![[1.0, 0.0, -1.0], [0.0, 1.0, 2.0]]
-    );
-    assert_eq!(
-        Matrix::from([[0, 1, 0, 0], [1, 0, 1, 0], [0, 0, 0, 1]])
-            .reduced_basis(),
-        vec![[1, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]
     )
 }
 
