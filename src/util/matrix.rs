@@ -388,7 +388,7 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 }
 
 
-pub trait Entry: Scalar + Sub<Output=Self> {
+pub trait Entry: Scalar + Sub<Output=Self> + std::fmt::Display {
     fn clear_column<const N: usize, const M: usize>(
         col: usize, v: &mut [Self; N], b: &mut [Self; N],
         vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
@@ -397,6 +397,7 @@ pub trait Entry: Scalar + Sub<Output=Self> {
     fn reduce_column<const N: usize>(
         col: usize, v: &mut [Self; N], b: &[Self; N]
     );
+    fn can_divide(a: Self, b: Self) -> bool;
 }
 
 
@@ -441,6 +442,10 @@ impl Entry for f64 {
         for k in (col + 1)..v.len() {
             v[k] -= b[k] * f;
         }
+    }
+
+    fn can_divide(a: Self, b: Self) -> bool {
+        b != 0.0 && (a == 0.0 || (a / b * b / a - 1.0).abs() <= f64::EPSILON)
     }
 }
 
@@ -492,6 +497,10 @@ impl Entry for i64 {
                 v[k] -= b[k] * f;
             }
         }
+    }
+
+    fn can_divide(a: Self, b: Self) -> bool {
+        b != 0 && a / b * b == a
     }
 }
 
@@ -665,7 +674,7 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
             let x = re.result[(row, re.columns[row])];
             for k in 0..K {
                 let t = b[k] - a[k];
-                if ((t / x) * x - t).is_zero() { // TODO tolerance for float
+                if Entry::can_divide(t, x) {
                     result[(row, k)] = t / x;
                 } else {
                     return None;
