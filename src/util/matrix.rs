@@ -7,6 +7,9 @@ pub trait Scalar:
 {
 }
 
+impl Scalar for f64 {}
+impl Scalar for i64 {}
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Matrix<T, const N: usize, const M: usize> {
@@ -14,7 +17,7 @@ pub struct Matrix<T, const N: usize, const M: usize> {
 }
 
 
-impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
+impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
     pub fn nr_rows(&self) -> usize {
         N
     }
@@ -22,115 +25,27 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
     pub fn nr_columns(&self) -> usize {
         M
     }
+}
 
-    pub fn transpose(&self) -> Matrix<T, M, N> {
-        let mut result = [[T::zero(); N]; M];
-        for i in 0..M {
-            for j in 0..N {
-                result[i][j] = self.data[j][i];
-            }
-        }
-        Matrix::from(result)
-    }
 
-    pub fn get_row(&self, i: usize) -> Matrix<T, 1, M> {
-        assert!(i < N);
-        Matrix::from([self.data[i]])
-    }
+impl<T: Scalar, const N: usize, const M: usize>
+    Index<usize> for Matrix<T, N, M>
+{
+    type Output = [T; M];
 
-    pub fn set_row(&mut self, i: usize, row: Matrix<T, 1, M>) {
-        assert!(i < N);
-        self.data[i] = row.data[0];
-    }
-
-    pub fn get_column(&self, j: usize) -> Matrix<T, N, 1> {
-        assert!(j < M);
-        let mut result = [[T::zero(); 1]; N];
-        for i in 0..N {
-            result[i][0] = self.data[i][j];
-        }
-        Matrix::from(result)
-    }
-
-    pub fn set_column(&mut self, j: usize, column: Matrix<T, N, 1>) {
-        assert!(j < M);
-        for i in 0..N {
-            self.data[i][j] = column.data[i][0];
-        }
-    }
-
-    pub fn hstack<const L: usize, const S: usize>(self, rhs: Matrix<T, N, L>)
-        -> Matrix<T, N, S>
-    {
-        assert_eq!(S, N + M);
-
-        let mut result = [[T::zero(); S]; N];
-
-        for i in 0..N {
-            for j in 0..M {
-                result[i][j] = self.data[i][j];
-            }
-            for j in 0..L {
-                result[i][M + j] = rhs[i][j];
-            }
-        }
-        Matrix::from(result)
-    }
-
-    pub fn vstack<const L: usize, const S: usize>(self, rhs: Matrix<T, L, M>)
-        -> Matrix<T, S, M>
-    {
-        assert_eq!(S, N + L);
-
-        let mut result = [[T::zero(); M]; S];
-
-        for j in 0..M {
-            for i in 0..N {
-                result[i][j] = self.data[i][j];
-            }
-            for i in 0..L {
-                result[N + i][j] = rhs[i][j];
-            }
-        }
-        Matrix::from(result)
-    }
-
-    pub fn submatrix<I, J, const K: usize, const L: usize>(
-        self, rows: I, columns: J
-    )
-        -> Matrix<T, K, L>
-        where
-            I: IntoIterator<Item=usize>,
-            J: IntoIterator<Item=usize>
-    {
-        let rows: Vec<_> = rows.into_iter().collect();
-        let columns: Vec<_> = columns.into_iter().collect();
-
-        assert!(rows.iter().all(|&i| i < N));
-        assert!(columns.iter().all(|&j| j < M));
-        assert_eq!(rows.len(), K);
-        assert_eq!(columns.len(), L);
-
-        let mut result = [[T::zero(); L]; K];
-
-        for i in 0..K {
-            for j in 0..L {
-                result[i][j] = self.data[rows[i]][columns[j]];
-            }
-        }
-
-        Matrix::from(result)
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < N);
+        &self.data[index]
     }
 }
 
 
-impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
-    pub fn identity() -> Self {
-        let mut data = [[T::zero(); N]; N];
-        for i in 0..N {
-            data[i][i] = T::one();
-        }
-        Self { data }
+impl<T: Scalar, const N: usize, const M: usize>
+    IndexMut<usize> for Matrix<T, N, M>
+{
+    fn index_mut(&mut self, index: usize) -> &mut [T; M] {
+        assert!(index < N);
+        &mut self.data[index]
     }
 }
 
@@ -162,48 +77,119 @@ impl<T: Scalar>
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize>
-    Index<(usize, usize)> for Matrix<T, N, M>
-{
-    type Output = T;
+impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
+    pub fn new() -> Self {
+        Matrix::from([[T::zero(); M]; N])
+    }
 
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        assert!(index.0 < N);
-        assert!(index.1 < M);
-        &self.data[index.0][index.1]
+    pub fn transpose(&self) -> Matrix<T, M, N> {
+        let mut result = Matrix::new();
+        for i in 0..M {
+            for j in 0..N {
+                result[i][j] = self[j][i];
+            }
+        }
+        result
+    }
+
+    pub fn get_row(&self, i: usize) -> Matrix<T, 1, M> {
+        assert!(i < N);
+        Matrix::from([self[i]])
+    }
+
+    pub fn set_row(&mut self, i: usize, row: Matrix<T, 1, M>) {
+        assert!(i < N);
+        self[i] = row[0];
+    }
+
+    pub fn get_column(&self, j: usize) -> Matrix<T, N, 1> {
+        assert!(j < M);
+        let mut result = Matrix::new();
+        for i in 0..N {
+            result[i][0] = self[i][j];
+        }
+        result
+    }
+
+    pub fn set_column(&mut self, j: usize, column: Matrix<T, N, 1>) {
+        assert!(j < M);
+        for i in 0..N {
+            self[i][j] = column[i][0];
+        }
+    }
+
+    pub fn hstack<const L: usize, const S: usize>(self, rhs: Matrix<T, N, L>)
+        -> Matrix<T, N, S>
+    {
+        assert_eq!(S, N + M);
+
+        let mut result = Matrix::new();
+
+        for i in 0..N {
+            for j in 0..M {
+                result[i][j] = self[i][j];
+            }
+            for j in 0..L {
+                result[i][M + j] = rhs[i][j];
+            }
+        }
+        result
+    }
+
+    pub fn vstack<const L: usize, const S: usize>(self, rhs: Matrix<T, L, M>)
+        -> Matrix<T, S, M>
+    {
+        assert_eq!(S, N + L);
+
+        let mut result = Matrix::new();
+
+        for j in 0..M {
+            for i in 0..N {
+                result[i][j] = self[i][j];
+            }
+            for i in 0..L {
+                result[N + i][j] = rhs[i][j];
+            }
+        }
+        result
+    }
+
+    pub fn submatrix<I, J, const K: usize, const L: usize>(
+        self, rows: I, columns: J
+    )
+        -> Matrix<T, K, L>
+        where
+            I: IntoIterator<Item=usize>,
+            J: IntoIterator<Item=usize>
+    {
+        let rows: Vec<_> = rows.into_iter().collect();
+        let columns: Vec<_> = columns.into_iter().collect();
+
+        assert!(rows.iter().all(|&i| i < N));
+        assert!(columns.iter().all(|&j| j < M));
+        assert_eq!(rows.len(), K);
+        assert_eq!(columns.len(), L);
+
+        let mut result = Matrix::new();
+
+        for i in 0..K {
+            for j in 0..L {
+                result[i][j] = self[rows[i]][columns[j]];
+            }
+        }
+
+        result
     }
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize>
-    IndexMut<(usize, usize)> for Matrix<T, N, M>
-{
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
-        assert!(index.0 < N);
-        assert!(index.1 < M);
-        &mut self.data[index.0][index.1]
-    }
-}
-
-
-impl<T: Scalar, const N: usize, const M: usize>
-    Index<usize> for Matrix<T, N, M>
-{
-    type Output = [T; M];
-
-    fn index(&self, index: usize) -> &Self::Output {
-        assert!(index < N);
-        &self.data[index]
-    }
-}
-
-
-impl<T: Scalar, const N: usize, const M: usize>
-    IndexMut<usize> for Matrix<T, N, M>
-{
-    fn index_mut(&mut self, index: usize) -> &mut [T; M] {
-        assert!(index < N);
-        &mut self.data[index]
+impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
+    pub fn identity() -> Self {
+        let mut result = Matrix::new();
+        for i in 0..N {
+            result[i][i] = T::one();
+        }
+        result
     }
 }
 
@@ -214,15 +200,15 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
     type Output = Matrix<T, N, M>;
 
     fn add(self, rhs: [[T; M]; N]) -> Self::Output {
-        let mut result = [[T::zero(); M]; N];
+        let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self[(i, j)] + rhs[i][j];
+                result[i][j] = self[i][j] + rhs[i][j];
             }
         }
 
-        Matrix::from(result)
+        result
     }
 }
 
@@ -240,13 +226,13 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 
 impl<T: Scalar + Copy, const N: usize, const M: usize> Zero for Matrix<T, N, M> {
     fn zero() -> Self {
-        Matrix::from([[T::zero(); M]; N])
+        Matrix::new()
     }
 
     fn is_zero(&self) -> bool {
         for i in 0..N {
             for j in 0..M {
-                if !self[(i, j)].is_zero() {
+                if !self[i][j].is_zero() {
                     return false
                 }
             }
@@ -263,19 +249,19 @@ impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
     type Output = [[T; L]; N];
 
     fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
-        let mut result = [[T::zero(); L]; N];
+        let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..L {
                 let mut x = T::zero();
                 for k in 0..M {
-                    x = x + self[i][k] * rhs.data[k][j];
+                    x = x + self[i][k] * rhs[k][j];
                 }
                 result[i][j] = x;
             }
         }
 
-        result
+        result.data
     }
 }
 
@@ -286,18 +272,18 @@ impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
     type Output = Matrix<T, N, L>;
 
     fn mul(self, rhs: [[T; L]; M]) -> Self::Output {
-        let mut result = [[T::zero(); L]; N];
+        let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..L {
                 let mut x = T::zero();
                 for k in 0..M {
-                    x = x + self.data[i][k] * rhs[k][j];
+                    x = x + self[i][k] * rhs[k][j];
                 }
                 result[i][j] = x;
             }
         }
-        Matrix::from(result)
+        result
     }
 }
 
@@ -308,14 +294,14 @@ impl<const N: usize, const M: usize>
     type Output = Matrix<i64, N, M>;
 
     fn mul(self, rhs: Matrix<i64, N, M>) -> Self::Output {
-        let mut result = [[i64::zero(); M]; N];
+        let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self * rhs.data[i][j];
+                result[i][j] = self * rhs[i][j];
             }
         }
-        Matrix::from(result)
+        result
     }
 }
 
@@ -326,14 +312,14 @@ impl<const N: usize, const M: usize>
     type Output = Matrix<f64, N, M>;
 
     fn mul(self, rhs: Matrix<f64, N, M>) -> Self::Output {
-        let mut result = [[f64::zero(); M]; N];
+        let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self * rhs.data[i][j];
+                result[i][j] = self * rhs[i][j];
             }
         }
-        Matrix::from(result)
+        result
     }
 }
 
@@ -344,14 +330,14 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
     type Output = Self;
 
     fn mul(self, rhs: T) -> Self::Output {
-        let mut result = [[T::zero(); M]; N];
+        let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self.data[i][j] * rhs;
+                result[i][j] = self[i][j] * rhs;
             }
         }
-        Matrix::from(result)
+        result
     }
 }
 
@@ -400,8 +386,6 @@ pub trait Entry: Scalar + Sub<Output=Self> + std::fmt::Display {
 }
 
 
-impl Scalar for f64 {}
-
 impl Entry for f64 {
     fn clear_column<const N: usize, const M: usize>(
         col: usize, v: &mut [Self; N], b: &mut [Self; N],
@@ -448,8 +432,6 @@ impl Entry for f64 {
     }
 }
 
-
-impl Scalar for i64 {}
 
 impl Entry for i64 {
     fn clear_column<const N: usize, const M: usize>(
@@ -562,7 +544,7 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
     fn reduce(&mut self) {
         let mut col = 0;
         for row in 0..self.rank {
-            while self.vectors[(row, col)].is_zero() {
+            while self.vectors[row][col].is_zero() {
                 col += 1;
             }
 
@@ -604,7 +586,7 @@ impl<T: Entry + Copy, const N: usize, const M: usize>
         let mut cols = [N; N];
 
         for col in 0..M {
-            let pivot_row = (row..N).find(|&r| !u[(r, col)].is_zero());
+            let pivot_row = (row..N).find(|&r| !u[r][col].is_zero());
 
             if let Some(pr) = pivot_row {
                 if pr != row {
@@ -661,20 +643,20 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         let re = RowEchelonMatrix::from(self.clone());
         let y = re.multiplier * rhs;
 
-        if !(re.rank..N).all(|i| (0..K).all(|j| y[(i, j)].is_zero())) {
+        if !(re.rank..N).all(|i| (0..K).all(|j| y[i][j].is_zero())) {
             return None;
         }
 
         let mut result = Matrix::zero();
 
         for row in (0..re.rank).rev() {
-            let a = (Matrix::from(re.result[row]) * result).data[0];
+            let a = (Matrix::from(re.result[row]) * result)[0];
             let b = y[row];
-            let x = re.result[(row, re.columns[row])];
+            let x = re.result[row][re.columns[row]];
             for k in 0..K {
                 let t = b[k] - a[k];
                 if Entry::can_divide(t, x) {
-                    result[(row, k)] = t / x;
+                    result[row][k] = t / x;
                 } else {
                     return None;
                 }
@@ -690,21 +672,21 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
     fn determinant(&self) -> T {
         match self.nr_rows() {
             0 => T::one(),
-            1 => self[(0, 0)],
+            1 => self[0][0],
             2 => {
-                self[(0, 0)] * self[(1, 1)] - self[(0, 1)] * self[(1, 0)]
+                self[0][0] * self[1][1] - self[0][1] * self[1][0]
             },
             3 => {
-                self[(0, 0)] * self[(1, 1)] * self[(2, 2)] +
-                self[(0, 1)] * self[(1, 2)] * self[(2, 0)] +
-                self[(0, 2)] * self[(1, 0)] * self[(2, 1)] -
-                self[(0, 2)] * self[(1, 1)] * self[(2, 0)] -
-                self[(0, 0)] * self[(1, 2)] * self[(2, 1)] -
-                self[(0, 1)] * self[(1, 0)] * self[(2, 2)]
+                self[0][0] * self[1][1] * self[2][2] +
+                self[0][1] * self[1][2] * self[2][0] +
+                self[0][2] * self[1][0] * self[2][1] -
+                self[0][2] * self[1][1] * self[2][0] -
+                self[0][0] * self[1][2] * self[2][1] -
+                self[0][1] * self[1][0] * self[2][2]
             },
             _ => {
                 let re = RowEchelonMatrix::from(self.clone());
-                (0..N).map(|i| re.result[(i, i)])
+                (0..N).map(|i| re.result[i][i])
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())
             }
@@ -724,7 +706,7 @@ fn test_matrix_indexing() {
     let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
 
     m[0] = (Matrix::from(m[0]) * 3.0)[0];
-    m[(1, 0)] = m[(1, 0)] + 4.0;
+    m[1][0] = m[1][0] + 4.0;
 
     assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
 }
@@ -773,7 +755,7 @@ fn test_matrix_zero() {
 #[test]
 fn test_matrix_mul() {
     assert_eq!(
-        (Matrix::from([[1, 2, 3]]) * [[3], [2], [1]])[(0, 0)],
+        (Matrix::from([[1, 2, 3]]) * [[3], [2], [1]])[0][0],
         10
     );
     assert_eq!(
@@ -792,7 +774,7 @@ fn test_matrix_mul() {
         (
             Matrix::from([[1.0, 1.0], [0.0, 1.0]]) *
             [[1.0, 2.0], [0.0, 1.0]]
-        )[(0, 1)],
+        )[0][1],
         3.0
     );
     assert_eq!(
