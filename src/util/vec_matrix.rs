@@ -27,6 +27,18 @@ impl<T: Scalar> VecMatrix<T> {
     pub fn nr_columns(&self) -> usize {
         self.nr_cols
     }
+
+    fn is_zero(&self) -> bool {
+        for i in 0..self.nr_rows {
+            for j in 0..self.nr_cols {
+                if !self[i][j].is_zero() {
+                    return false
+                }
+            }
+        }
+
+        true
+    }
 }
 
 
@@ -96,6 +108,10 @@ impl<T: Scalar + Clone> VecMatrix<T> {
             nr_rows,
             nr_cols
         }
+    }
+
+    pub fn zero(nr_rows: usize, nr_cols: usize) -> Self {
+        VecMatrix::new(nr_rows, nr_cols)
     }
 
     pub fn transpose(&self) -> VecMatrix<T> {
@@ -392,6 +408,13 @@ fn test_matrix_submatrix() {
         VecMatrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).submatrix(0..2, [0, 2]),
         VecMatrix::from([[1, 3], [4, 6]])
     )
+}
+
+
+#[test]
+fn test_matrix_zero() {
+    assert_eq!(VecMatrix::zero(2, 3), VecMatrix::from([[0; 3]; 2]));
+    assert!(VecMatrix::from([[0; 4]; 5]).is_zero());
 }
 
 
