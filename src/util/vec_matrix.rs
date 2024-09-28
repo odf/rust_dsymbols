@@ -132,7 +132,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
     }
 
-    pub fn get_col(&self, j: usize) -> VecMatrix<T> {
+    pub fn get_column(&self, j: usize) -> VecMatrix<T> {
         assert!(j < self.nr_cols);
 
         let mut result = VecMatrix::new(self.nr_rows, 1);
@@ -144,7 +144,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         result
     }
 
-    pub fn set_col(&mut self, j: usize, col: VecMatrix<T>) {
+    pub fn set_column(&mut self, j: usize, col: VecMatrix<T>) {
         assert_eq!(col.nr_cols, 1);
         assert_eq!(col.nr_rows, self.nr_rows);
         assert!(j < self.nr_cols);
@@ -152,6 +152,38 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         for i in 0..self.nr_rows {
             self[i][j] = col[i][0].clone();
         }
+    }
+
+    pub fn hstack(self, rhs: VecMatrix<T>) -> VecMatrix<T> {
+        assert_eq!(self.nr_rows, rhs.nr_rows);
+
+        let mut result = VecMatrix::new(self.nr_rows, self.nr_cols + rhs.nr_cols);
+
+        for i in 0..self.nr_rows {
+            for j in 0..self.nr_cols {
+                result[i][j] = self[i][j].clone();
+            }
+            for j in 0..rhs.nr_cols {
+                result[i][self.nr_cols + j] = rhs[i][j].clone();
+            }
+        }
+        result
+    }
+
+    pub fn vstack(self, rhs: VecMatrix<T>) -> VecMatrix<T> {
+        assert_eq!(self.nr_cols, rhs.nr_cols);
+
+        let mut result = VecMatrix::new(self.nr_rows + rhs.nr_rows, self.nr_cols);
+
+        for j in 0..self.nr_cols {
+            for i in 0..self.nr_rows {
+                result[i][j] = self[i][j].clone();
+            }
+            for i in 0..rhs.nr_rows {
+                result[self.nr_rows + i][j] = rhs[i][j].clone();
+            }
+        }
+        result
     }
 
     pub fn submatrix<I, J>(self, rows: I, columns: J) -> VecMatrix<T>
@@ -174,6 +206,48 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
 
         result
+    }
+}
+
+
+impl<T: Scalar + Clone> VecMatrix<T> {
+    pub fn identity(dim: usize) -> Self {
+        let mut result = VecMatrix::new(dim, dim);
+        for i in 0..dim {
+            result[i][i] = T::one();
+        }
+        result
+    }
+}
+
+
+impl<T: Scalar + Copy> Add<VecMatrix<T>> for VecMatrix<T> {
+    type Output = VecMatrix<T>;
+
+    fn add(self, rhs: VecMatrix<T>) -> Self::Output {
+        assert_eq!(self.nr_rows, rhs.nr_rows);
+        assert_eq!(self.nr_cols, rhs.nr_cols);
+
+        let mut result = VecMatrix::new(self.nr_rows, self.nr_cols);
+
+        for i in 0..self.nr_rows {
+            for j in 0..self.nr_cols {
+                result[i][j] = self[i][j] + rhs[i][j];
+            }
+        }
+
+        result
+    }
+}
+
+
+impl<T: Scalar + Copy, const N: usize, const M: usize>
+    Add<[[T; M]; N]> for VecMatrix<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn add(self, rhs: [[T; M]; N]) -> Self::Output {
+        self + VecMatrix::from(rhs)
     }
 }
 
@@ -280,6 +354,35 @@ fn test_matrix_indexing() {
     m[1][0] = m[1][0] + 4.0;
 
     assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
+}
+
+
+#[test]
+fn test_matrix_add() {
+    assert_eq!(
+        VecMatrix::from([[1, 2], [3, 4]]) + VecMatrix::from([[1, 2], [3, 4]]),
+        VecMatrix::from([[2, 4], [6, 8]])
+    );
+
+    assert_eq!(
+        VecMatrix::from([[1, 2], [3, 4]]) + [[4, 3], [2, 1]],
+        VecMatrix::from([[5, 5], [5, 5]])
+    );
+}
+
+
+#[test]
+fn test_matrix_stack() {
+    assert_eq!(
+        VecMatrix::from([[1, 2, 3]])
+            .vstack(VecMatrix::from([[4, 5, 6], [7, 8, 9]])),
+        [[1, 2, 3], [4, 5, 6], [7, 8, 9]].into()
+    );
+    assert_eq!(
+        VecMatrix::from([[1, 2], [3, 4]])
+            .hstack(VecMatrix::from([[5, 6], [7, 8]])),
+        [[1, 2, 5, 6], [3, 4, 7, 8]].into()
+    );
 }
 
 
