@@ -1,6 +1,8 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 use num_traits::{One, Zero};
 
+use super::vec_matrix::VecMatrix;
+
 
 pub trait Scalar:
     Zero + One + Mul<Output=Self> + Add<Output=Self> + Neg<Output=Self>
@@ -195,11 +197,11 @@ impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
 
 
 impl<T: Scalar + Copy, const N: usize, const M: usize>
-    Add<[[T; M]; N]> for Matrix<T, N, M>
+    Add<Matrix<T, N, M>> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, M>;
 
-    fn add(self, rhs: [[T; M]; N]) -> Self::Output {
+    fn add(self, rhs: Matrix<T, N, M>) -> Self::Output {
         let mut result = Matrix::new();
 
         for i in 0..N {
@@ -214,12 +216,12 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 
 
 impl<T: Scalar + Copy, const N: usize, const M: usize>
-    Add<Matrix<T, N, M>> for Matrix<T, N, M>
+    Add<[[T; M]; N]> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, M>;
 
-    fn add(self, rhs: Matrix<T, N, M>) -> Self::Output {
-        self + rhs.data
+    fn add(self, rhs: [[T; M]; N]) -> Self::Output {
+        self + Matrix::from(rhs)
     }
 }
 
@@ -244,9 +246,9 @@ impl<T: Scalar + Copy, const N: usize, const M: usize> Zero for Matrix<T, N, M> 
 
 
 impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
-    Mul<Matrix<T, M, L>> for [[T; M]; N]
+    Mul<Matrix<T, M, L>> for Matrix<T, N, M>
 {
-    type Output = [[T; L]; N];
+    type Output = Matrix<T, N, L>;
 
     fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
         let mut result = Matrix::new();
@@ -261,7 +263,18 @@ impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
             }
         }
 
-        result.data
+        result
+    }
+}
+
+
+impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
+    Mul<Matrix<T, M, L>> for [[T; M]; N]
+{
+    type Output = Matrix<T, N, L>;
+
+    fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
+        Matrix::from(self) * rhs
     }
 }
 
@@ -272,18 +285,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
     type Output = Matrix<T, N, L>;
 
     fn mul(self, rhs: [[T; L]; M]) -> Self::Output {
-        let mut result = Matrix::new();
-
-        for i in 0..N {
-            for j in 0..L {
-                let mut x = T::zero();
-                for k in 0..M {
-                    x = x + self[i][k] * rhs[k][j];
-                }
-                result[i][j] = x;
-            }
-        }
-        result
+        self * Matrix::from(rhs)
     }
 }
 
@@ -338,17 +340,6 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
             }
         }
         result
-    }
-}
-
-
-impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
-    Mul<Matrix<T, M, L>> for Matrix<T, N, M>
-{
-    type Output = Matrix<T, N, L>;
-
-    fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
-        self * rhs.data
     }
 }
 
@@ -764,7 +755,7 @@ fn test_matrix_mul() {
     );
     assert_eq!(
         [[1, 2, 3]] * Matrix::from([3, 2, 1]).transpose(),
-        [[10]]
+        [[10]].into()
     );
     assert_eq!(
         Matrix::from([[1.0, 1.0], [0.0, 1.0]]) * [[1.0, 2.0], [0.0, 1.0]],
