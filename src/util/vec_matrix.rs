@@ -1,5 +1,4 @@
-use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
-use num_traits::{One, Zero};
+use std::ops::{Add, Div, Index, IndexMut, Mul};
 
 use crate::util::entries::{Entry, Scalar};
 
