@@ -32,22 +32,20 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 
 
 pub trait Entry: Scalar + Sub<Output=Self> + std::fmt::Display {
-    fn clear_column<const N: usize, const M: usize>(
-        col: usize, v: &mut [Self; N], b: &mut [Self; N],
-        vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
+    fn clear_column(
+        col: usize, v: &mut [Self], b: &mut [Self],
+        vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
     );
-    fn normalize_column<const N: usize>(col: usize, v: &mut [Self; N]);
-    fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N]
-    );
+    fn normalize_column(col: usize, v: &mut [Self]);
+    fn reduce_column(col: usize, v: &mut [Self], b: &[Self]);
     fn can_divide(a: Self, b: Self) -> bool;
 }
 
 
 impl Entry for f64 {
-    fn clear_column<const N: usize, const M: usize>(
-        col: usize, v: &mut [Self; N], b: &mut [Self; N],
-        vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
+    fn clear_column(
+        col: usize, v: &mut [Self], b: &mut [Self],
+        vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
     ) {
         let f = v[col] / b[col];
         v[col] = 0.0;
@@ -65,7 +63,7 @@ impl Entry for f64 {
         }
     }
 
-    fn normalize_column<const N: usize>(col: usize, v: &mut [Self; N]) {
+    fn normalize_column(col: usize, v: &mut [Self]) {
         let f = v[col];
         v[col] = 1.0;
 
@@ -74,9 +72,7 @@ impl Entry for f64 {
         }
     }
 
-    fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N]
-    ) {
+    fn reduce_column(col: usize, v: &mut [Self], b: &[Self]) {
         let f = v[col];
         v[col] = 0.0;
 
@@ -92,10 +88,12 @@ impl Entry for f64 {
 
 
 impl Entry for i64 {
-    fn clear_column<const N: usize, const M: usize>(
-        col: usize, v: &mut [Self; N], b: &mut [Self; N],
-        vx: Option<&mut [Self; M]>, bx: Option<&mut [Self; M]>
+    fn clear_column(
+        col: usize, v: &mut [Self], b: &mut [Self],
+        vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
     ) {
+        assert_eq!(v.len(), b.len());
+
         let (_, r, s, t, u) = gcdx(b[col], v[col]);
         let det = r * u - s * t;
 
@@ -107,6 +105,8 @@ impl Entry for i64 {
 
         if let Some(vx) = vx {
             if let Some(bx) = bx {
+                assert_eq!(vx.len(), bx.len());
+
                 for k in 0..vx.len() {
                     let tmp = det * (bx[k] * r + vx[k] * s);
                     vx[k] = bx[k] * t + vx[k] * u;
@@ -116,7 +116,7 @@ impl Entry for i64 {
         }
     }
 
-    fn normalize_column<const N: usize>(col: usize, v: &mut [Self; N]) {
+    fn normalize_column(col: usize, v: &mut [Self]) {
         if v[col] < 0 {
             for k in col..v.len() {
                 v[k] = -v[k];
@@ -124,9 +124,9 @@ impl Entry for i64 {
         }
     }
 
-    fn reduce_column<const N: usize>(
-        col: usize, v: &mut [Self; N], b: &[Self; N]
-    ) {
+    fn reduce_column(col: usize, v: &mut [Self], b: &[Self]) {
+        assert_eq!(v.len(), b.len());
+
         let f = v[col] / b[col] - (
             if v[col] < 0 { 1 } else { 0 }
         );
