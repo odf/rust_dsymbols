@@ -243,7 +243,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy> Add<&VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Add<&VecMatrix<T>> for &VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -254,7 +254,7 @@ impl<T: Scalar + Copy> Add<&VecMatrix<T>> for &VecMatrix<T> {
 
         for i in 0..self.nr_rows {
             for j in 0..self.nr_cols {
-                result[i][j] = self[i][j] + rhs[i][j];
+                result[i][j] = self[i][j].clone() + rhs[i][j].clone();
             }
         }
 
@@ -263,7 +263,7 @@ impl<T: Scalar + Copy> Add<&VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy> Add<&VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Add<&VecMatrix<T>> for VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -272,7 +272,7 @@ impl<T: Scalar + Copy> Add<&VecMatrix<T>> for VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy> Add<VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Add<VecMatrix<T>> for &VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -281,7 +281,7 @@ impl<T: Scalar + Copy> Add<VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy> Add<VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Add<VecMatrix<T>> for VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -290,7 +290,7 @@ impl<T: Scalar + Copy> Add<VecMatrix<T>> for VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<[[T; M]; N]> for &VecMatrix<T>
 {
     type Output = VecMatrix<T>;
@@ -301,7 +301,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<[[T; M]; N]> for VecMatrix<T>
 {
     type Output = VecMatrix<T>;
@@ -312,7 +312,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy> Mul<&VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for &VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -322,7 +322,7 @@ impl<T: Scalar + Copy> Mul<&VecMatrix<T>> for &VecMatrix<T> {
             for j in 0..rhs.nr_cols {
                 let mut x = T::zero();
                 for k in 0..self.nr_cols {
-                    x = x + self[i][k] * rhs[k][j];
+                    x = x + self[i][k].clone() * rhs[k][j].clone();
                 }
                 result[i][j] = x;
             }
@@ -333,7 +333,7 @@ impl<T: Scalar + Copy> Mul<&VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy> Mul<&VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -342,7 +342,7 @@ impl<T: Scalar + Copy> Mul<&VecMatrix<T>> for VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy> Mul<VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<VecMatrix<T>> for &VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -351,7 +351,7 @@ impl<T: Scalar + Copy> Mul<VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy> Mul<VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<VecMatrix<T>> for VecMatrix<T> {
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -360,7 +360,7 @@ impl<T: Scalar + Copy> Mul<VecMatrix<T>> for VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Mul<&VecMatrix<T>> for [[T; M]; N]
 {
     type Output = VecMatrix<T>;
@@ -371,7 +371,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Mul<VecMatrix<T>> for [[T; M]; N]
 {
     type Output = VecMatrix<T>;
@@ -382,7 +382,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy, const M: usize, const L: usize>
+impl<T: Scalar + Clone, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for VecMatrix<T>
 {
     type Output = VecMatrix<T>;
@@ -427,7 +427,7 @@ impl Mul<VecMatrix<f64>> for f64 {
 }
 
 
-impl<T: Scalar + Copy> Mul<T> for VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<T> for VecMatrix<T> {
     type Output = Self;
 
     fn mul(self, rhs: T) -> Self::Output {
@@ -435,7 +435,7 @@ impl<T: Scalar + Copy> Mul<T> for VecMatrix<T> {
 
         for i in 0..self.nr_rows {
             for j in 0..self.nr_cols {
-                result[i][j] = self[i][j] * rhs;
+                result[i][j] = self[i][j].clone() * rhs.clone();
             }
         }
 
@@ -453,7 +453,7 @@ pub struct RowEchelonVecMatrix<T: Entry> {
 }
 
 
-impl<T: Entry + Copy> RowEchelonVecMatrix<T> {
+impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
     pub fn from(m: VecMatrix<T>) -> Self {
         let mut u = m.clone();
         let mut s = VecMatrix::identity(m.nr_rows());
@@ -504,7 +504,7 @@ impl<T: Entry + Copy> RowEchelonVecMatrix<T> {
 }
 
 
-impl<T: Entry + Copy> VecMatrix<T> {
+impl<T: Entry + Clone> VecMatrix<T> {
     fn rank(&self) -> usize {
         RowEchelonVecMatrix::from(self.clone()).rank
     }
@@ -535,11 +535,11 @@ impl<T: Entry + Copy> VecMatrix<T> {
         for row in (0..re.rank).rev() {
             let a = VecMatrix::from(re.result.get_row(row)) * &result;
             let b = y.get_row(row);
-            let x = re.result[row][re.columns[row]];
+            let x = re.result[row][re.columns[row]].clone();
             for k in 0..rhs.nr_columns() {
-                let t = b[0][k] - a[0][k];
-                if Entry::can_divide(t, x) {
-                    result[row][k] = t / x;
+                let t = b[0][k].clone() - a[0][k].clone();
+                if Entry::can_divide(t.clone(), x.clone()) {
+                    result[row][k] = t / x.clone();
                 } else {
                     return None;
                 }
@@ -551,25 +551,26 @@ impl<T: Entry + Copy> VecMatrix<T> {
 }
 
 
-impl<T: Entry + Copy> VecMatrix<T> {
+impl<T: Entry + Clone> VecMatrix<T> {
     fn determinant(&self) -> T {
         match self.nr_rows() {
             0 => T::one(),
-            1 => self[0][0],
+            1 => self[0][0].clone(),
             2 => {
-                self[0][0] * self[1][1] - self[0][1] * self[1][0]
+                self[0][0].clone() * self[1][1].clone() -
+                self[0][1].clone() * self[1][0].clone()
             },
             3 => {
-                self[0][0] * self[1][1] * self[2][2] +
-                self[0][1] * self[1][2] * self[2][0] +
-                self[0][2] * self[1][0] * self[2][1] -
-                self[0][2] * self[1][1] * self[2][0] -
-                self[0][0] * self[1][2] * self[2][1] -
-                self[0][1] * self[1][0] * self[2][2]
+                self[0][0].clone() * self[1][1].clone() * self[2][2].clone() +
+                self[0][1].clone() * self[1][2].clone() * self[2][0].clone() +
+                self[0][2].clone() * self[1][0].clone() * self[2][1].clone() -
+                self[0][2].clone() * self[1][1].clone() * self[2][0].clone() -
+                self[0][0].clone() * self[1][2].clone() * self[2][1].clone() -
+                self[0][1].clone() * self[1][0].clone() * self[2][2].clone()
             },
             _ => {
                 let re = RowEchelonVecMatrix::from(self.clone());
-                (0..self.nr_rows()).map(|i| re.result[i][i])
+                (0..self.nr_rows()).map(|i| re.result[i][i].clone())
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())
             }
@@ -757,7 +758,7 @@ fn test_matrix_solve() {
     fn test<T, const N: usize, const M: usize, const L: usize>(
         a: [[T; M]; N], b: [[T; L]; M]
     )
-        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
     {
         let a = VecMatrix::from(a);
         let b = VecMatrix::from(b);
@@ -778,7 +779,7 @@ fn test_matrix_solve() {
 #[test]
 fn test_matrix_inverse() {
     fn test<T, const N: usize>(a: [[T; N]; N])
-        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
     {
         let a = VecMatrix::from(a);
 
