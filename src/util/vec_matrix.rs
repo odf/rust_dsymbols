@@ -1,14 +1,7 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 use num_traits::{One, Zero};
 
-
-pub trait Scalar:
-    Zero + One + Mul<Output=Self> + Add<Output=Self> + Neg<Output=Self>
-{
-}
-
-impl Scalar for f64 {}
-impl Scalar for i64 {}
+use crate::util::entries::{Entry, Scalar};
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -84,6 +77,19 @@ impl<T: Scalar + Clone, const M: usize> From<[T; M]> for VecMatrix<T> {
         let mut result = VecMatrix::new(1, M);
 
         for j in 0..M {
+            result[0][j] = data[j].clone();
+        }
+
+        result
+    }
+}
+
+
+impl<T: Scalar + Clone> From<Vec<T>> for VecMatrix<T> {
+    fn from(data: Vec<T>) -> Self {
+        let mut result = VecMatrix::new(1, data.len());
+
+        for j in 0..data.len() {
             result[0][j] = data[j].clone();
         }
 
@@ -362,6 +368,146 @@ impl<T: Scalar + Copy> Mul<T> for VecMatrix<T> {
 }
 
 
+pub struct RowEchelonVecMatrix<T: Entry> {
+    original: VecMatrix<T>,
+    multiplier: VecMatrix<T>,
+    result: VecMatrix<T>,
+    columns: Vec<usize>,
+    rank: usize
+}
+
+
+impl<T: Entry + Copy> RowEchelonVecMatrix<T> {
+    pub fn from(m: VecMatrix<T>) -> Self {
+        let mut u = m.clone();
+        let mut s = VecMatrix::identity(m.nr_rows());
+        let mut row = 0;
+        let mut cols = vec![m.nr_rows(); m.nr_rows()];
+
+        for col in 0..m.nr_columns() {
+            let pivot_row = (row..m.nr_rows()).find(|&r| !u[r][col].is_zero());
+
+            if let Some(pr) = pivot_row {
+                if pr != row {
+                    let t = u.get_row(pr);
+                    u.set_row(pr, u.get_row(row));
+                    u.set_row(row, t);
+
+                    let t = s.get_row(pr);
+                    s.set_row(pr, s.get_row(row));
+                    s.set_row(row, t);
+                }
+
+                let mut vu: Vec<_> = u[row].iter().cloned().collect();
+                let mut vs: Vec<_> = s[row].iter().cloned().collect();
+
+                for r in (row + 1)..m.nr_rows() {
+                    Entry::clear_column(
+                        col,
+                        &mut u[r], &mut vu,
+                        Some(&mut s[r]), Some(&mut vs)
+                    );
+                }
+
+                u.set_row(row, vu.into());
+                s.set_row(row, vs.into());
+
+                cols[row] = col;
+                row += 1;
+            }
+        }
+
+        RowEchelonVecMatrix {
+            original: m,
+            multiplier: s,
+            result: u,
+            columns: cols,
+            rank: row
+        }
+    }
+}
+
+
+impl<T: Entry + Copy> VecMatrix<T> {
+    fn determinant(&self) -> T {
+        match self.nr_rows() {
+            0 => T::one(),
+            1 => self[0][0],
+            2 => {
+                self[0][0] * self[1][1] - self[0][1] * self[1][0]
+            },
+            3 => {
+                self[0][0] * self[1][1] * self[2][2] +
+                self[0][1] * self[1][2] * self[2][0] +
+                self[0][2] * self[1][0] * self[2][1] -
+                self[0][2] * self[1][1] * self[2][0] -
+                self[0][0] * self[1][2] * self[2][1] -
+                self[0][1] * self[1][0] * self[2][2]
+            },
+            _ => {
+                let re = RowEchelonVecMatrix::from(self.clone());
+                (0..self.nr_rows()).map(|i| re.result[i][i])
+                    .reduce(|a, b| a * b)
+                    .unwrap_or(T::zero())
+            }
+        }
+    }
+
+    fn inverse(&self) -> Option<Self>
+        where T: Div<T, Output=T>
+    {
+        self.solve(VecMatrix::identity(self.nr_rows()))
+    }
+}
+
+
+impl<T: Entry + Copy> VecMatrix<T> {
+    fn rank(&self) -> usize {
+        RowEchelonVecMatrix::from(self.clone()).rank
+    }
+
+    fn null_space(&self) -> Vec<VecMatrix<T>> {
+        let re = RowEchelonVecMatrix::from(self.transpose());
+        let s = re.multiplier;
+
+        (re.rank..self.nr_columns())
+            .map(|i| s.get_row(i).transpose())
+            .collect()
+    }
+
+    fn solve(&self, rhs: VecMatrix<T>) -> Option<VecMatrix<T>>
+        where T: Div<T, Output=T>
+    {
+        let re = RowEchelonVecMatrix::from(self.clone());
+        let y = re.multiplier * rhs.clone();
+
+        if !(re.rank..self.nr_rows()).all(|i|
+            (0..rhs.nr_columns()).all(|j| y[i][j].is_zero())
+        ) {
+            return None;
+        }
+
+        let mut result = VecMatrix::zero(self.nr_columns(), rhs.nr_columns());
+
+        for row in (0..re.rank).rev() {
+            let a = VecMatrix::from(re.result.get_row(row)) * result.clone();
+            let b = y.get_row(row);
+            let x = re.result[row][re.columns[row]];
+            for k in 0..rhs.nr_columns() {
+                let t = b[0][k] - a[0][k];
+                if Entry::can_divide(t, x) {
+                    result[row][k] = t / x;
+                } else {
+                    return None;
+                }
+            }
+        }
+
+        Some(result)
+    }
+}
+
+
 #[test]
 fn test_matrix_indexing() {
     let mut m = VecMatrix::from([[1.0, 1.0], [0.0, 1.0]]);
@@ -466,4 +612,95 @@ fn test_matrix_mul() {
         2.5 * VecMatrix::from([[1.0, 2.0], [3.0, 4.0]]),
         VecMatrix::from([[2.5, 5.0], [7.5, 10.0]])
     );
+}
+
+
+#[test]
+fn test_matrix_determinant() {
+    assert_eq!(
+        VecMatrix::from([[1.0, 0.3, 0.7], [0.0, 2.0, 1.2], [0.0, 0.0, 0.25]])
+            .determinant(),
+        0.5
+    );
+
+    assert_eq!(VecMatrix::<f64>::identity(1).determinant(), 1.0);
+    assert_eq!(VecMatrix::<f64>::identity(2).determinant(), 1.0);
+    assert_eq!(VecMatrix::<f64>::identity(3).determinant(), 1.0);
+    assert_eq!(VecMatrix::<f64>::identity(4).determinant(), 1.0);
+
+    assert_eq!((VecMatrix::<f64>::identity(1) * 2.0).determinant(), 2.0);
+    assert_eq!((VecMatrix::<f64>::identity(2) * 2.0).determinant(), 4.0);
+    assert_eq!((VecMatrix::<f64>::identity(3) * 2.0).determinant(), 8.0);
+    assert_eq!((VecMatrix::<f64>::identity(4) * 2.0).determinant(), 16.0);
+}
+
+#[test]
+fn test_matrix_nullspace() {
+    let a = VecMatrix::from([[1, 2], [3, 4]]);
+    let n = a.null_space();
+    assert_eq!(n, vec![]);
+
+    let a = VecMatrix::from([[1.0, 2.0], [3.0, 6.0]]);
+    let n = a.null_space();
+    assert_eq!(n.len(), 1);
+    for v in a.null_space() {
+        assert_eq!(a.clone() * v, VecMatrix::from([[0.0], [0.0]]));
+    }
+
+    let a = VecMatrix::from([[1.0, 2.0], [3.0, 4.0]]);
+    let n = a.null_space();
+    assert_eq!(n, vec![]);
+
+    let a = VecMatrix::from([[0.0, 1.0, 0.0]]);
+    let n = a.null_space();
+    assert_eq!(n.len(), 2);
+    for v in n {
+        assert_eq!(a.clone() * v, VecMatrix::from([[0.0]]));
+    }
+}
+
+#[test]
+fn test_matrix_solve() {
+    fn test<T, const N: usize, const M: usize, const L: usize>(
+        a: [[T; M]; N], b: [[T; L]; M]
+    )
+        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+    {
+        let a = VecMatrix::from(a);
+        let b = VecMatrix::from(b);
+        let ab = a.clone() * b.clone();
+        assert_eq!(a.clone() * a.solve(ab.clone()).unwrap(), ab.clone());
+
+        if N == M && a.rank() == N {
+            assert_eq!(a.solve(ab), Some(b));
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]], [[1.0, 0.0], [1.0, -3.0]]);
+    test([[1, 2], [3, 4]], [[1, 0], [1, -3]]);
+    test([[1.0, 2.0], [3.0, 6.0]], [[1.0], [1.0]]);
+    test([[1, 2], [3, 6]], [[1], [1]]);
+}
+
+#[test]
+fn test_matrix_inverse() {
+    fn test<T, const N: usize>(a: [[T; N]; N])
+        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+    {
+        let a = VecMatrix::from(a);
+
+        if a.rank() == N {
+            assert_eq!(a.clone() * a.inverse().unwrap(), VecMatrix::identity(N));
+        } else {
+            assert_eq!(a.inverse(), None);
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]]);
+    test([[1.0, 2.0], [3.0, 6.0]]);
+
+    test([[1, 2], [3, 5]]);
+
+    // Inverse exists, but is not integral:
+    assert_eq!(VecMatrix::from([[1, 2], [3, 4]]).inverse(), None);
 }
