@@ -19,18 +19,6 @@ impl<T: Scalar> VecMatrix<T> {
     pub fn nr_columns(&self) -> usize {
         self.nr_cols
     }
-
-    fn is_zero(&self) -> bool {
-        for i in 0..self.nr_rows {
-            for j in 0..self.nr_cols {
-                if !self[i][j].is_zero() {
-                    return false
-                }
-            }
-        }
-
-        true
-    }
 }
 
 
@@ -64,6 +52,19 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
             for j in 0..M {
                 result[i][j] = data[i][j].clone();
             }
+        }
+
+        result
+    }
+}
+
+
+impl<T: Scalar + Clone> From<&[T]> for VecMatrix<T> {
+    fn from(data: &[T]) -> Self {
+        let mut result = VecMatrix::new(1, data.len());
+
+        for j in 0..data.len() {
+            result[0][j] = data[j].clone();
         }
 
         result
@@ -115,10 +116,6 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
     }
 
-    pub fn zero(nr_rows: usize, nr_cols: usize) -> Self {
-        VecMatrix::new(nr_rows, nr_cols)
-    }
-
     pub fn transpose(&self) -> VecMatrix<T> {
         let mut result = VecMatrix::new(self.nr_cols, self.nr_rows);
 
@@ -133,14 +130,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
 
     pub fn get_row(&self, i: usize) -> VecMatrix<T> {
         assert!(i < self.nr_rows);
-
-        let mut result = VecMatrix::new(1, self.nr_cols);
-
-        for j in 0..self.nr_cols {
-            result[0][j] = self[i][j].clone();
-        }
-
-        result
+        VecMatrix::from(&self[i])
     }
 
     pub fn set_row(&mut self, i: usize, row: VecMatrix<T>) {
@@ -307,6 +297,25 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
     fn add(self, rhs: [[T; M]; N]) -> Self::Output {
         self + VecMatrix::from(rhs)
+    }
+}
+
+
+impl<T: Scalar + Clone> VecMatrix<T> {
+    pub fn zero(nr_rows: usize, nr_cols: usize) -> Self {
+        VecMatrix::new(nr_rows, nr_cols)
+    }
+
+    fn is_zero(&self) -> bool {
+        for i in 0..self.nr_rows {
+            for j in 0..self.nr_cols {
+                if !self[i][j].is_zero() {
+                    return false
+                }
+            }
+        }
+
+        true
     }
 }
 

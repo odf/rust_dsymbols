@@ -87,7 +87,7 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 
     pub fn get_row(&self, i: usize) -> Matrix<T, 1, M> {
         assert!(i < N);
-        Matrix::from([self[i]])
+        Matrix::from(self[i])
     }
 
     pub fn set_row(&mut self, i: usize, row: Matrix<T, 1, M>) {
@@ -188,11 +188,11 @@ impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
 
 
 impl<T: Scalar + Copy, const N: usize, const M: usize>
-    Add<Matrix<T, N, M>> for Matrix<T, N, M>
+    Add<&Matrix<T, N, M>> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, M>;
 
-    fn add(self, rhs: Matrix<T, N, M>) -> Self::Output {
+    fn add(self, rhs: &Matrix<T, N, M>) -> Self::Output {
         let mut result = Matrix::new();
 
         for i in 0..N {
@@ -202,6 +202,17 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
         }
 
         result
+    }
+}
+
+
+impl<T: Scalar + Copy, const N: usize, const M: usize>
+    Add<Matrix<T, N, M>> for Matrix<T, N, M>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn add(self, rhs: Matrix<T, N, M>) -> Self::Output {
+        self + &rhs
     }
 }
 
