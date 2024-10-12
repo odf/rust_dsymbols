@@ -605,6 +605,25 @@ fn test_matrix_indexing() {
 
 
 #[test]
+fn test_matrix_row_column_manipulation() {
+    let mut m = VecMatrix::from([[1.0, 1.0], [0.0, 1.0]]);
+
+    m.set_row(0, m.get_row(0) * 2.0);
+    m.set_column(1, m.get_column(1) * 3.0);
+
+    assert_eq!(m, [[2.0, 6.0], [0.0, 3.0]].into());
+}
+
+
+#[test]
+fn test_matrix_identity() {
+    let m = VecMatrix::<i64>::identity(3);
+    assert_eq!(m, [[1, 0, 0], [0, 1, 0], [0, 0, 1]].into());
+    assert_eq!(VecMatrix::identity(2), [[1, 0], [0, 1]].into());
+}
+
+
+#[test]
 fn test_matrix_add() {
     assert_eq!(
         &VecMatrix::from([[1, 2], [3, 4]]) + &VecMatrix::from([[1, 2], [3, 4]]),
