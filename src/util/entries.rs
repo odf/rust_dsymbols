@@ -32,6 +32,7 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 
 
 pub trait Entry: Scalar + Sub<Output=Self> {
+    fn pivot_index(v: &[Self]) -> Option<usize>;
     fn clear_column(
         col: usize, v: &mut [Self], b: &mut [Self],
         vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
@@ -43,6 +44,25 @@ pub trait Entry: Scalar + Sub<Output=Self> {
 
 
 impl Entry for f64 {
+    fn pivot_index(v: &[Self]) -> Option<usize> {
+        let mut result = None;
+
+        for i in 0..v.len() {
+            if v[i] != 0.0 {
+                if let Some(k) = result {
+                    let x: Self = v[k];
+                    if v[i].abs() > x.abs() {
+                        result = Some(i);
+                    }
+                } else {
+                    result = Some(i);
+                }
+            }
+        }
+
+        result
+    }
+
     fn clear_column(
         col: usize, v: &mut [Self], b: &mut [Self],
         vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
@@ -88,6 +108,25 @@ impl Entry for f64 {
 
 
 impl Entry for i64 {
+    fn pivot_index(v: &[Self]) -> Option<usize> {
+        let mut result = None;
+
+        for i in 0..v.len() {
+            if v[i] != 0 {
+                if let Some(k) = result {
+                    let x: Self = v[k];
+                    if v[i].abs() < x.abs() {
+                        result = Some(i);
+                    }
+                } else {
+                    result = Some(i);
+                }
+            }
+        }
+
+        result
+    }
+
     fn clear_column(
         col: usize, v: &mut [Self], b: &mut [Self],
         vx: Option<&mut [Self]>, bx: Option<&mut [Self]>

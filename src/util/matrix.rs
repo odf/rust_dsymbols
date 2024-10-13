@@ -404,9 +404,11 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
         let mut cols = [N; N];
 
         for col in 0..M {
-            let pivot_row = (row..N).find(|&r| !u[r][col].is_zero());
+            if let Some(pi) = Entry::pivot_index(
+                &(row..N).map(|r| u[r][col].clone()).collect::<Vec<_>>()
+            ) {
+                let pr = row + pi;
 
-            if let Some(pr) = pivot_row {
                 if pr != row {
                     (u[pr], u[row]) = (u[row].clone(), u[pr].clone());
                     (s[pr], s[row]) = (s[row].clone(), s[pr].clone());
@@ -699,16 +701,33 @@ fn test_matrix_nullspace() {
     }
 }
 
+
+fn allclose<const N: usize, const M: usize>(
+    a: &Matrix<f64, N, M>, b: &Matrix<f64, N, M>, rtol: f64, atol: f64
+) -> bool
+{
+    for i in 0..N {
+        for j in 0..M {
+            if (a[i][j] - b[i][j]).abs() > (atol + rtol * b[i][j].abs()) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+
 #[test]
-fn test_matrix_solve() {
-    fn test<T, const N: usize, const M: usize, const L: usize>(
-        a: [[T; M]; N], b: [[T; L]; M]
+fn test_matrix_solve_i64() {
+    fn test<const N: usize, const M: usize, const L: usize>(
+        a: [[i64; M]; N], b: [[i64; L]; M]
     )
-        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
     {
         let a = Matrix::from(a);
         let b = Matrix::from(b);
         let ab = &a * &b;
+
         assert_eq!(&a * a.solve(&ab).unwrap(), ab);
 
         if N == M && a.rank() == N {
@@ -716,16 +735,36 @@ fn test_matrix_solve() {
         }
     }
 
-    test([[1.0, 2.0], [3.0, 4.0]], [[1.0, 0.0], [1.0, -3.0]]);
     test([[1, 2], [3, 4]], [[1, 0], [1, -3]]);
-    test([[1.0, 2.0], [3.0, 6.0]], [[1.0], [1.0]]);
     test([[1, 2], [3, 6]], [[1], [1]]);
 }
 
+
 #[test]
-fn test_matrix_inverse() {
-    fn test<T, const N: usize>(a: [[T; N]; N])
-        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
+fn test_matrix_solve_f64() {
+    fn test<const N: usize, const M: usize, const L: usize>(
+        a: [[f64; M]; N], b: [[f64; L]; M]
+    )
+    {
+        let a = Matrix::from(a);
+        let b = Matrix::from(b);
+        let ab = &a * &b;
+
+        assert!(allclose(&(&a * a.solve(&ab).unwrap()), &ab, 1.0e-9, 1.0e-9));
+
+        if N == M && a.rank() == N {
+            assert!(allclose(&a.solve(&ab).unwrap(), &b, 1.0e-9, 1.0e-9));
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]], [[1.0, 0.0], [1.0, -3.0]]);
+    test([[1.0, 2.0], [3.0, 6.0]], [[1.0], [1.0]]);
+}
+
+
+#[test]
+fn test_matrix_inverse_i64() {
+    fn test<const N: usize>(a: [[i64; N]; N])
     {
         let a = Matrix::from(a);
 
@@ -736,11 +775,31 @@ fn test_matrix_inverse() {
         }
     }
 
-    test([[1.0, 2.0], [3.0, 4.0]]);
-    test([[1.0, 2.0], [3.0, 6.0]]);
-
     test([[1, 2], [3, 5]]);
 
     // Inverse exists, but is not integral:
     assert_eq!(Matrix::from([[1, 2], [3, 4]]).inverse(), None);
+}
+
+
+#[test]
+fn test_matrix_inverse_f64() {
+    fn test<const N: usize>(a: [[f64; N]; N])
+    {
+        let a = Matrix::from(a);
+
+        if a.rank() == N {
+            assert!(allclose(
+                &(&a * a.inverse().unwrap()),
+                &Matrix::identity(),
+                1.0e-9,
+                1.0e-9
+            ));
+        } else {
+            assert_eq!(a.inverse(), None);
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]]);
+    test([[1.0, 2.0], [3.0, 6.0]]);
 }
