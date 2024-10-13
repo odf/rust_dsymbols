@@ -4,7 +4,7 @@ use num_traits::Zero;
 use crate::util::entries::{Entry, Scalar};
 
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Matrix<T, const N: usize, const M: usize> {
     data: [[T; M]; N]
 }
@@ -70,16 +70,22 @@ impl<T: Scalar>
 }
 
 
-impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
+impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
     pub fn new() -> Self {
-        Matrix::from([[T::zero(); M]; N])
+        Matrix::from(
+            core::array::from_fn(|_|
+                core::array::from_fn(|_|
+                    T::zero()
+                )
+            )
+        )
     }
 
     pub fn transpose(&self) -> Matrix<T, M, N> {
         let mut result = Matrix::new();
         for i in 0..M {
             for j in 0..N {
-                result[i][j] = self[j][i];
+                result[i][j] = self[j][i].clone();
             }
         }
         result
@@ -87,19 +93,19 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 
     pub fn get_row(&self, i: usize) -> Matrix<T, 1, M> {
         assert!(i < N);
-        Matrix::from(self[i])
+        Matrix::from(self[i].clone())
     }
 
     pub fn set_row(&mut self, i: usize, row: Matrix<T, 1, M>) {
         assert!(i < N);
-        self[i] = row[0];
+        self[i] = row[0].clone();
     }
 
     pub fn get_column(&self, j: usize) -> Matrix<T, N, 1> {
         assert!(j < M);
         let mut result = Matrix::new();
         for i in 0..N {
-            result[i][0] = self[i][j];
+            result[i][0] = self[i][j].clone();
         }
         result
     }
@@ -107,7 +113,7 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
     pub fn set_column(&mut self, j: usize, column: Matrix<T, N, 1>) {
         assert!(j < M);
         for i in 0..N {
-            self[i][j] = column[i][0];
+            self[i][j] = column[i][0].clone();
         }
     }
 
@@ -120,10 +126,10 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self[i][j];
+                result[i][j] = self[i][j].clone();
             }
             for j in 0..L {
-                result[i][M + j] = rhs[i][j];
+                result[i][M + j] = rhs[i][j].clone();
             }
         }
         result
@@ -138,10 +144,10 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 
         for j in 0..M {
             for i in 0..N {
-                result[i][j] = self[i][j];
+                result[i][j] = self[i][j].clone();
             }
             for i in 0..L {
-                result[N + i][j] = rhs[i][j];
+                result[N + i][j] = rhs[i][j].clone();
             }
         }
         result
@@ -167,7 +173,7 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 
         for i in 0..K {
             for j in 0..L {
-                result[i][j] = self[rows[i]][columns[j]];
+                result[i][j] = self[rows[i]][columns[j]].clone();
             }
         }
 
@@ -176,7 +182,7 @@ impl<T: Scalar + Copy , const N: usize, const M: usize> Matrix<T, N, M> {
 }
 
 
-impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
+impl<T: Scalar + Clone, const N: usize> Matrix<T, N, N> {
     pub fn identity() -> Self {
         let mut result = Matrix::new();
         for i in 0..N {
@@ -187,7 +193,7 @@ impl<T: Scalar + Copy, const N: usize> Matrix<T, N, N> {
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<&Matrix<T, N, M>> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, M>;
@@ -197,7 +203,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self[i][j] + rhs[i][j];
+                result[i][j] = self[i][j].clone() + rhs[i][j].clone();
             }
         }
 
@@ -206,7 +212,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<Matrix<T, N, M>> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, M>;
@@ -217,7 +223,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<[[T; M]; N]> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, M>;
@@ -228,7 +234,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize> Zero for Matrix<T, N, M> {
+impl<T: Scalar + Clone, const N: usize, const M: usize> Zero for Matrix<T, N, M> {
     fn zero() -> Self {
         Matrix::new()
     }
@@ -247,19 +253,19 @@ impl<T: Scalar + Copy, const N: usize, const M: usize> Zero for Matrix<T, N, M> 
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
-    Mul<Matrix<T, M, L>> for Matrix<T, N, M>
+impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
+    Mul<&Matrix<T, M, L>> for &Matrix<T, N, M>
 {
     type Output = Matrix<T, N, L>;
 
-    fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
+    fn mul(self, rhs: &Matrix<T, M, L>) -> Self::Output {
         let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..L {
                 let mut x = T::zero();
                 for k in 0..M {
-                    x = x + self[i][k] * rhs[k][j];
+                    x = x + self[i][k].clone() * rhs[k][j].clone();
                 }
                 result[i][j] = x;
             }
@@ -270,7 +276,40 @@ impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
+    Mul<&Matrix<T, M, L>> for Matrix<T, N, M>
+{
+    type Output = Matrix<T, N, L>;
+
+    fn mul(self, rhs: &Matrix<T, M, L>) -> Self::Output {
+        &self * rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
+    Mul<Matrix<T, M, L>> for &Matrix<T, N, M>
+{
+    type Output = Matrix<T, N, L>;
+
+    fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
+        self * &rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
+    Mul<Matrix<T, M, L>> for Matrix<T, N, M>
+{
+    type Output = Matrix<T, N, L>;
+
+    fn mul(self, rhs: Matrix<T, M, L>) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<Matrix<T, M, L>> for [[T; M]; N]
 {
     type Output = Matrix<T, N, L>;
@@ -281,7 +320,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize, const L: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for Matrix<T, N, M>
 {
     type Output = Matrix<T, N, L>;
@@ -328,7 +367,7 @@ impl<const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Copy, const N: usize, const M: usize>
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Mul<T> for Matrix<T, N, M>
 {
     type Output = Self;
@@ -338,7 +377,7 @@ impl<T: Scalar + Copy, const N: usize, const M: usize>
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self[i][j] * rhs;
+                result[i][j] = self[i][j].clone() * rhs.clone();
             }
         }
         result
@@ -355,7 +394,7 @@ pub struct RowEchelonMatrix<T: Entry, const N: usize, const M: usize> {
 }
 
 
-impl<T: Entry + Copy, const N: usize, const M: usize>
+impl<T: Entry + Clone, const N: usize, const M: usize>
     RowEchelonMatrix<T, N, M>
 {
     pub fn from(m: Matrix<T, N, M>) -> Self {
@@ -369,8 +408,8 @@ impl<T: Entry + Copy, const N: usize, const M: usize>
 
             if let Some(pr) = pivot_row {
                 if pr != row {
-                    (u[pr], u[row]) = (u[row], u[pr]);
-                    (s[pr], s[row]) = (s[row], s[pr]);
+                    (u[pr], u[row]) = (u[row].clone(), u[pr].clone());
+                    (s[pr], s[row]) = (s[row].clone(), s[pr].clone());
                 }
 
                 let mut vu = u[row].clone();
@@ -403,7 +442,7 @@ impl<T: Entry + Copy, const N: usize, const M: usize>
 }
 
 
-impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
+impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M> {
     fn rank(&self) -> usize {
         RowEchelonMatrix::from(self.clone()).rank
     }
@@ -412,10 +451,10 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         let re = RowEchelonMatrix::from(self.transpose());
         let s = re.multiplier;
 
-        (re.rank..M).map(|i| Matrix::from(s[i]).transpose()).collect()
+        (re.rank..M).map(|i| Matrix::from(s[i].clone()).transpose()).collect()
     }
 
-    fn solve<const K: usize>(&self, rhs: Matrix<T, N, K>)
+    fn solve<const K: usize>(&self, rhs: &Matrix<T, N, K>)
         -> Option<Matrix<T, M, K>>
         where T: Div<T, Output=T>
     {
@@ -429,13 +468,13 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
         let mut result = Matrix::zero();
 
         for row in (0..re.rank).rev() {
-            let a = (Matrix::from(re.result[row]) * result)[0];
-            let b = y[row];
-            let x = re.result[row][re.columns[row]];
+            let a = (Matrix::from(re.result[row].clone()) * &result)[0].clone();
+            let b = y[row].clone();
+            let x = re.result[row][re.columns[row]].clone();
             for k in 0..K {
-                let t = b[k] - a[k];
-                if Entry::can_divide(t, x) {
-                    result[row][k] = t / x;
+                let t = b[k].clone() - a[k].clone();
+                if Entry::can_divide(t.clone(), x.clone()) {
+                    result[row][k] = t / x.clone();
                 } else {
                     return None;
                 }
@@ -447,25 +486,26 @@ impl<T: Entry + Copy, const N: usize, const M: usize> Matrix<T, N, M> {
 }
 
 
-impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
+impl<T: Entry + Clone, const N: usize> Matrix<T, N, N> {
     fn determinant(&self) -> T {
         match self.nr_rows() {
             0 => T::one(),
-            1 => self[0][0],
+            1 => self[0][0].clone(),
             2 => {
-                self[0][0] * self[1][1] - self[0][1] * self[1][0]
+                self[0][0].clone() * self[1][1].clone() -
+                self[0][1].clone() * self[1][0].clone()
             },
             3 => {
-                self[0][0] * self[1][1] * self[2][2] +
-                self[0][1] * self[1][2] * self[2][0] +
-                self[0][2] * self[1][0] * self[2][1] -
-                self[0][2] * self[1][1] * self[2][0] -
-                self[0][0] * self[1][2] * self[2][1] -
-                self[0][1] * self[1][0] * self[2][2]
+                self[0][0].clone() * self[1][1].clone() * self[2][2].clone() +
+                self[0][1].clone() * self[1][2].clone() * self[2][0].clone() +
+                self[0][2].clone() * self[1][0].clone() * self[2][1].clone() -
+                self[0][2].clone() * self[1][1].clone() * self[2][0].clone() -
+                self[0][0].clone() * self[1][2].clone() * self[2][1].clone() -
+                self[0][1].clone() * self[1][0].clone() * self[2][2].clone()
             },
             _ => {
                 let re = RowEchelonMatrix::from(self.clone());
-                (0..N).map(|i| re.result[i][i])
+                (0..N).map(|i| re.result[i][i].clone())
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())
             }
@@ -475,7 +515,7 @@ impl<T: Entry + Copy, const N: usize> Matrix<T, N, N> {
     fn inverse(&self) -> Option<Self>
         where T: Div<T, Output=T>
     {
-        self.solve(Matrix::identity())
+        self.solve(&Matrix::identity())
     }
 }
 
@@ -634,7 +674,7 @@ fn test_matrix_nullspace() {
     let n = a.null_space();
     assert_eq!(n.len(), 1);
     for v in a.null_space() {
-        assert_eq!(a * v, Matrix::from([[0.0], [0.0]]));
+        assert_eq!(&a * v, Matrix::from([[0.0], [0.0]]));
     }
 
     let a = Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
@@ -645,7 +685,7 @@ fn test_matrix_nullspace() {
     let n = a.null_space();
     assert_eq!(n.len(), 2);
     for v in n {
-        assert_eq!(a * v, Matrix::from([[0.0]]));
+        assert_eq!(&a * v, Matrix::from([[0.0]]));
     }
 }
 
@@ -654,15 +694,15 @@ fn test_matrix_solve() {
     fn test<T, const N: usize, const M: usize, const L: usize>(
         a: [[T; M]; N], b: [[T; L]; M]
     )
-        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
     {
         let a = Matrix::from(a);
         let b = Matrix::from(b);
-        let ab = a * b;
-        assert_eq!(a * a.solve(ab).unwrap(), ab);
+        let ab = &a * &b;
+        assert_eq!(&a * a.solve(&ab).unwrap(), ab);
 
         if N == M && a.rank() == N {
-            assert_eq!(a.solve(ab), Some(b));
+            assert_eq!(a.solve(&ab), Some(b));
         }
     }
 
@@ -675,12 +715,12 @@ fn test_matrix_solve() {
 #[test]
 fn test_matrix_inverse() {
     fn test<T, const N: usize>(a: [[T; N]; N])
-        where T: Entry + Copy + std::fmt::Debug + PartialEq + Div<T, Output=T>
+        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
     {
         let a = Matrix::from(a);
 
         if a.rank() == N {
-            assert_eq!(a * a.inverse().unwrap(), Matrix::identity());
+            assert_eq!(&a * a.inverse().unwrap(), Matrix::identity());
         } else {
             assert_eq!(a.inverse(), None);
         }
