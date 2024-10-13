@@ -1,6 +1,7 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul};
 
 use crate::util::entries::{Entry, Scalar};
+use crate::util::matrix::Matrix;
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,9 +44,9 @@ impl<T: Scalar> IndexMut<usize> for VecMatrix<T>
 
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
-    From<[[T; M]; N]> for VecMatrix<T>
+    From<Matrix<T, N, M>> for VecMatrix<T>
 {
-    fn from(data: [[T; M]; N]) -> Self {
+    fn from(data: Matrix<T, N, M>) -> Self {
         let mut result = VecMatrix::new(N, M);
 
         for i in 0..N {
@@ -55,6 +56,29 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
         }
 
         result
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    From<[[T; M]; N]> for VecMatrix<T>
+{
+    fn from(data: [[T; M]; N]) -> Self {
+        Matrix::from(data).into()
+    }
+}
+
+
+impl<T: Scalar + Clone, const M: usize> From<[T; M]> for VecMatrix<T> {
+    fn from(data: [T; M]) -> Self {
+        Matrix::from(data).into()
+    }
+}
+
+
+impl<T: Scalar + Clone> From<T> for VecMatrix<T> {
+    fn from(data: T) -> Self {
+        Matrix::from(data).into()
     }
 }
 
@@ -72,19 +96,6 @@ impl<T: Scalar + Clone> From<&[T]> for VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone, const M: usize> From<[T; M]> for VecMatrix<T> {
-    fn from(data: [T; M]) -> Self {
-        let mut result = VecMatrix::new(1, M);
-
-        for j in 0..M {
-            result[0][j] = data[j].clone();
-        }
-
-        result
-    }
-}
-
-
 impl<T: Scalar + Clone> From<Vec<T>> for VecMatrix<T> {
     fn from(data: Vec<T>) -> Self {
         let mut result = VecMatrix::new(1, data.len());
@@ -93,15 +104,6 @@ impl<T: Scalar + Clone> From<Vec<T>> for VecMatrix<T> {
             result[0][j] = data[j].clone();
         }
 
-        result
-    }
-}
-
-
-impl<T: Scalar + Clone> From<T> for VecMatrix<T> {
-    fn from(data: T) -> Self {
-        let mut result = VecMatrix::new(1, 1);
-        result[0][0] = data.clone();
         result
     }
 }
