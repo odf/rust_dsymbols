@@ -31,7 +31,7 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 }
 
 
-pub trait Entry: Scalar + Sub<Output=Self> + std::fmt::Display {
+pub trait Entry: Scalar + Sub<Output=Self> {
     fn clear_column(
         col: usize, v: &mut [Self], b: &mut [Self],
         vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
