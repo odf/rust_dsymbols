@@ -4,7 +4,7 @@ use num_traits::Zero;
 use crate::util::entries::{Entry, Scalar};
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Matrix<T, const N: usize, const M: usize> {
     data: [[T; M]; N]
 }
@@ -517,6 +517,16 @@ impl<T: Entry + Clone, const N: usize> Matrix<T, N, N> {
     {
         self.solve(&Matrix::identity())
     }
+}
+
+
+#[test]
+fn test_matrix_copy() {
+    let m1 = Matrix::from([[1, 2], [3, 4]]);
+    let mut m2 = m1;
+    m2[0][0] = 0;
+    assert_eq!(m1 + m2, Matrix::from([[1, 4], [6, 8]]));
+    assert_eq!(m1 + (-1 * m2), Matrix::from([[1, 0], [0, 0]]));
 }
 
 
