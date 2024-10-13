@@ -135,7 +135,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         VecMatrix::from(&self[i])
     }
 
-    pub fn set_row(&mut self, i: usize, row: VecMatrix<T>) {
+    pub fn set_row(&mut self, i: usize, row: &VecMatrix<T>) {
         assert_eq!(row.nr_rows, 1);
         assert_eq!(row.nr_cols, self.nr_cols);
         assert!(i < self.nr_rows);
@@ -157,7 +157,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         result
     }
 
-    pub fn set_column(&mut self, j: usize, col: VecMatrix<T>) {
+    pub fn set_column(&mut self, j: usize, col: &VecMatrix<T>) {
         assert_eq!(col.nr_cols, 1);
         assert_eq!(col.nr_rows, self.nr_rows);
         assert!(j < self.nr_cols);
@@ -476,12 +476,12 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
             if let Some(pr) = pivot_row {
                 if pr != row {
                     let t = u.get_row(pr);
-                    u.set_row(pr, u.get_row(row));
-                    u.set_row(row, t);
+                    u.set_row(pr, &u.get_row(row));
+                    u.set_row(row, &t);
 
                     let t = s.get_row(pr);
-                    s.set_row(pr, s.get_row(row));
-                    s.set_row(row, t);
+                    s.set_row(pr, &s.get_row(row));
+                    s.set_row(row, &t);
                 }
 
                 let mut vu: Vec<_> = u[row].iter().cloned().collect();
@@ -495,8 +495,8 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
                     );
                 }
 
-                u.set_row(row, vu.into());
-                s.set_row(row, vs.into());
+                u.set_row(row, &vu.into());
+                s.set_row(row, &vs.into());
 
                 cols[row] = col;
                 row += 1;
@@ -599,7 +599,7 @@ impl<T: Entry + Clone> VecMatrix<T> {
 fn test_matrix_indexing() {
     let mut m = VecMatrix::from([[1.0, 1.0], [0.0, 1.0]]);
 
-    m.set_row(0, m.get_row(0) * 3.0);
+    m.set_row(0, &(m.get_row(0) * 3.0));
     m[1][0] = m[1][0] + 4.0;
 
     assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
@@ -610,8 +610,8 @@ fn test_matrix_indexing() {
 fn test_matrix_row_column_manipulation() {
     let mut m = VecMatrix::from([[1.0, 1.0], [0.0, 1.0]]);
 
-    m.set_row(0, m.get_row(0) * 2.0);
-    m.set_column(1, m.get_column(1) * 3.0);
+    m.set_row(0, &(m.get_row(0) * 2.0));
+    m.set_column(1, &(m.get_column(1) * 3.0));
 
     assert_eq!(m, [[2.0, 6.0], [0.0, 3.0]].into());
 }

@@ -96,7 +96,7 @@ impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
         Matrix::from(self[i].clone())
     }
 
-    pub fn set_row(&mut self, i: usize, row: Matrix<T, 1, M>) {
+    pub fn set_row(&mut self, i: usize, row: &Matrix<T, 1, M>) {
         assert!(i < N);
         self[i] = row[0].clone();
     }
@@ -110,14 +110,14 @@ impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
         result
     }
 
-    pub fn set_column(&mut self, j: usize, column: Matrix<T, N, 1>) {
+    pub fn set_column(&mut self, j: usize, column: &Matrix<T, N, 1>) {
         assert!(j < M);
         for i in 0..N {
             self[i][j] = column[i][0].clone();
         }
     }
 
-    pub fn hstack<const L: usize, const S: usize>(self, rhs: Matrix<T, N, L>)
+    pub fn hstack<const L: usize, const S: usize>(self, rhs: &Matrix<T, N, L>)
         -> Matrix<T, N, S>
     {
         assert_eq!(S, N + M);
@@ -135,7 +135,7 @@ impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
         result
     }
 
-    pub fn vstack<const L: usize, const S: usize>(self, rhs: Matrix<T, L, M>)
+    pub fn vstack<const L: usize, const S: usize>(self, rhs: &Matrix<T, L, M>)
         -> Matrix<T, S, M>
     {
         assert_eq!(S, N + L);
@@ -545,8 +545,8 @@ fn test_matrix_indexing() {
 fn test_matrix_row_column_manipulation() {
     let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
 
-    m.set_row(0, m.get_row(0) * 2.0);
-    m.set_column(1, m.get_column(1) * 3.0);
+    m.set_row(0, &(m.get_row(0) * 2.0));
+    m.set_column(1, &(m.get_column(1) * 3.0));
 
     assert_eq!(m, [[2.0, 6.0], [0.0, 3.0]].into());
 }
@@ -635,12 +635,12 @@ fn test_matrix_mul() {
 #[test]
 fn test_matrix_stack() {
     assert_eq!(
-        Matrix::from([[1, 2, 3]]).vstack(Matrix::from([[4, 5, 6], [7, 8, 9]])),
+        Matrix::from([[1, 2, 3]]).vstack(&Matrix::from([[4, 5, 6], [7, 8, 9]])),
         [[1, 2, 3], [4, 5, 6], [7, 8, 9]].into()
     );
     assert_eq!(
         Matrix::from([[1, 2], [3, 4]])
-            .hstack(Matrix::from([[5, 6], [7, 8]])),
+            .hstack(&Matrix::from([[5, 6], [7, 8]])),
         [[1, 2, 5, 6], [3, 4, 7, 8]].into()
     );
 }
