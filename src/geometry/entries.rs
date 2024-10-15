@@ -11,6 +11,15 @@ impl Scalar for f64 {}
 impl Scalar for i64 {}
 
 
+pub trait ScalarPtr<T>:
+    Sized + Mul<Output=T> + Add<Output=T> + Neg<Output=T>
+{
+}
+
+impl ScalarPtr<f64> for &f64 {}
+impl ScalarPtr<i64> for &i64 {}
+
+
 pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
     where T:
         Copy + Zero + One +

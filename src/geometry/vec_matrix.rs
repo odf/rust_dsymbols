@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul};
 
-use crate::geometry::entries::{Entry, Scalar};
+use crate::geometry::entries::{Entry, Scalar, ScalarPtr};
 use crate::geometry::matrix::Matrix;
 
 
@@ -12,7 +12,7 @@ pub struct VecMatrix<T> {
 }
 
 
-impl<T: Scalar> VecMatrix<T> {
+impl<T> VecMatrix<T> {
     pub fn nr_rows(&self) -> usize {
         self.nr_rows
     }
@@ -23,7 +23,7 @@ impl<T: Scalar> VecMatrix<T> {
 }
 
 
-impl<T: Scalar> Index<usize> for VecMatrix<T>
+impl<T> Index<usize> for VecMatrix<T>
 {
     type Output = [T];
 
@@ -34,7 +34,7 @@ impl<T: Scalar> Index<usize> for VecMatrix<T>
 }
 
 
-impl<T: Scalar> IndexMut<usize> for VecMatrix<T>
+impl<T> IndexMut<usize> for VecMatrix<T>
 {
     fn index_mut(&mut self, index: usize) -> &mut [T] {
         assert!(index < self.nr_rows);
@@ -234,7 +234,9 @@ impl<T: Scalar + Clone> VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Add<&VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Add<&VecMatrix<T>> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -245,7 +247,7 @@ impl<T: Scalar + Clone> Add<&VecMatrix<T>> for &VecMatrix<T> {
 
         for i in 0..self.nr_rows {
             for j in 0..self.nr_cols {
-                result[i][j] = self[i][j].clone() + rhs[i][j].clone();
+                result[i][j] = &self[i][j] + &rhs[i][j];
             }
         }
 
@@ -254,7 +256,9 @@ impl<T: Scalar + Clone> Add<&VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Add<&VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Add<&VecMatrix<T>> for VecMatrix<T>
+where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -263,7 +267,9 @@ impl<T: Scalar + Clone> Add<&VecMatrix<T>> for VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Add<VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Add<VecMatrix<T>> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -272,7 +278,9 @@ impl<T: Scalar + Clone> Add<VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Add<VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Add<VecMatrix<T>> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn add(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -283,6 +291,7 @@ impl<T: Scalar + Clone> Add<VecMatrix<T>> for VecMatrix<T> {
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<[[T; M]; N]> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = VecMatrix<T>;
 
@@ -294,6 +303,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<[[T; M]; N]> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = VecMatrix<T>;
 
@@ -322,7 +332,9 @@ impl<T: Scalar + Clone> VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -332,7 +344,7 @@ impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for &VecMatrix<T> {
             for j in 0..rhs.nr_cols {
                 let mut x = T::zero();
                 for k in 0..self.nr_cols {
-                    x = x + self[i][k].clone() * rhs[k][j].clone();
+                    x = x + &self[i][k] * &rhs[k][j];
                 }
                 result[i][j] = x;
             }
@@ -343,7 +355,9 @@ impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: &VecMatrix<T>) -> Self::Output {
@@ -352,7 +366,9 @@ impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Mul<VecMatrix<T>> for &VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<VecMatrix<T>> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -361,7 +377,9 @@ impl<T: Scalar + Clone> Mul<VecMatrix<T>> for &VecMatrix<T> {
 }
 
 
-impl<T: Scalar + Clone> Mul<VecMatrix<T>> for VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<VecMatrix<T>> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = VecMatrix<T>;
 
     fn mul(self, rhs: VecMatrix<T>) -> Self::Output {
@@ -372,6 +390,7 @@ impl<T: Scalar + Clone> Mul<VecMatrix<T>> for VecMatrix<T> {
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
     Mul<&VecMatrix<T>> for [[T; M]; N]
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = VecMatrix<T>;
 
@@ -383,6 +402,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
     Mul<VecMatrix<T>> for [[T; M]; N]
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = VecMatrix<T>;
 
@@ -394,6 +414,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
 impl<T: Scalar + Clone, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = VecMatrix<T>;
 
@@ -437,19 +458,32 @@ impl Mul<VecMatrix<f64>> for f64 {
 }
 
 
-impl<T: Scalar + Clone> Mul<T> for VecMatrix<T> {
+impl<T: Scalar + Clone> Mul<&T> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     type Output = Self;
 
-    fn mul(self, rhs: T) -> Self::Output {
+    fn mul(self, rhs: &T) -> Self::Output {
         let mut result = VecMatrix::new(self.nr_rows, self.nr_cols);
 
         for i in 0..self.nr_rows {
             for j in 0..self.nr_cols {
-                result[i][j] = self[i][j].clone() * rhs.clone();
+                result[i][j] = &self[i][j] * rhs;
             }
         }
 
         result
+    }
+}
+
+
+impl<T: Scalar + Clone> Mul<T> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        self * &rhs
     }
 }
 
@@ -514,7 +548,9 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
 }
 
 
-impl<T: Entry + Clone> VecMatrix<T> {
+impl<T: Entry + Clone> VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     fn rank(&self) -> usize {
         RowEchelonVecMatrix::from(self.clone()).rank
     }
@@ -561,7 +597,9 @@ impl<T: Entry + Clone> VecMatrix<T> {
 }
 
 
-impl<T: Entry + Clone> VecMatrix<T> {
+impl<T: Entry + Clone> VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     fn determinant(&self) -> T {
         match self.nr_rows() {
             0 => T::one(),
@@ -787,7 +825,9 @@ fn test_matrix_solve() {
     fn test<T, const N: usize, const M: usize, const L: usize>(
         a: [[T; M]; N], b: [[T; L]; M]
     )
-        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
+        where
+            T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>,
+            for <'a> &'a T: ScalarPtr<T>
     {
         let a = VecMatrix::from(a);
         let b = VecMatrix::from(b);
@@ -808,7 +848,9 @@ fn test_matrix_solve() {
 #[test]
 fn test_matrix_inverse() {
     fn test<T, const N: usize>(a: [[T; N]; N])
-        where T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>
+        where 
+            T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>,
+            for <'a> &'a T: ScalarPtr<T>
     {
         let a = VecMatrix::from(a);
 

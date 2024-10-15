@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul};
 use num_traits::Zero;
 
-use crate::geometry::entries::{Entry, Scalar};
+use crate::geometry::entries::{Entry, Scalar, ScalarPtr};
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -10,7 +10,7 @@ pub struct Matrix<T, const N: usize, const M: usize> {
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
+impl<T, const N: usize, const M: usize> Matrix<T, N, M> {
     pub fn nr_rows(&self) -> usize {
         N
     }
@@ -21,7 +21,7 @@ impl<T: Scalar, const N: usize, const M: usize> Matrix<T, N, M> {
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize>
+impl<T, const N: usize, const M: usize>
     Index<usize> for Matrix<T, N, M>
 {
     type Output = [T; M];
@@ -33,7 +33,7 @@ impl<T: Scalar, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar, const N: usize, const M: usize>
+impl<T, const N: usize, const M: usize>
     IndexMut<usize> for Matrix<T, N, M>
 {
     fn index_mut(&mut self, index: usize) -> &mut [T; M] {
@@ -194,7 +194,8 @@ impl<T: Scalar + Clone, const N: usize> Matrix<T, N, N> {
 
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
-    Add<&Matrix<T, N, M>> for Matrix<T, N, M>
+    Add<&Matrix<T, N, M>> for &Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, M>;
 
@@ -203,7 +204,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self[i][j].clone() + rhs[i][j].clone();
+                result[i][j] = &self[i][j] + &rhs[i][j];
             }
         }
 
@@ -214,17 +215,19 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<Matrix<T, N, M>> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, M>;
 
     fn add(self, rhs: Matrix<T, N, M>) -> Self::Output {
-        self + &rhs
+        &self + &rhs
     }
 }
 
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<[[T; M]; N]> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, M>;
 
@@ -234,7 +237,9 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 }
 
 
-impl<T: Scalar + Clone, const N: usize, const M: usize> Zero for Matrix<T, N, M> {
+impl<T: Scalar + Clone, const N: usize, const M: usize> Zero for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     fn zero() -> Self {
         Matrix::new()
     }
@@ -255,6 +260,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize> Zero for Matrix<T, N, M>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<&Matrix<T, M, L>> for &Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, L>;
 
@@ -265,7 +271,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
             for j in 0..L {
                 let mut x = T::zero();
                 for k in 0..M {
-                    x = x + self[i][k].clone() * rhs[k][j].clone();
+                    x = x + &self[i][k] * &rhs[k][j];
                 }
                 result[i][j] = x;
             }
@@ -278,6 +284,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<&Matrix<T, M, L>> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, L>;
 
@@ -289,6 +296,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<Matrix<T, M, L>> for &Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, L>;
 
@@ -300,6 +308,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<Matrix<T, M, L>> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, L>;
 
@@ -311,6 +320,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<Matrix<T, M, L>> for [[T; M]; N]
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, L>;
 
@@ -322,6 +332,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
 
 impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<[[T; L]; M]> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Matrix<T, N, L>;
 
@@ -368,19 +379,32 @@ impl<const N: usize, const M: usize>
 
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
-    Mul<T> for Matrix<T, N, M>
+    Mul<&T> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Self;
 
-    fn mul(self, rhs: T) -> Self::Output {
+    fn mul(self, rhs: &T) -> Self::Output {
         let mut result = Matrix::new();
 
         for i in 0..N {
             for j in 0..M {
-                result[i][j] = self[i][j].clone() * rhs.clone();
+                result[i][j] = &self[i][j] * rhs;
             }
         }
         result
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Mul<T> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        self * &rhs
     }
 }
 
@@ -444,7 +468,9 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
 }
 
 
-impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M> {
+impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     fn rank(&self) -> usize {
         RowEchelonMatrix::from(self.clone()).rank
     }
@@ -488,7 +514,9 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M> {
 }
 
 
-impl<T: Entry + Clone, const N: usize> Matrix<T, N, N> {
+impl<T: Entry + Clone, const N: usize> Matrix<T, N, N>
+    where for <'a> &'a T: ScalarPtr<T>
+{
     fn determinant(&self) -> T {
         match self.nr_rows() {
             0 => T::one(),
