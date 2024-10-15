@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul};
 
-use crate::util::entries::{Entry, Scalar};
-use crate::util::matrix::Matrix;
+use crate::geometry::entries::{Entry, Scalar};
+use crate::geometry::matrix::Matrix;
 
 
 #[derive(Clone, Debug, PartialEq)]
