@@ -505,9 +505,11 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
         let mut cols = vec![m.nr_rows(); m.nr_rows()];
 
         for col in 0..m.nr_columns() {
-            let pivot_row = (row..m.nr_rows()).find(|&r| !u[r][col].is_zero());
+            if let Some(pi) = Entry::pivot_index(
+                (row..m.nr_rows()).map(|r| &u[r][col])
+            ) {
+                let pr = row + pi;
 
-            if let Some(pr) = pivot_row {
                 if pr != row {
                     let t = u.get_row(pr);
                     u.set_row(pr, &u.get_row(row));
@@ -630,6 +632,16 @@ impl<T: Entry + Clone> VecMatrix<T>
     {
         self.solve(&VecMatrix::identity(self.nr_rows()))
     }
+}
+
+
+#[test]
+fn test_matrix_clone() {
+    let m1 = VecMatrix::from([[1, 2], [3, 4]]);
+    let mut m2 = m1.clone();
+    m2[0][0] = 0;
+    assert_eq!(&m1 + &m2, VecMatrix::from([[1, 4], [6, 8]]));
+    assert_eq!(m1 + (-1 * m2), VecMatrix::from([[1, 0], [0, 0]]));
 }
 
 
@@ -820,18 +832,32 @@ fn test_matrix_nullspace() {
     }
 }
 
+
+fn allclose(a: &VecMatrix<f64>, b: &VecMatrix<f64>, rtol: f64, atol: f64)
+    -> bool
+{
+    for i in 0..a.nr_rows() {
+        for j in 0..a.nr_columns() {
+            if (a[i][j] - b[i][j]).abs() > (atol + rtol * b[i][j].abs()) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+
 #[test]
-fn test_matrix_solve() {
-    fn test<T, const N: usize, const M: usize, const L: usize>(
-        a: [[T; M]; N], b: [[T; L]; M]
+fn test_matrix_solve_i64() {
+    fn test<const N: usize, const M: usize, const L: usize>(
+        a: [[i64; M]; N], b: [[i64; L]; M]
     )
-        where
-            T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>,
-            for <'a> &'a T: ScalarPtr<T>
     {
         let a = VecMatrix::from(a);
         let b = VecMatrix::from(b);
         let ab = &a * &b;
+
         assert_eq!(&a * a.solve(&ab).unwrap(), ab);
 
         if N == M && a.rank() == N {
@@ -839,18 +865,36 @@ fn test_matrix_solve() {
         }
     }
 
-    test([[1.0, 2.0], [3.0, 4.0]], [[1.0, 0.0], [1.0, -3.0]]);
     test([[1, 2], [3, 4]], [[1, 0], [1, -3]]);
-    test([[1.0, 2.0], [3.0, 6.0]], [[1.0], [1.0]]);
     test([[1, 2], [3, 6]], [[1], [1]]);
 }
 
+
 #[test]
-fn test_matrix_inverse() {
-    fn test<T, const N: usize>(a: [[T; N]; N])
-        where 
-            T: Entry + Clone + std::fmt::Debug + PartialEq + Div<T, Output=T>,
-            for <'a> &'a T: ScalarPtr<T>
+fn test_matrix_solve_f64() {
+    fn test<const N: usize, const M: usize, const L: usize>(
+        a: [[f64; M]; N], b: [[f64; L]; M]
+    )
+    {
+        let a = VecMatrix::from(a);
+        let b = VecMatrix::from(b);
+        let ab = &a * &b;
+
+        assert!(allclose(&(&a * a.solve(&ab).unwrap()), &ab, 1.0e-9, 1.0e-9));
+
+        if N == M && a.rank() == N {
+            assert!(allclose(&a.solve(&ab).unwrap(), &b, 1.0e-9, 1.0e-9));
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]], [[1.0, 0.0], [1.0, -3.0]]);
+    test([[1.0, 2.0], [3.0, 6.0]], [[1.0], [1.0]]);
+}
+
+
+#[test]
+fn test_matrix_inverse_i64() {
+    fn test<const N: usize>(a: [[i64; N]; N])
     {
         let a = VecMatrix::from(a);
 
@@ -861,11 +905,31 @@ fn test_matrix_inverse() {
         }
     }
 
-    test([[1.0, 2.0], [3.0, 4.0]]);
-    test([[1.0, 2.0], [3.0, 6.0]]);
-
     test([[1, 2], [3, 5]]);
 
     // Inverse exists, but is not integral:
     assert_eq!(VecMatrix::from([[1, 2], [3, 4]]).inverse(), None);
+}
+
+
+#[test]
+fn test_matrix_inverse_f64() {
+    fn test<const N: usize>(a: [[f64; N]; N])
+    {
+        let a = VecMatrix::from(a);
+
+        if a.rank() == N {
+            assert!(allclose(
+                &(&a * a.inverse().unwrap()),
+                &VecMatrix::identity(N),
+                1.0e-9,
+                1.0e-9
+            ));
+        } else {
+            assert_eq!(a.inverse(), None);
+        }
+    }
+
+    test([[1.0, 2.0], [3.0, 4.0]]);
+    test([[1.0, 2.0], [3.0, 6.0]]);
 }

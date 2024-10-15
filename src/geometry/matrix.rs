@@ -429,8 +429,8 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
 
         for col in 0..M {
             if let Some(pi) = Entry::pivot_index(
-                &(row..N).map(|r| u[r][col].clone()).collect::<Vec<_>>()
-            ) {
+                (row..N).map(|r| &u[r][col])
+             ) {
                 let pr = row + pi;
 
                 if pr != row {

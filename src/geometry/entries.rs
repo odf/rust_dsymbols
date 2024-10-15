@@ -41,7 +41,8 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 
 
 pub trait Entry: Scalar + Sub<Output=Self> {
-    fn pivot_index(v: &[Self]) -> Option<usize>;
+    fn pivot_index<'a, I>(v: I) -> Option<usize>
+        where I: IntoIterator<Item=&'a Self>, Self: 'a;
     fn clear_column(
         col: usize, v: &mut [Self], b: &mut [Self],
         vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
@@ -53,23 +54,26 @@ pub trait Entry: Scalar + Sub<Output=Self> {
 
 
 impl Entry for f64 {
-    fn pivot_index(v: &[Self]) -> Option<usize> {
-        let mut result = None;
+    fn pivot_index<'a, I>(v: I) -> Option<usize>
+        where I: IntoIterator<Item=&'a f64>
+    {
+        let mut best_index = 0;
+        let mut best_entry: f64 = 0.0;
 
-        for i in 0..v.len() {
-            if v[i] != 0.0 {
-                if let Some(k) = result {
-                    let x: Self = v[k];
-                    if v[i].abs() > x.abs() {
-                        result = Some(i);
-                    }
-                } else {
-                    result = Some(i);
+        for (i, &x) in v.into_iter().enumerate() {
+            if x != 0.0 {
+                if best_entry == 0.0 || x.abs() > best_entry.abs() {
+                    best_index = i;
+                    best_entry = x;
                 }
             }
         }
 
-        result
+        if best_entry != 0.0 {
+            Some(best_index)
+        } else {
+            None
+        }
     }
 
     fn clear_column(
@@ -117,23 +121,26 @@ impl Entry for f64 {
 
 
 impl Entry for i64 {
-    fn pivot_index(v: &[Self]) -> Option<usize> {
-        let mut result = None;
+    fn pivot_index<'a, I>(v: I) -> Option<usize>
+        where I: IntoIterator<Item=&'a i64>
+    {
+        let mut best_index = 0;
+        let mut best_entry: i64 = 0;
 
-        for i in 0..v.len() {
-            if v[i] != 0 {
-                if let Some(k) = result {
-                    let x: Self = v[k];
-                    if v[i].abs() < x.abs() {
-                        result = Some(i);
-                    }
-                } else {
-                    result = Some(i);
+        for (i, &x) in v.into_iter().enumerate() {
+            if x != 0 {
+                if best_entry == 0 || x.abs() > best_entry.abs() {
+                    best_index = i;
+                    best_entry = x;
                 }
             }
         }
 
-        result
+        if best_entry != 0 {
+            Some(best_index)
+        } else {
+            None
+        }
     }
 
     fn clear_column(
