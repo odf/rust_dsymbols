@@ -101,6 +101,16 @@ impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
         self[i] = row[0].clone();
     }
 
+
+    pub fn swap_rows(&mut self, i: usize, j: usize) {
+        assert!(i < N);
+        assert!(j < N);
+        assert_ne!(i, j);
+
+        self.data.swap(i, j)
+    }
+
+
     pub fn get_column(&self, j: usize) -> Matrix<T, N, 1> {
         assert!(j < M);
         let mut result = Matrix::new();
@@ -434,8 +444,8 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
                 let pr = row + pi;
 
                 if pr != row {
-                    (u[pr], u[row]) = (u[row].clone(), u[pr].clone());
-                    (s[pr], s[row]) = (s[row].clone(), s[pr].clone());
+                    u.swap_rows(pr, row);
+                    s.swap_rows(pr, row);
                 }
 
                 let mut vu = u[row].clone();

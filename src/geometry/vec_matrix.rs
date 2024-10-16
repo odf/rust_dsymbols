@@ -145,6 +145,19 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
     }
 
+    pub fn swap_rows(&mut self, i: usize, j: usize) {
+        assert!(i < self.nr_rows);
+        assert!(j < self.nr_rows);
+        assert_ne!(i, j);
+
+        let ri = i * self.nr_cols;
+        let rj = j * self.nr_cols;
+
+        for k in 0..self.nr_cols {
+            self.data.swap(ri + k, rj + k);
+        }
+    }
+
     pub fn get_column(&self, j: usize) -> VecMatrix<T> {
         assert!(j < self.nr_cols);
 
@@ -511,17 +524,12 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
                 let pr = row + pi;
 
                 if pr != row {
-                    let t = u.get_row(pr);
-                    u.set_row(pr, &u.get_row(row));
-                    u.set_row(row, &t);
-
-                    let t = s.get_row(pr);
-                    s.set_row(pr, &s.get_row(row));
-                    s.set_row(row, &t);
+                    u.swap_rows(pr, row);
+                    s.swap_rows(pr, row);
                 }
 
-                let mut vu: Vec<_> = u[row].iter().cloned().collect();
-                let mut vs: Vec<_> = s[row].iter().cloned().collect();
+                let mut vu = u.get_row(row).data;
+                let mut vs = s.get_row(row).data;
 
                 for r in (row + 1)..m.nr_rows() {
                     Entry::clear_column(
