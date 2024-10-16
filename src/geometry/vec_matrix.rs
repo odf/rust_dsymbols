@@ -502,7 +502,6 @@ impl<T: Scalar + Clone> Mul<T> for VecMatrix<T>
 
 
 pub struct RowEchelonVecMatrix<T: Entry> {
-    original: VecMatrix<T>,
     multiplier: VecMatrix<T>,
     result: VecMatrix<T>,
     columns: Vec<usize>,
@@ -511,7 +510,7 @@ pub struct RowEchelonVecMatrix<T: Entry> {
 
 
 impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
-    pub fn from(m: VecMatrix<T>) -> Self {
+    pub fn new(m: &VecMatrix<T>) -> Self {
         let mut u = m.clone();
         let mut s = VecMatrix::identity(m.nr_rows());
         let mut row = 0;
@@ -548,7 +547,6 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
         }
 
         RowEchelonVecMatrix {
-            original: m,
             multiplier: s,
             result: u,
             columns: cols,
@@ -562,11 +560,11 @@ impl<T: Entry + Clone> VecMatrix<T>
     where for <'a> &'a T: ScalarPtr<T>
 {
     fn rank(&self) -> usize {
-        RowEchelonVecMatrix::from(self.clone()).rank
+        RowEchelonVecMatrix::new(self).rank
     }
 
     fn null_space(&self) -> Vec<VecMatrix<T>> {
-        let re = RowEchelonVecMatrix::from(self.transpose());
+        let re = RowEchelonVecMatrix::new(&self.transpose());
         let s = re.multiplier;
 
         (re.rank..self.nr_columns())
@@ -577,7 +575,7 @@ impl<T: Entry + Clone> VecMatrix<T>
     fn solve(&self, rhs: &VecMatrix<T>) -> Option<VecMatrix<T>>
         where T: Div<T, Output=T>
     {
-        let re = RowEchelonVecMatrix::from(self.clone());
+        let re = RowEchelonVecMatrix::new(self);
         let y = re.multiplier * rhs;
 
         if !(re.rank..self.nr_rows()).all(|i|
@@ -627,7 +625,7 @@ impl<T: Entry + Clone> VecMatrix<T>
                 self[0][1].clone() * self[1][0].clone() * self[2][2].clone()
             },
             _ => {
-                let re = RowEchelonVecMatrix::from(self.clone());
+                let re = RowEchelonVecMatrix::new(self);
                 (0..self.nr_rows()).map(|i| re.result[i][i].clone())
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())

@@ -420,7 +420,6 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
 
 pub struct RowEchelonMatrix<T: Entry, const N: usize, const M: usize> {
-    original: Matrix<T, N, M>,
     multiplier: Matrix<T, N, N>,
     result: Matrix<T, N, M>,
     columns: [usize; N],
@@ -431,7 +430,7 @@ pub struct RowEchelonMatrix<T: Entry, const N: usize, const M: usize> {
 impl<T: Entry + Clone, const N: usize, const M: usize>
     RowEchelonMatrix<T, N, M>
 {
-    pub fn from(m: Matrix<T, N, M>) -> Self {
+    pub fn new(m: &Matrix<T, N, M>) -> Self {
         let mut u = m.clone();
         let mut s = Matrix::identity();
         let mut row = 0;
@@ -468,7 +467,6 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
         }
 
         RowEchelonMatrix {
-            original: m,
             multiplier: s,
             result: u,
             columns: cols,
@@ -482,11 +480,11 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
     where for <'a> &'a T: ScalarPtr<T>
 {
     fn rank(&self) -> usize {
-        RowEchelonMatrix::from(self.clone()).rank
+        RowEchelonMatrix::new(self).rank
     }
 
     fn null_space(&self) -> Vec<Matrix<T, M, 1>> {
-        let re = RowEchelonMatrix::from(self.transpose());
+        let re = RowEchelonMatrix::new(&self.transpose());
         let s = re.multiplier;
 
         (re.rank..M).map(|i| Matrix::from(s[i].clone()).transpose()).collect()
@@ -496,7 +494,7 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
         -> Option<Matrix<T, M, K>>
         where T: Div<T, Output=T>
     {
-        let re = RowEchelonMatrix::from(self.clone());
+        let re = RowEchelonMatrix::new(self);
         let y = re.multiplier * rhs;
 
         if !(re.rank..N).all(|i| (0..K).all(|j| y[i][j].is_zero())) {
@@ -544,7 +542,7 @@ impl<T: Entry + Clone, const N: usize> Matrix<T, N, N>
                 self[0][1].clone() * self[1][0].clone() * self[2][2].clone()
             },
             _ => {
-                let re = RowEchelonMatrix::from(self.clone());
+                let re = RowEchelonMatrix::new(self);
                 (0..N).map(|i| re.result[i][i].clone())
                     .reduce(|a, b| a * b)
                     .unwrap_or(T::zero())
