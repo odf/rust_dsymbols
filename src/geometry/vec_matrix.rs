@@ -587,13 +587,13 @@ impl<T: Entry + Clone> VecMatrix<T>
         let mut result = VecMatrix::zero(self.nr_columns(), rhs.nr_columns());
 
         for row in (0..re.rank).rev() {
-            let a = VecMatrix::from(re.result.get_row(row)) * &result;
+            let a = re.result.get_row(row) * &result;
             let b = y.get_row(row);
-            let x = re.result[row][re.columns[row]].clone();
+            let x = &re.result[row][re.columns[row]];
             for k in 0..rhs.nr_columns() {
-                let t = b[0][k].clone() - a[0][k].clone();
-                if Entry::can_divide(t.clone(), x.clone()) {
-                    result[row][k] = t / x.clone();
+                let t = &b[0][k] - &a[0][k];
+                if Entry::can_divide(&t, &x) {
+                    result[row][k] = &t / x;
                 } else {
                     return None;
                 }
@@ -613,22 +613,23 @@ impl<T: Entry + Clone> VecMatrix<T>
             0 => T::one(),
             1 => self[0][0].clone(),
             2 => {
-                self[0][0].clone() * self[1][1].clone() -
-                self[0][1].clone() * self[1][0].clone()
+                &self[0][0] * &self[1][1] - &self[0][1] * &self[1][0]
             },
             3 => {
-                self[0][0].clone() * self[1][1].clone() * self[2][2].clone() +
-                self[0][1].clone() * self[1][2].clone() * self[2][0].clone() +
-                self[0][2].clone() * self[1][0].clone() * self[2][1].clone() -
-                self[0][2].clone() * self[1][1].clone() * self[2][0].clone() -
-                self[0][0].clone() * self[1][2].clone() * self[2][1].clone() -
-                self[0][1].clone() * self[1][0].clone() * self[2][2].clone()
+                &(&self[0][0] * &self[1][1]) * &self[2][2] +
+                &(&self[0][1] * &self[1][2]) * &self[2][0] +
+                &(&self[0][2] * &self[1][0]) * &self[2][1] -
+                &(&self[0][2] * &self[1][1]) * &self[2][0] -
+                &(&self[0][0] * &self[1][2]) * &self[2][1] -
+                &(&self[0][1] * &self[1][0]) * &self[2][2]
             },
             _ => {
                 let re = RowEchelonVecMatrix::new(self);
-                (0..self.nr_rows()).map(|i| re.result[i][i].clone())
-                    .reduce(|a, b| a * b)
-                    .unwrap_or(T::zero())
+                let mut result = T::one();
+                for i in 0..self.nr_rows {
+                    result = &result * &re.result[i][i];
+                }
+                result
             }
         }
     }

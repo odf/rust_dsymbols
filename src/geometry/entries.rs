@@ -12,7 +12,9 @@ impl Scalar for i64 {}
 
 
 pub trait ScalarPtr<T>:
-    Sized + Mul<Output=T> + Add<Output=T> + Neg<Output=T>
+    Sized +
+    Add<Output=T> + Sub<Output=T> + Neg<Output=T> +
+    Mul<Output=T> + Div<Output=T>
 {
 }
 
@@ -49,7 +51,7 @@ pub trait Entry: Scalar + Sub<Output=Self> {
     );
     fn normalize_column(col: usize, v: &mut [Self]);
     fn reduce_column(col: usize, v: &mut [Self], b: &[Self]);
-    fn can_divide(a: Self, b: Self) -> bool;
+    fn can_divide(a: &Self, b: &Self) -> bool;
 }
 
 
@@ -114,8 +116,8 @@ impl Entry for f64 {
         }
     }
 
-    fn can_divide(a: Self, b: Self) -> bool {
-        b != 0.0 && (a == 0.0 || (a / b * b / a - 1.0).abs() <= f64::EPSILON)
+    fn can_divide(a: &Self, b: &Self) -> bool {
+        *b != 0.0 && (*a == 0.0 || (a / b * b / a - 1.0).abs() <= f64::EPSILON)
     }
 }
 
@@ -193,7 +195,7 @@ impl Entry for i64 {
         }
     }
 
-    fn can_divide(a: Self, b: Self) -> bool {
-        b != 0 && a / b * b == a
+    fn can_divide(a: &Self, b: &Self) -> bool {
+        *b != 0 && a / b * b == *a
     }
 }

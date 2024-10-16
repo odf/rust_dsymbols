@@ -487,7 +487,7 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
         let re = RowEchelonMatrix::new(&self.transpose());
         let s = re.multiplier;
 
-        (re.rank..M).map(|i| Matrix::from(s[i].clone()).transpose()).collect()
+        (re.rank..M).map(|i| s.get_row(i).transpose()).collect()
     }
 
     fn solve<const K: usize>(&self, rhs: &Matrix<T, N, K>)
@@ -504,13 +504,13 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
         let mut result = Matrix::zero();
 
         for row in (0..re.rank).rev() {
-            let a = (Matrix::from(re.result[row].clone()) * &result)[0].clone();
-            let b = y[row].clone();
-            let x = re.result[row][re.columns[row]].clone();
+            let a = re.result.get_row(row) * &result;
+            let b = y.get_row(row);
+            let x = &re.result[row][re.columns[row]];
             for k in 0..K {
-                let t = b[k].clone() - a[k].clone();
-                if Entry::can_divide(t.clone(), x.clone()) {
-                    result[row][k] = t / x.clone();
+                let t = &b[0][k] - &a[0][k];
+                if Entry::can_divide(&t, &x) {
+                    result[row][k] = &t / x;
                 } else {
                     return None;
                 }
@@ -530,22 +530,23 @@ impl<T: Entry + Clone, const N: usize> Matrix<T, N, N>
             0 => T::one(),
             1 => self[0][0].clone(),
             2 => {
-                self[0][0].clone() * self[1][1].clone() -
-                self[0][1].clone() * self[1][0].clone()
+                &self[0][0] * &self[1][1] - &self[0][1] * &self[1][0]
             },
             3 => {
-                self[0][0].clone() * self[1][1].clone() * self[2][2].clone() +
-                self[0][1].clone() * self[1][2].clone() * self[2][0].clone() +
-                self[0][2].clone() * self[1][0].clone() * self[2][1].clone() -
-                self[0][2].clone() * self[1][1].clone() * self[2][0].clone() -
-                self[0][0].clone() * self[1][2].clone() * self[2][1].clone() -
-                self[0][1].clone() * self[1][0].clone() * self[2][2].clone()
+                &(&self[0][0] * &self[1][1]) * &self[2][2] +
+                &(&self[0][1] * &self[1][2]) * &self[2][0] +
+                &(&self[0][2] * &self[1][0]) * &self[2][1] -
+                &(&self[0][2] * &self[1][1]) * &self[2][0] -
+                &(&self[0][0] * &self[1][2]) * &self[2][1] -
+                &(&self[0][1] * &self[1][0]) * &self[2][2]
             },
             _ => {
                 let re = RowEchelonMatrix::new(self);
-                (0..N).map(|i| re.result[i][i].clone())
-                    .reduce(|a, b| a * b)
-                    .unwrap_or(T::zero())
+                let mut result = T::one();
+                for i in 0..N {
+                    result = &result * &re.result[i][i];
+                }
+                result
             }
         }
     }
