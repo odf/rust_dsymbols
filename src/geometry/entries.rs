@@ -3,7 +3,12 @@ use num_traits::{One, Zero};
 
 
 pub trait Scalar:
-    Zero + One + Mul<Output=Self> + Add<Output=Self> + Neg<Output=Self>
+    Zero + One +
+    Neg<Output=Self> +
+    Add<Output=Self> +
+    Sub<Output=Self> +
+    Mul<Output=Self> +
+    Div<Output=Self>
 {
 }
 
@@ -13,8 +18,11 @@ impl Scalar for i64 {}
 
 pub trait ScalarPtr<T>:
     Sized +
-    Add<Output=T> + Sub<Output=T> + Neg<Output=T> +
-    Mul<Output=T> + Div<Output=T>
+    Neg<Output=T> +
+    Add<Output=T> + Add<T, Output=T> +
+    Sub<Output=T> + Sub<T, Output=T> +
+    Mul<Output=T> + Mul<T, Output=T> +
+    Div<Output=T> + Div<T, Output=T>
 {
 }
 
@@ -42,7 +50,7 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 }
 
 
-pub trait Entry: Scalar + Sub<Output=Self> {
+pub trait Entry: Scalar {
     fn pivot_index<'a, I>(v: I) -> Option<usize>
         where I: IntoIterator<Item=&'a Self>, Self: 'a;
     fn clear_column(
