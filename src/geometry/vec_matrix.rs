@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul};
 
-use crate::geometry::traits::{Entry, Scalar, ScalarPtr};
+use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 use crate::geometry::matrix::Matrix;
 
 
@@ -12,12 +12,12 @@ pub struct VecMatrix<T> {
 }
 
 
-impl<T> VecMatrix<T> {
-    pub fn nr_rows(&self) -> usize {
+impl<T> Array2d<T> for VecMatrix<T> {
+    fn nr_rows(&self) -> usize {
         self.nr_rows
     }
 
-    pub fn nr_columns(&self) -> usize {
+    fn nr_columns(&self) -> usize {
         self.nr_cols
     }
 }
@@ -34,11 +34,37 @@ impl<T> Index<usize> for VecMatrix<T>
 }
 
 
+impl<T> Index<(usize, usize)> for VecMatrix<T>
+{
+    type Output = T;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (i, j) = index;
+        assert!(i < self.nr_rows);
+        assert!(j < self.nr_cols);
+
+        &self.data[i * self.nr_cols + j]
+    }
+}
+
+
 impl<T> IndexMut<usize> for VecMatrix<T>
 {
     fn index_mut(&mut self, index: usize) -> &mut [T] {
         assert!(index < self.nr_rows);
         &mut self.data[index * self.nr_cols .. (index + 1) * self.nr_cols]
+    }
+}
+
+
+impl<T> IndexMut<(usize, usize)> for VecMatrix<T>
+{
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
+        let (i, j) = index;
+        assert!(i < self.nr_rows);
+        assert!(j < self.nr_cols);
+
+        &mut self.data[i * self.nr_cols + j]
     }
 }
 
@@ -840,21 +866,6 @@ fn test_matrix_nullspace() {
 }
 
 
-fn allclose(a: &VecMatrix<f64>, b: &VecMatrix<f64>, rtol: f64, atol: f64)
-    -> bool
-{
-    for i in 0..a.nr_rows() {
-        for j in 0..a.nr_columns() {
-            if (a[i][j] - b[i][j]).abs() > (atol + rtol * b[i][j].abs()) {
-                return false;
-            }
-        }
-    }
-
-    true
-}
-
-
 #[test]
 fn test_matrix_solve_i64() {
     fn test<const N: usize, const M: usize, const L: usize>(
@@ -879,6 +890,8 @@ fn test_matrix_solve_i64() {
 
 #[test]
 fn test_matrix_solve_f64() {
+    use crate::geometry::traits::allclose;
+
     fn test<const N: usize, const M: usize, const L: usize>(
         a: [[f64; M]; N], b: [[f64; L]; M]
     )
@@ -921,6 +934,8 @@ fn test_matrix_inverse_i64() {
 
 #[test]
 fn test_matrix_inverse_f64() {
+    use crate::geometry::traits::allclose;
+
     fn test<const N: usize>(a: [[f64; N]; N])
     {
         let a = VecMatrix::from(a);

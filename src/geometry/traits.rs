@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Index, Mul, Neg, Sub};
 use num_traits::{One, Zero};
 
 
@@ -28,6 +28,27 @@ pub trait ScalarPtr<T>:
 
 impl ScalarPtr<f64> for &f64 {}
 impl ScalarPtr<i64> for &i64 {}
+
+pub trait Array2d<T>: Index<(usize, usize), Output=T> {
+    fn nr_rows(&self) -> usize;
+    fn nr_columns(&self) -> usize;
+}
+
+
+pub fn allclose<M: Array2d<f64>>(a: &M, b: &M, rtol: f64, atol: f64) -> bool {
+    assert_eq!(a.nr_rows(), b.nr_rows());
+    assert_eq!(a.nr_columns(), b.nr_columns());
+
+    for i in 0..a.nr_rows() {
+        for j in 0..a.nr_columns() {
+            if (a[(i, j)] - b[(i, j)]).abs() > (atol + rtol * b[(i, j)].abs()) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
 
 
 pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?

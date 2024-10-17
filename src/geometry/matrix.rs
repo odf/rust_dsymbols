@@ -1,29 +1,7 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul};
 use num_traits::Zero;
 
-use crate::geometry::traits::{Entry, Scalar, ScalarPtr};
-
-
-pub trait Array2d<T>: Index<(usize, usize), Output=T> {
-    fn nr_rows(&self) -> usize;
-    fn nr_columns(&self) -> usize;
-}
-
-
-fn allclose<M: Array2d<f64>>(a: &M, b: &M, rtol: f64, atol: f64) -> bool {
-    assert_eq!(a.nr_rows(), b.nr_rows());
-    assert_eq!(a.nr_columns(), b.nr_columns());
-
-    for i in 0..a.nr_rows() {
-        for j in 0..a.nr_columns() {
-            if (a[(i, j)] - b[(i, j)]).abs() > (atol + rtol * b[(i, j)].abs()) {
-                return false;
-            }
-        }
-    }
-
-    true
-}
+use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -63,7 +41,7 @@ impl<T, const N: usize, const M: usize>
     fn index(&self, index: (usize, usize)) -> &Self::Output {
         let (i, j) = index;
         assert!(i < N);
-        assert!(j < N);
+        assert!(j < M);
 
         &self.data[i][j]
     }
@@ -86,7 +64,7 @@ impl<T, const N: usize, const M: usize>
     fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
         let (i, j) = index;
         assert!(i < N);
-        assert!(j < N);
+        assert!(j < M);
 
         &mut self.data[i][j]
     }
@@ -813,6 +791,8 @@ fn test_matrix_solve_i64() {
 
 #[test]
 fn test_matrix_solve_f64() {
+    use crate::geometry::traits::allclose;
+
     fn test<const N: usize, const M: usize, const L: usize>(
         a: [[f64; M]; N], b: [[f64; L]; M]
     )
@@ -855,6 +835,8 @@ fn test_matrix_inverse_i64() {
 
 #[test]
 fn test_matrix_inverse_f64() {
+    use crate::geometry::traits::allclose;
+
     fn test<const N: usize>(a: [[f64; N]; N])
     {
         let a = Matrix::from(a);
