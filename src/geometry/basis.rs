@@ -1,5 +1,5 @@
 use crate::geometry::matrix::Matrix;
-use crate::geometry::entries::Entry;
+use crate::geometry::traits::Entry;
 
 use num_traits::Zero;
 

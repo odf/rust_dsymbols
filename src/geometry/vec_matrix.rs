@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul};
 
-use crate::geometry::entries::{Entry, Scalar, ScalarPtr};
+use crate::geometry::traits::{Entry, Scalar, ScalarPtr};
 use crate::geometry::matrix::Matrix;
 
 
