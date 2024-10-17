@@ -1,30 +1,107 @@
-use crate::geometry::matrix::Matrix;
-use crate::geometry::traits::Entry;
-
 use num_traits::Zero;
 
+use crate::geometry::matrix::Matrix;
 
-pub(crate) fn pivot_column<T: Zero>(v: &[T]) -> Option<usize> {
+use super::traits::{Scalar, ScalarPtr, gcdx};
+
+
+trait Entry: Scalar {
+    fn clear_column(col: usize, v: &mut [Self], b: &mut [Self]);
+    fn normalize_column(col: usize, v: &mut [Self]);
+    fn reduce_column(col: usize, v: &mut [Self], b: &[Self]);
+}
+
+
+impl Entry for f64 {
+    fn clear_column(col: usize, v: &mut [Self], b: &mut [Self]) {
+        let f = v[col] / b[col];
+        v[col] = 0.0;
+
+        for k in (col + 1)..v.len() {
+            v[k] -= b[k] * f;
+        }
+    }
+
+    fn normalize_column(col: usize, v: &mut [Self]) {
+        let f = v[col];
+        v[col] = 1.0;
+
+        for k in (col + 1)..v.len() {
+            v[k] /= f;
+        }
+    }
+
+    fn reduce_column(col: usize, v: &mut [Self], b: &[Self]) {
+        let f = v[col];
+        v[col] = 0.0;
+
+        for k in (col + 1)..v.len() {
+            v[k] -= b[k] * f;
+        }
+    }
+}
+
+
+impl Entry for i64 {
+    fn clear_column(col: usize, v: &mut [Self], b: &mut [Self]) {
+        assert_eq!(v.len(), b.len());
+
+        let (_, r, s, t, u) = gcdx(b[col], v[col]);
+        let det = r * u - s * t;
+
+        for k in col..v.len() {
+            let tmp = det * (b[k] * r + v[k] * s);
+            v[k] = b[k] * t + v[k] * u;
+            b[k] = tmp;
+        }
+    }
+
+    fn normalize_column(col: usize, v: &mut [Self]) {
+        if v[col] < 0 {
+            for k in col..v.len() {
+                v[k] = -v[k];
+            }
+        }
+    }
+
+    fn reduce_column(col: usize, v: &mut [Self], b: &[Self]) {
+        assert_eq!(v.len(), b.len());
+
+        let f = v[col] / b[col] - (
+            if v[col] < 0 { 1 } else { 0 }
+        );
+
+        if f != 0 {
+            for k in col..v.len() {
+                v[k] -= b[k] * f;
+            }
+        }
+    }
+}
+
+fn pivot_column<T: Zero>(v: &[T]) -> Option<usize> {
     v.iter().position(|x| !x.is_zero())
 }
 
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct Basis<T: Entry, const N: usize> {
-    pub(crate) vectors: Matrix<T, N, N>,
-    pub(crate) rank: usize
+struct Basis<T: Entry, const N: usize> {
+    vectors: Matrix<T, N, N>,
+    rank: usize
 }
 
 
-impl<T: Copy + Entry, const N: usize> Basis<T, N> {
-    pub(crate) fn new() -> Self {
+impl<T: Copy + Entry, const N: usize> Basis<T, N>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    fn new() -> Self {
         Basis {
-            vectors: Matrix::from([[T::zero(); N]; N]),
+            vectors: Matrix::new(),
             rank: 0
         }
     }
 
-    pub(crate) fn extend(&mut self, v: &[T; N]) {
+    fn extend(&mut self, v: &[T; N]) {
         let mut v = v.clone();
 
         for i in 0..self.rank {
@@ -59,7 +136,7 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
         }
     }
 
-    pub(crate) fn reduce(&mut self) {
+    fn reduce(&mut self) {
         let mut col = 0;
         for row in 0..self.rank {
             while self.vectors[row][col].is_zero() {
@@ -75,11 +152,11 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
         }
     }
 
-    pub(crate) fn rank(&self) -> usize {
+    fn rank(&self) -> usize {
         self.rank
     }
 
-    pub(crate) fn vectors(&self) -> Vec<[T; N]> {
+    fn vectors(&self) -> Vec<[T; N]> {
         (0..self.rank).map(|i| self.vectors[i]).collect()
     }
 }
