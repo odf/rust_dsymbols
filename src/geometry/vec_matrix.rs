@@ -543,11 +543,7 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
         let mut cols = vec![m.nr_rows(); m.nr_rows()];
 
         for col in 0..m.nr_columns() {
-            if let Some(pi) = Entry::pivot_index(
-                (row..m.nr_rows()).map(|r| &u[r][col])
-            ) {
-                let pr = row + pi;
-
+            if let Some(pr) = Entry::pivot_row(col, row, &u) {
                 if pr != row {
                     u.swap_rows(pr, row);
                     s.swap_rows(pr, row);

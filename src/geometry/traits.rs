@@ -76,12 +76,10 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 
 pub trait Entry: Scalar {
     fn can_divide(a: &Self, b: &Self) -> bool;
-    fn pivot_index<'a, I>(v: I) -> Option<usize>
-        where I: IntoIterator<Item=&'a Self>, Self: 'a;
-    fn clear_col(
-        col: usize, row1: usize, row2: usize,
-        a: &mut dyn Array2d<Self>,
-        x: Option<&mut dyn Array2d<Self>>
+    fn pivot_row<M: Array2d<Self>>(col: usize, row0: usize, a: &M)
+        -> Option<usize>;
+    fn clear_col<A: Array2d<Self>, B: Array2d<Self>>(
+        col: usize, row1: usize, row2: usize, a: &mut A, x: Option<&mut B>
     );
 }
 
@@ -91,32 +89,22 @@ impl Entry for f64 {
         *b != 0.0 && (*a == 0.0 || (a / b * b / a - 1.0).abs() <= f64::EPSILON)
     }
 
-    fn pivot_index<'a, I>(v: I) -> Option<usize>
-        where I: IntoIterator<Item=&'a f64>
+    fn pivot_row<M: Array2d<Self>>(col: usize, row0: usize, a: &M)
+        -> Option<usize>
     {
-        let mut best_index = 0;
-        let mut best_entry: f64 = 0.0;
+        let mut best_row = row0;
 
-        for (i, &x) in v.into_iter().enumerate() {
-            if x != 0.0 {
-                if best_entry == 0.0 || x.abs() > best_entry.abs() {
-                    best_index = i;
-                    best_entry = x;
-                }
+        for row in (row0 + 1)..a.nr_rows() {
+            if a[(row, col)].abs() > a[(best_row, col)].abs() {
+                best_row = row;
             }
         }
 
-        if best_entry != 0.0 {
-            Some(best_index)
-        } else {
-            None
-        }
+        if a[(best_row, col)] != 0.0 { Some(best_row) } else { None }
     }
 
-    fn clear_col(
-        col: usize, row1: usize, row2: usize,
-        a: &mut dyn Array2d<Self>,
-        x: Option<&mut dyn Array2d<Self>>
+    fn clear_col<A: Array2d<Self>, B: Array2d<Self>>(
+        col: usize, row1: usize, row2: usize, a: &mut A, x: Option<&mut B>
     ) {
         let f = a[(row1, col)] / a[(row2, col)];
         a[(row1, col)] = 0.0;
@@ -139,32 +127,22 @@ impl Entry for i64 {
         *b != 0 && a / b * b == *a
     }
 
-    fn pivot_index<'a, I>(v: I) -> Option<usize>
-        where I: IntoIterator<Item=&'a i64>
+    fn pivot_row<M: Array2d<Self>>(col: usize, row0: usize, a: &M)
+        -> Option<usize>
     {
-        let mut best_index = 0;
-        let mut best_entry: i64 = 0;
+        let mut best_row = row0;
 
-        for (i, &x) in v.into_iter().enumerate() {
-            if x != 0 {
-                if best_entry == 0 || x.abs() > best_entry.abs() {
-                    best_index = i;
-                    best_entry = x;
-                }
+        for row in (row0 + 1)..a.nr_rows() {
+            if a[(row, col)].abs() < a[(best_row, col)].abs() {
+                best_row = row;
             }
         }
 
-        if best_entry != 0 {
-            Some(best_index)
-        } else {
-            None
-        }
+        if a[(best_row, col)] != 0 { Some(best_row) } else { None }
     }
 
-    fn clear_col(
-        col: usize, row1: usize, row2: usize,
-        a: &mut dyn Array2d<Self>,
-        x: Option<&mut dyn Array2d<Self>>
+    fn clear_col<A: Array2d<Self>, B: Array2d<Self>>(
+        col: usize, row1: usize, row2: usize, a: &mut A, x: Option<&mut B>
     ) {
         let (_, r, s, t, u) = gcdx(a[(row2, col)], a[(row1, col)]);
         let det = r * u - s * t;
