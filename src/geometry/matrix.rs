@@ -475,19 +475,9 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
                     s.swap_rows(pr, row);
                 }
 
-                let mut vu = u[row].clone();
-                let mut vs = s[row].clone();
-
                 for r in (row + 1)..N {
-                    Entry::clear_column(
-                        col,
-                        &mut u[r], &mut vu,
-                        Some(&mut s[r]), Some(&mut vs)
-                    );
+                    Entry::clear_col(col, r, row, &mut u, Some(&mut s));
                 }
-
-                u[row] = vu;
-                s[row] = vs;
 
                 cols[row] = col;
                 row += 1;

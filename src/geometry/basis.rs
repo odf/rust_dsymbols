@@ -46,7 +46,7 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N> {
                     self.rank += 1;
                     return;
                 } else if col == col_b {
-                    Entry::clear_column(col, &mut v, b, None, None);
+                    Entry::clear_column(col, &mut v, b);
                 }
             } else {
                 break;

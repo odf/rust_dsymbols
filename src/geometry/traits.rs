@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Index, Mul, Neg, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 use num_traits::{One, Zero};
 
 
@@ -29,7 +29,10 @@ pub trait ScalarPtr<T>:
 impl ScalarPtr<f64> for &f64 {}
 impl ScalarPtr<i64> for &i64 {}
 
-pub trait Array2d<T>: Index<(usize, usize), Output=T> {
+pub trait Array2d<T>:
+    Index<(usize, usize), Output=T> +
+    IndexMut<(usize, usize), Output=T>
+{
     fn nr_rows(&self) -> usize;
     fn nr_columns(&self) -> usize;
 }
@@ -72,19 +75,25 @@ pub fn gcdx<T>(a: T, b: T) -> (T, T, T, T, T) // TODO return a struct?
 
 
 pub trait Entry: Scalar {
+    fn can_divide(a: &Self, b: &Self) -> bool;
     fn pivot_index<'a, I>(v: I) -> Option<usize>
         where I: IntoIterator<Item=&'a Self>, Self: 'a;
-    fn clear_column(
-        col: usize, v: &mut [Self], b: &mut [Self],
-        vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
+    fn clear_col(
+        col: usize, row1: usize, row2: usize,
+        a: &mut dyn Array2d<Self>,
+        x: Option<&mut dyn Array2d<Self>>
     );
+    fn clear_column(col: usize, v: &mut [Self], b: &mut [Self]);
     fn normalize_column(col: usize, v: &mut [Self]);
     fn reduce_column(col: usize, v: &mut [Self], b: &[Self]);
-    fn can_divide(a: &Self, b: &Self) -> bool;
 }
 
 
 impl Entry for f64 {
+    fn can_divide(a: &Self, b: &Self) -> bool {
+        *b != 0.0 && (*a == 0.0 || (a / b * b / a - 1.0).abs() <= f64::EPSILON)
+    }
+
     fn pivot_index<'a, I>(v: I) -> Option<usize>
         where I: IntoIterator<Item=&'a f64>
     {
@@ -107,23 +116,31 @@ impl Entry for f64 {
         }
     }
 
-    fn clear_column(
-        col: usize, v: &mut [Self], b: &mut [Self],
-        vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
+    fn clear_col(
+        col: usize, row1: usize, row2: usize,
+        a: &mut dyn Array2d<Self>,
+        x: Option<&mut dyn Array2d<Self>>
     ) {
+        let f = a[(row1, col)] / a[(row2, col)];
+        a[(row1, col)] = 0.0;
+
+        for k in (col + 1)..a.nr_columns() {
+            a[(row1, k)] -= a[(row2, k)] * f;
+        }
+
+        if let Some(x) = x {
+            for k in 0..x.nr_columns() {
+                x[(row1, k)] -= x[(row2, k)] * f;
+            }
+        }
+    }
+
+    fn clear_column(col: usize, v: &mut [Self], b: &mut [Self]) {
         let f = v[col] / b[col];
         v[col] = 0.0;
 
         for k in (col + 1)..v.len() {
             v[k] -= b[k] * f;
-        }
-
-        if let Some(vx) = vx {
-            if let Some(bx) = bx {
-                for k in 0..vx.len() {
-                    vx[k] -= bx[k] * f;
-                }
-            }
         }
     }
 
@@ -144,14 +161,14 @@ impl Entry for f64 {
             v[k] -= b[k] * f;
         }
     }
-
-    fn can_divide(a: &Self, b: &Self) -> bool {
-        *b != 0.0 && (*a == 0.0 || (a / b * b / a - 1.0).abs() <= f64::EPSILON)
-    }
 }
 
 
 impl Entry for i64 {
+    fn can_divide(a: &Self, b: &Self) -> bool {
+        *b != 0 && a / b * b == *a
+    }
+
     fn pivot_index<'a, I>(v: I) -> Option<usize>
         where I: IntoIterator<Item=&'a i64>
     {
@@ -174,10 +191,30 @@ impl Entry for i64 {
         }
     }
 
-    fn clear_column(
-        col: usize, v: &mut [Self], b: &mut [Self],
-        vx: Option<&mut [Self]>, bx: Option<&mut [Self]>
+    fn clear_col(
+        col: usize, row1: usize, row2: usize,
+        a: &mut dyn Array2d<Self>,
+        x: Option<&mut dyn Array2d<Self>>
     ) {
+        let (_, r, s, t, u) = gcdx(a[(row2, col)], a[(row1, col)]);
+        let det = r * u - s * t;
+
+        for k in col..a.nr_columns() {
+            let tmp = det * (a[(row2, k)] * r + a[(row1, k)] * s);
+            a[(row1, k)] = a[(row2, k)] * t + a[(row1, k)] * u;
+            a[(row2, k)] = tmp;
+        }
+
+        if let Some(x) = x {
+            for k in 0..x.nr_columns() {
+                let tmp = det * (x[(row2, k)] * r + x[(row1, k)] * s);
+                x[(row1, k)] = x[(row2, k)] * t + x[(row1, k)] * u;
+                x[(row2, k)] = tmp;
+            }
+        }
+    }
+
+    fn clear_column(col: usize, v: &mut [Self], b: &mut [Self]) {
         assert_eq!(v.len(), b.len());
 
         let (_, r, s, t, u) = gcdx(b[col], v[col]);
@@ -187,18 +224,6 @@ impl Entry for i64 {
             let tmp = det * (b[k] * r + v[k] * s);
             v[k] = b[k] * t + v[k] * u;
             b[k] = tmp;
-        }
-
-        if let Some(vx) = vx {
-            if let Some(bx) = bx {
-                assert_eq!(vx.len(), bx.len());
-
-                for k in 0..vx.len() {
-                    let tmp = det * (bx[k] * r + vx[k] * s);
-                    vx[k] = bx[k] * t + vx[k] * u;
-                    bx[k] = tmp;
-                }
-            }
         }
     }
 
@@ -222,9 +247,5 @@ impl Entry for i64 {
                 v[k] -= b[k] * f;
             }
         }
-    }
-
-    fn can_divide(a: &Self, b: &Self) -> bool {
-        *b != 0 && a / b * b == *a
     }
 }

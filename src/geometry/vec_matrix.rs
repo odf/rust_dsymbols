@@ -553,19 +553,9 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
                     s.swap_rows(pr, row);
                 }
 
-                let mut vu = u.get_row(row).data;
-                let mut vs = s.get_row(row).data;
-
                 for r in (row + 1)..m.nr_rows() {
-                    Entry::clear_column(
-                        col,
-                        &mut u[r], &mut vu,
-                        Some(&mut s[r]), Some(&mut vs)
-                    );
+                    Entry::clear_col(col, r, row, &mut u, Some(&mut s));
                 }
-
-                u.set_row(row, &vu.into());
-                s.set_row(row, &vs.into());
 
                 cols[row] = col;
                 row += 1;
