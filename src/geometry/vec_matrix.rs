@@ -497,10 +497,10 @@ impl Mul<VecMatrix<f64>> for f64 {
 }
 
 
-impl<T: Scalar + Clone> Mul<&T> for VecMatrix<T>
+impl<T: Scalar + Clone> Mul<&T> for &VecMatrix<T>
     where for <'a> &'a T: ScalarPtr<T>
 {
-    type Output = Self;
+    type Output = VecMatrix<T>;
 
     fn mul(self, rhs: &T) -> Self::Output {
         let mut result = VecMatrix::new(self.nr_rows, self.nr_cols);
@@ -516,13 +516,24 @@ impl<T: Scalar + Clone> Mul<&T> for VecMatrix<T>
 }
 
 
+impl<T: Scalar + Clone> Mul<&T> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Self;
+
+    fn mul(self, rhs: &T) -> Self::Output {
+        &self * rhs
+    }
+}
+
+
 impl<T: Scalar + Clone> Mul<T> for VecMatrix<T>
     where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Self;
 
     fn mul(self, rhs: T) -> Self::Output {
-        self * &rhs
+        &self * &rhs
     }
 }
 
@@ -964,4 +975,56 @@ fn test_matrix_inverse_f64() {
 
     test([[1.0, 2.0], [3.0, 4.0]]);
     test([[1.0, 2.0], [3.0, 6.0]]);
+}
+
+
+mod test_big_rational {
+    use super::*;
+    use num_traits::{One, FromPrimitive};
+    use num_rational::BigRational;
+
+    fn matrix<const N: usize, const M: usize>(m: [[i64; M]; N])
+        -> VecMatrix<BigRational>
+    {
+        let mut result = VecMatrix::new(N, M);
+
+        for i in 0..N {
+            for j in 0..M {
+                result[(i, j)] = BigRational::from_i64(m[i][j]).unwrap();
+            }
+        }
+
+        result
+    }
+
+    #[test]
+    fn test_determinant() {
+        assert_eq!(
+            matrix([
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 0, 1],
+                [0, 0, 1, 0]
+            ]).determinant(),
+            -BigRational::one()
+        );
+
+        let one = &BigRational::one();
+        let two = &BigRational::from_i64(2).unwrap();
+
+        let i1 = &VecMatrix::<BigRational>::identity(1);
+        let i2 = &VecMatrix::<BigRational>::identity(2);
+        let i3 = &VecMatrix::<BigRational>::identity(3);
+        let i4 = &VecMatrix::<BigRational>::identity(4);
+
+        assert_eq!(i1.determinant(), *one);
+        assert_eq!(i2.determinant(), *one);
+        assert_eq!(i3.determinant(), *one);
+        assert_eq!(i4.determinant(), *one);
+
+        assert_eq!((i1 * two).determinant(), two.pow(1));
+        assert_eq!((i2 * two).determinant(), two.pow(2));
+        assert_eq!((i3 * two).determinant(), two.pow(3));
+        assert_eq!((i4 * two).determinant(), two.pow(4));
+    }
 }

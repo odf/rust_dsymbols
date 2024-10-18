@@ -417,10 +417,10 @@ impl<const N: usize, const M: usize>
 
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
-    Mul<&T> for Matrix<T, N, M>
+    Mul<&T> for &Matrix<T, N, M>
     where for <'a> &'a T: ScalarPtr<T>
 {
-    type Output = Self;
+    type Output = Matrix<T, N, M>;
 
     fn mul(self, rhs: &T) -> Self::Output {
         let mut result = Matrix::new();
@@ -436,13 +436,25 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Mul<&T> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Self;
+
+    fn mul(self, rhs: &T) -> Self::Output {
+        &self * rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Mul<T> for Matrix<T, N, M>
     where for <'a> &'a T: ScalarPtr<T>
 {
     type Output = Self;
 
     fn mul(self, rhs: T) -> Self::Output {
-        self * &rhs
+        &self * &rhs
     }
 }
 
@@ -865,4 +877,56 @@ fn test_matrix_inverse_f64() {
 
     test([[1.0, 2.0], [3.0, 4.0]]);
     test([[1.0, 2.0], [3.0, 6.0]]);
+}
+
+
+mod test_big_rational {
+    use super::*;
+    use num_traits::{Zero, One, FromPrimitive};
+    use num_rational::BigRational;
+
+    fn matrix<const N: usize, const M: usize>(m: [[i64; M]; N])
+        -> Matrix<BigRational, N, M>
+    {
+        let mut result = Matrix::new();
+
+        for i in 0..N {
+            for j in 0..M {
+                result[(i, j)] = BigRational::from_i64(m[i][j]).unwrap();
+            }
+        }
+
+        result
+    }
+
+    #[test]
+    fn test_determinant() {
+        assert_eq!(
+            matrix([
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 0, 1],
+                [0, 0, 1, 0]
+            ]).determinant(),
+            -BigRational::one()
+        );
+
+        let one = &BigRational::one();
+        let two = &BigRational::from_i64(2).unwrap();
+
+        let i1 = &Matrix::<BigRational, 1, 1>::identity();
+        let i2 = &Matrix::<BigRational, 2, 2>::identity();
+        let i3 = &Matrix::<BigRational, 3, 3>::identity();
+        let i4 = &Matrix::<BigRational, 4, 4>::identity();
+
+        assert_eq!(i1.determinant(), *one);
+        assert_eq!(i2.determinant(), *one);
+        assert_eq!(i3.determinant(), *one);
+        assert_eq!(i4.determinant(), *one);
+
+        assert_eq!((i1 * two).determinant(), two.pow(1));
+        assert_eq!((i2 * two).determinant(), two.pow(2));
+        assert_eq!((i3 * two).determinant(), two.pow(3));
+        assert_eq!((i4 * two).determinant(), two.pow(4));
+    }
 }
