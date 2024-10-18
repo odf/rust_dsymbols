@@ -133,7 +133,9 @@ impl Entry for i64 {
         let mut best_row = row0;
 
         for row in (row0 + 1)..a.nr_rows() {
-            if a[(row, col)].abs() < a[(best_row, col)].abs() {
+            let x = a[(row, col)];
+            let y = a[(best_row, col)];
+            if x != 0 && (y == 0 || x.abs() < y.abs()) {
                 best_row = row;
             }
         }
