@@ -911,8 +911,14 @@ mod test_big_rational {
             -BigRational::one()
         );
 
+        assert_eq!(
+            matrix([[7, 8, 8], [4, 5, 6], [1, 2, 3]]).determinant(),
+            BigRational::from_i64(-3).unwrap()
+        );
+
         let one = &BigRational::one();
         let two = &BigRational::from_i64(2).unwrap();
+        let half = &(one / two);
 
         let i1 = &Matrix::<BigRational, 1, 1>::identity();
         let i2 = &Matrix::<BigRational, 2, 2>::identity();
@@ -928,5 +934,18 @@ mod test_big_rational {
         assert_eq!((i2 * two).determinant(), two.pow(2));
         assert_eq!((i3 * two).determinant(), two.pow(3));
         assert_eq!((i4 * two).determinant(), two.pow(4));
+
+        assert_eq!((i1 * half).determinant(), half.pow(1));
+        assert_eq!((i2 * half).determinant(), half.pow(2));
+        assert_eq!((i3 * half).determinant(), half.pow(3));
+        assert_eq!((i4 * half).determinant(), half.pow(4));
+    }
+
+    #[test]
+    fn test_rank() {
+        assert_eq!(matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]]).rank(), 3);
+        assert_eq!(matrix([[1, 2, 3], [2, 4, 6], [3, 6, 9]]).rank(), 1);
+        assert_eq!(matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).rank(), 2);
+        assert_eq!(matrix([[7, 8, 8], [4, 5, 6], [1, 2, 3]]).rank(), 3);
     }
 }
