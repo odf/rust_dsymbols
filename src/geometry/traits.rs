@@ -1,5 +1,6 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
-use num_traits::{One, Zero};
+use num_rational::BigRational;
+use num_traits::{One, Zero, Signed};
 
 
 pub trait Scalar:
@@ -12,6 +13,7 @@ pub trait Scalar:
 {
 }
 
+impl Scalar for BigRational {}
 impl Scalar for f64 {}
 impl Scalar for i64 {}
 
@@ -26,6 +28,7 @@ pub trait ScalarPtr<T>:
 {
 }
 
+impl ScalarPtr<BigRational> for &BigRational {}
 impl ScalarPtr<f64> for &f64 {}
 impl ScalarPtr<i64> for &i64 {}
 
@@ -81,6 +84,44 @@ pub trait Entry: Scalar {
     fn clear_col<A: Array2d<Self>, B: Array2d<Self>>(
         col: usize, row1: usize, row2: usize, a: &mut A, x: Option<&mut B>
     );
+}
+
+
+impl Entry for BigRational {
+    fn can_divide(a: &Self, b: &Self) -> bool {
+        !b.is_zero()
+    }
+
+    fn pivot_row<M: Array2d<Self>>(col: usize, row0: usize, a: &M)
+        -> Option<usize>
+    {
+        let mut best_row = row0;
+
+        for row in (row0 + 1)..a.nr_rows() {
+            if a[(row, col)].abs() > a[(best_row, col)].abs() {
+                best_row = row;
+            }
+        }
+
+        if a[(best_row, col)].is_zero() { None } else { Some(best_row) }
+    }
+
+    fn clear_col<A: Array2d<Self>, B: Array2d<Self>>(
+        col: usize, row1: usize, row2: usize, a: &mut A, x: Option<&mut B>
+    ) {
+        let f = &a[(row1, col)] / &a[(row2, col)];
+        a[(row1, col)] = Self::zero();
+
+        for k in (col + 1)..a.nr_columns() {
+            a[(row1, k)] = &a[(row1, k)] - &a[(row2, k)] * &f;
+        }
+
+        if let Some(x) = x {
+            for k in 0..x.nr_columns() {
+                x[(row1, k)] = &x[(row1, k)] - &x[(row2, k)] * &f;
+            }
+        }
+    }
 }
 
 
