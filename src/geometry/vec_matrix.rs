@@ -531,7 +531,8 @@ pub struct RowEchelonVecMatrix<T: Entry> {
     multiplier: VecMatrix<T>,
     result: VecMatrix<T>,
     columns: Vec<usize>,
-    rank: usize
+    rank: usize,
+    nr_swaps: usize
 }
 
 
@@ -540,6 +541,7 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
         let mut u = m.clone();
         let mut s = VecMatrix::identity(m.nr_rows());
         let mut row = 0;
+        let mut nr_swaps = 0;
         let mut cols = vec![m.nr_rows(); m.nr_rows()];
 
         for col in 0..m.nr_columns() {
@@ -547,6 +549,7 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
                 if pr != row {
                     u.swap_rows(pr, row);
                     s.swap_rows(pr, row);
+                    nr_swaps += 1;
                 }
 
                 for r in (row + 1)..m.nr_rows() {
@@ -562,7 +565,8 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
             multiplier: s,
             result: u,
             columns: cols,
-            rank: row
+            rank: row,
+            nr_swaps
         }
     }
 }
@@ -641,7 +645,7 @@ impl<T: Entry + Clone> VecMatrix<T>
                 for i in 0..self.nr_rows {
                     result = &result * &re.result[i][i];
                 }
-                result
+                if re.nr_swaps % 2 == 0 { result } else { -result }
             }
         }
     }
@@ -813,6 +817,26 @@ fn test_matrix_determinant() {
         VecMatrix::from([[1.0, 0.3, 0.7], [0.0, 2.0, 1.2], [0.0, 0.0, 0.25]])
             .determinant(),
         0.5
+    );
+
+    assert_eq!(
+        VecMatrix::from([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ]).determinant(),
+        -1
+    );
+
+    assert_eq!(
+        VecMatrix::from([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0, 0.0]
+        ]).determinant(),
+        -1.0
     );
 
     assert_eq!(VecMatrix::<f64>::identity(1).determinant(), 1.0);

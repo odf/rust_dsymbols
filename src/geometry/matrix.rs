@@ -451,7 +451,8 @@ pub struct RowEchelonMatrix<T: Entry, const N: usize, const M: usize> {
     multiplier: Matrix<T, N, N>,
     result: Matrix<T, N, M>,
     columns: [usize; N],
-    rank: usize
+    rank: usize,
+    nr_swaps: usize
 }
 
 
@@ -462,6 +463,7 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
         let mut u = m.clone();
         let mut s = Matrix::identity();
         let mut row = 0;
+        let mut nr_swaps = 0;
         let mut cols = [N; N];
 
         for col in 0..M {
@@ -469,6 +471,7 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
                 if pr != row {
                     u.swap_rows(pr, row);
                     s.swap_rows(pr, row);
+                    nr_swaps += 1;
                 }
 
                 for r in (row + 1)..N {
@@ -484,7 +487,8 @@ impl<T: Entry + Clone, const N: usize, const M: usize>
             multiplier: s,
             result: u,
             columns: cols,
-            rank: row
+            rank: row,
+            nr_swaps
         }
     }
 }
@@ -560,7 +564,7 @@ impl<T: Entry + Clone, const N: usize> Matrix<T, N, N>
                 for i in 0..N {
                     result = &result * &re.result[i][i];
                 }
-                result
+                if re.nr_swaps % 2 == 0 { result } else { -result }
             }
         }
     }
@@ -714,6 +718,26 @@ fn test_matrix_determinant() {
         Matrix::from([[1.0, 0.3, 0.7], [0.0, 2.0, 1.2], [0.0, 0.0, 0.25]])
             .determinant(),
         0.5
+    );
+
+    assert_eq!(
+        Matrix::from([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ]).determinant(),
+        -1
+    );
+
+    assert_eq!(
+        Matrix::from([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0, 0.0]
+        ]).determinant(),
+        -1.0
     );
 
     assert_eq!(Matrix::<f64, 1, 1>::identity().determinant(), 1.0);
