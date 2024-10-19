@@ -882,7 +882,8 @@ fn test_matrix_inverse_f64() {
 
 mod test_big_rational {
     use super::*;
-    use num_traits::{Zero, One, FromPrimitive};
+    use num_bigint::BigInt;
+    use num_traits::{One, FromPrimitive};
     use num_rational::BigRational;
 
     fn matrix<const N: usize, const M: usize>(m: [[i64; M]; N])
@@ -947,5 +948,60 @@ mod test_big_rational {
         assert_eq!(matrix([[1, 2, 3], [2, 4, 6], [3, 6, 9]]).rank(), 1);
         assert_eq!(matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).rank(), 2);
         assert_eq!(matrix([[7, 8, 8], [4, 5, 6], [1, 2, 3]]).rank(), 3);
+    }
+
+    #[test]
+    fn test_solve() {
+        let half = &BigRational::new(BigInt::from(1), BigInt::from(2));
+
+        let a = matrix([[1, 2], [3, 4]]);
+        let x = matrix([[1, 0], [1, -3]]);
+        let b = &a * &x;
+        assert_eq!(b, matrix([[3, -6], [7, -12]]));
+        let s = a.solve(&b).unwrap();
+        assert_eq!(s, x);
+
+        let a = matrix([[1, 2], [3, 6]]);
+        let x = matrix([[1], [1]]);
+        let b = &a * &x;
+        assert_eq!(b, matrix([[3], [9]]));
+        let s = a.solve(&b).unwrap();
+        assert_eq!(&a * s, b);
+
+        let a = matrix([[1, 2], [3, 5]]);
+        let x = matrix([[1], [2]]) * half;
+        let b = &a * &x;
+        assert_eq!(b, matrix([[5], [13]]) * half);
+        let s = a.solve(&b).unwrap();
+        assert_eq!(s, x);
+    }
+
+    #[test]
+    fn test_nullspace() {
+        let a = matrix([[1, 2], [3, 4]]);
+        let n = a.null_space();
+        for v in &n {
+            assert_eq!(&a * v, Matrix::zero());
+        }
+        assert_eq!(n.len(), 0);
+
+        let a = matrix([[1, 2], [3, 6]]);
+        let n = a.null_space();
+        for v in &n {
+            assert_eq!(&a * v, Matrix::zero());
+        }
+        assert_eq!(n.len(), 1);
+    }
+
+    #[test]
+    fn test_inverse() {
+        let a = matrix([[1, 2], [3, 4]]);
+        assert_eq!(&a * &a.inverse().unwrap(), Matrix::identity());
+
+        let a = matrix([[1, 2], [3, 5]]);
+        assert_eq!(&a * &a.inverse().unwrap(), Matrix::identity());
+
+        let a = matrix([[1, 2], [3, 6]]);
+        assert!(a.inverse().is_none());
     }
 }
