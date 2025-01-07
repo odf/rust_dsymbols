@@ -89,6 +89,15 @@ impl<T: Scalar, const M: usize>
 }
 
 
+impl<T: Scalar + Clone, const M: usize>
+    From<&[T; M]> for Matrix<T, 1, M>
+{
+    fn from(data: &[T; M]) -> Self {
+        Self { data: [data.clone()] }
+    }
+}
+
+
 impl<T: Scalar>
     From<T> for Matrix<T, 1, 1>
 {
@@ -121,7 +130,7 @@ impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
 
     pub fn get_row(&self, i: usize) -> Matrix<T, 1, M> {
         assert!(i < N);
-        Matrix::from(self[i].clone())
+        Matrix::from(&self[i])
     }
 
     pub fn set_row(&mut self, i: usize, row: &Matrix<T, 1, M>) {
