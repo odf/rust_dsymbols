@@ -201,7 +201,7 @@ impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
     }
 
     pub fn submatrix<I, J, const K: usize, const L: usize>(
-        self, rows: I, columns: J
+        &self, rows: I, columns: J
     )
         -> Matrix<T, K, L>
         where
@@ -536,9 +536,9 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
 
     fn null_space(&self) -> Vec<Matrix<T, M, 1>> {
         let re = RowEchelonMatrix::new(&self.transpose());
-        let s = re.multiplier;
+        let s = re.multiplier.transpose();
 
-        (re.rank..M).map(|i| s.get_row(i).transpose()).collect()
+        (re.rank..M).map(|i| s.submatrix(0..M, [i])).collect()
     }
 
     fn solve<const K: usize>(&self, rhs: &Matrix<T, N, K>)

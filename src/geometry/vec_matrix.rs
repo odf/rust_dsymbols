@@ -238,7 +238,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         result
     }
 
-    pub fn submatrix<I, J>(self, rows: I, columns: J) -> VecMatrix<T>
+    pub fn submatrix<I, J>(&self, rows: I, columns: J) -> VecMatrix<T>
         where
             I: IntoIterator<Item=usize>,
             J: IntoIterator<Item=usize>
@@ -604,10 +604,10 @@ impl<T: Entry + Clone> VecMatrix<T>
 
     fn null_space(&self) -> Vec<VecMatrix<T>> {
         let re = RowEchelonVecMatrix::new(&self.transpose());
-        let s = re.multiplier;
+        let s = re.multiplier.transpose();
 
         (re.rank..self.nr_columns())
-            .map(|i| s.get_row(i).transpose())
+            .map(|i| s.submatrix(0..s.nr_rows(), [i]))
             .collect()
     }
 
