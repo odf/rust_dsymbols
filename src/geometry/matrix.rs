@@ -555,11 +555,11 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
         let mut result = Matrix::zero();
 
         for row in (0..re.rank).rev() {
-            let a = &re.result[row] * &result;
+            let a = &(&re.result[row] * &result)[0];
             let b = &y[row];
             let x = &re.result[row][re.columns[row]];
             for k in 0..K {
-                let t = &b[k] - &a[0][k];
+                let t = &b[k] - &a[k];
                 if Entry::can_divide(&t, x) {
                     result[row][k] = &t / x;
                 } else {
