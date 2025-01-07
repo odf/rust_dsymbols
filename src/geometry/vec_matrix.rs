@@ -427,6 +427,18 @@ impl<T: Scalar + Clone> Mul<VecMatrix<T>> for VecMatrix<T>
 }
 
 
+impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for &[T]
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn mul(self, rhs: &VecMatrix<T>) -> Self::Output {
+        assert_eq!(self.len(), rhs.nr_rows());
+        VecMatrix::from(self) * rhs
+    }
+}
+
+
 impl<T: Scalar + Clone, const N: usize, const M: usize>
     Mul<&VecMatrix<T>> for [[T; M]; N]
     where for <'a> &'a T: ScalarPtr<T>
@@ -614,12 +626,12 @@ impl<T: Entry + Clone> VecMatrix<T>
         let mut result = VecMatrix::zero(self.nr_columns(), rhs.nr_columns());
 
         for row in (0..re.rank).rev() {
-            let a = re.result.get_row(row) * &result;
-            let b = y.get_row(row);
+            let a = &re.result[row] * &result;
+            let b = &y[row];
             let x = &re.result[row][re.columns[row]];
             for k in 0..rhs.nr_columns() {
-                let t = &b[0][k] - &a[0][k];
-                if Entry::can_divide(&t, &x) {
+                let t = &b[k] - &a[0][k];
+                if Entry::can_divide(&t, x) {
                     result[row][k] = &t / x;
                 } else {
                     return None;

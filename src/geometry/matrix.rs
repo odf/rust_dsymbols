@@ -365,6 +365,18 @@ impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
 }
 
 
+impl<T: Scalar + Clone, const M: usize, const L: usize>
+    Mul<&Matrix<T, M, L>> for &[T; M]
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, 1, L>;
+
+    fn mul(self, rhs: &Matrix<T, M, L>) -> Self::Output {
+        Matrix::from(self) * rhs
+    }
+}
+
+
 impl<T: Scalar + Clone, const N: usize, const M: usize, const L: usize>
     Mul<Matrix<T, M, L>> for [[T; M]; N]
     where for <'a> &'a T: ScalarPtr<T>
@@ -543,12 +555,12 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
         let mut result = Matrix::zero();
 
         for row in (0..re.rank).rev() {
-            let a = re.result.get_row(row) * &result;
-            let b = y.get_row(row);
+            let a = &re.result[row] * &result;
+            let b = &y[row];
             let x = &re.result[row][re.columns[row]];
             for k in 0..K {
-                let t = &b[0][k] - &a[0][k];
-                if Entry::can_divide(&t, &x) {
+                let t = &b[k] - &a[0][k];
+                if Entry::can_divide(&t, x) {
                     result[row][k] = &t / x;
                 } else {
                     return None;
