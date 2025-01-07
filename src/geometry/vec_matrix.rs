@@ -430,11 +430,11 @@ impl<T: Scalar + Clone> Mul<VecMatrix<T>> for VecMatrix<T>
 impl<T: Scalar + Clone> Mul<&VecMatrix<T>> for &[T]
     where for <'a> &'a T: ScalarPtr<T>
 {
-    type Output = VecMatrix<T>;
+    type Output = Vec<T>;
 
     fn mul(self, rhs: &VecMatrix<T>) -> Self::Output {
         assert_eq!(self.len(), rhs.nr_rows());
-        VecMatrix::from(self) * rhs
+        (VecMatrix::from(self) * rhs)[0].into()
     }
 }
 
@@ -626,7 +626,7 @@ impl<T: Entry + Clone> VecMatrix<T>
         let mut result = VecMatrix::zero(self.nr_columns(), rhs.nr_columns());
 
         for row in (0..re.rank).rev() {
-            let a = &(&re.result[row] * &result)[0];
+            let a = &re.result[row] * &result;
             let b = &y[row];
             let x = &re.result[row][re.columns[row]];
             for k in 0..rhs.nr_columns() {

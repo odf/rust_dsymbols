@@ -369,10 +369,10 @@ impl<T: Scalar + Clone, const M: usize, const L: usize>
     Mul<&Matrix<T, M, L>> for &[T; M]
     where for <'a> &'a T: ScalarPtr<T>
 {
-    type Output = Matrix<T, 1, L>;
+    type Output = [T; L];
 
     fn mul(self, rhs: &Matrix<T, M, L>) -> Self::Output {
-        Matrix::from(self) * rhs
+        (Matrix::from(self) * rhs)[0].clone()
     }
 }
 
@@ -555,7 +555,7 @@ impl<T: Entry + Clone, const N: usize, const M: usize> Matrix<T, N, M>
         let mut result = Matrix::zero();
 
         for row in (0..re.rank).rev() {
-            let a = &(&re.result[row] * &result)[0];
+            let a = &re.result[row] * &result;
             let b = &y[row];
             let x = &re.result[row][re.columns[row]];
             for k in 0..K {
