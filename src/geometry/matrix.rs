@@ -128,40 +128,12 @@ impl<T: Scalar + Clone , const N: usize, const M: usize> Matrix<T, N, M> {
         result
     }
 
-    pub fn get_row(&self, i: usize) -> Matrix<T, 1, M> {
-        assert!(i < N);
-        Matrix::from(&self[i])
-    }
-
-    pub fn set_row(&mut self, i: usize, row: &Matrix<T, 1, M>) {
-        assert!(i < N);
-        self[i] = row[0].clone();
-    }
-
-
     pub fn swap_rows(&mut self, i: usize, j: usize) {
         assert!(i < N);
         assert!(j < N);
         assert_ne!(i, j);
 
         self.data.swap(i, j)
-    }
-
-
-    pub fn get_column(&self, j: usize) -> Matrix<T, N, 1> {
-        assert!(j < M);
-        let mut result = Matrix::new();
-        for i in 0..N {
-            result[i][0] = self[i][j].clone();
-        }
-        result
-    }
-
-    pub fn set_column(&mut self, j: usize, column: &Matrix<T, N, 1>) {
-        assert!(j < M);
-        for i in 0..N {
-            self[i][j] = column[i][0].clone();
-        }
     }
 
     pub fn hstack<const L: usize, const S: usize>(self, rhs: &Matrix<T, N, L>)
@@ -624,21 +596,10 @@ fn test_matrix_copy() {
 fn test_matrix_indexing() {
     let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
 
-    m[0] = (Matrix::from(m[0]) * 3.0)[0];
     m[1][0] = m[1][0] + 4.0;
 
-    assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
-}
-
-
-#[test]
-fn test_matrix_row_column_manipulation() {
-    let mut m = Matrix::from([[1.0, 1.0], [0.0, 1.0]]);
-
-    m.set_row(0, &(m.get_row(0) * 2.0));
-    m.set_column(1, &(m.get_column(1) * 3.0));
-
-    assert_eq!(m, [[2.0, 6.0], [0.0, 3.0]].into());
+    assert_eq!(m, [[1.0, 1.0], [4.0, 1.0]].into());
+    assert_eq!(m[1], [4.0, 1.0]);
 }
 
 

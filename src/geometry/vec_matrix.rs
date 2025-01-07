@@ -156,21 +156,6 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         result
     }
 
-    pub fn get_row(&self, i: usize) -> VecMatrix<T> {
-        assert!(i < self.nr_rows);
-        VecMatrix::from(&self[i])
-    }
-
-    pub fn set_row(&mut self, i: usize, row: &VecMatrix<T>) {
-        assert_eq!(row.nr_rows, 1);
-        assert_eq!(row.nr_cols, self.nr_cols);
-        assert!(i < self.nr_rows);
-
-        for j in 0..self.nr_cols {
-            self[i][j] = row[0][j].clone();
-        }
-    }
-
     pub fn swap_rows(&mut self, i: usize, j: usize) {
         assert!(i < self.nr_rows);
         assert!(j < self.nr_rows);
@@ -181,28 +166,6 @@ impl<T: Scalar + Clone> VecMatrix<T> {
 
         for k in 0..self.nr_cols {
             self.data.swap(ri + k, rj + k);
-        }
-    }
-
-    pub fn get_column(&self, j: usize) -> VecMatrix<T> {
-        assert!(j < self.nr_cols);
-
-        let mut result = VecMatrix::new(self.nr_rows, 1);
-
-        for i in 0..self.nr_rows {
-            result[i][0] = self[i][j].clone();
-        }
-
-        result
-    }
-
-    pub fn set_column(&mut self, j: usize, col: &VecMatrix<T>) {
-        assert_eq!(col.nr_cols, 1);
-        assert_eq!(col.nr_rows, self.nr_rows);
-        assert!(j < self.nr_cols);
-
-        for i in 0..self.nr_rows {
-            self[i][j] = col[i][0].clone();
         }
     }
 
@@ -695,21 +658,10 @@ fn test_matrix_clone() {
 fn test_matrix_indexing() {
     let mut m = VecMatrix::from([[1.0, 1.0], [0.0, 1.0]]);
 
-    m.set_row(0, &(m.get_row(0) * 3.0));
     m[1][0] = m[1][0] + 4.0;
 
-    assert_eq!(m, [[3.0, 3.0], [4.0, 1.0]].into());
-}
-
-
-#[test]
-fn test_matrix_row_column_manipulation() {
-    let mut m = VecMatrix::from([[1.0, 1.0], [0.0, 1.0]]);
-
-    m.set_row(0, &(m.get_row(0) * 2.0));
-    m.set_column(1, &(m.get_column(1) * 3.0));
-
-    assert_eq!(m, [[2.0, 6.0], [0.0, 3.0]].into());
+    assert_eq!(m, [[1.0, 1.0], [4.0, 1.0]].into());
+    assert_eq!(m[1], [4.0, 1.0]);
 }
 
 
