@@ -611,6 +611,8 @@ impl<T: Entry + Clone> VecMatrix<T>
     where for <'a> &'a T: ScalarPtr<T>
 {
     fn determinant(&self) -> T {
+        assert_eq!(self.nr_rows(), self.nr_columns());
+
         match self.nr_rows() {
             0 => T::one(),
             1 => self[0][0].clone(),
@@ -639,6 +641,8 @@ impl<T: Entry + Clone> VecMatrix<T>
     fn inverse(&self) -> Option<Self>
         where T: Div<T, Output=T>
     {
+        assert_eq!(self.nr_rows(), self.nr_columns());
+
         self.solve(&VecMatrix::identity(self.nr_rows()))
     }
 }
