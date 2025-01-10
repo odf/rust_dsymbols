@@ -452,6 +452,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 }
 
 
+#[derive(Debug)]
 pub struct RowEchelonMatrix<T: Entry, const N: usize, const M: usize> {
     multiplier: Matrix<T, N, N>,
     result: Matrix<T, N, M>,
@@ -747,6 +748,20 @@ fn test_matrix_determinant() {
 
 #[test]
 fn test_matrix_nullspace() {
+    let a = Matrix::from([[0.0, 0.0], [0.0, 0.0]]);
+    let n = a.null_space();
+    assert_eq!(n.len(), 2);
+    for v in a.null_space() {
+        assert_eq!(&a * v, Matrix::from([[0.0], [0.0]]));
+    }
+
+    let a = Matrix::from([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
+    let n = a.null_space();
+    assert_eq!(n.len(), 3);
+    for v in a.null_space() {
+        assert_eq!(&a * v, Matrix::from([[0], [0], [0]]));
+    }
+
     let a = Matrix::from([[1, 2], [3, 4]]);
     let n = a.null_space();
     assert_eq!(n, vec![]);
@@ -985,5 +1000,85 @@ mod test_big_rational {
 
         let a = matrix([[1, 2], [3, 6]]);
         assert!(a.inverse().is_none());
+    }
+}
+
+
+mod property_based_tests {
+    use proptest::prelude::*;
+    use proptest::collection::vec;
+    use super::*;
+
+    prop_compose! {
+        fn arb_entry()(x in -100..100) -> i64 {
+            x as i64
+        }
+    }
+
+    prop_compose!{
+        fn arb_matrix2()(v in vec(arb_entry(), 4)) -> Matrix<i64, 2, 2>
+        {
+            let data = [[v[0], v[1]], [v[2], v[3]]];
+            Matrix { data }
+        }
+    }
+
+    prop_compose!{
+        fn arb_matrix3()(v in vec(arb_entry(), 9)) -> Matrix<i64, 3, 3>
+        {
+            let mut data = [[0; 3]; 3];
+            let mut k = 0;
+            for i in 0..3 {
+                for j in 0..3 {
+                    data[i][j] = v[k];
+                    k += 1;
+                }
+            }
+            Matrix { data }
+        }
+    }
+
+    prop_compose!{
+        fn arb_matrix4()(v in vec(arb_entry(), 16)) -> Matrix<i64, 4, 4>
+        {
+            let mut data = [[0; 4]; 4];
+            let mut k = 0;
+            for i in 0..4 {
+                for j in 0..4 {
+                    data[i][j] = v[k];
+                    k += 1;
+                }
+            }
+            Matrix { data }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_nullspace_rank_2d(m in arb_matrix2()) {
+            let mut a = Matrix::<i64, 2, 0>::new();
+            for v in m.null_space() {
+                a = a.hstack(&v);
+            }
+            assert_eq!(a.rank(), 2 - m.rank());
+        }
+
+        #[test]
+        fn test_nullspace_rank_3d(m in arb_matrix3()) {
+            let mut a = Matrix::<i64, 3, 0>::new();
+            for v in m.null_space() {
+                a = a.hstack(&v);
+            }
+            assert_eq!(a.rank(), 3 - m.rank());
+        }
+
+        #[test]
+        fn test_nullspace_rank_4d(m in arb_matrix4()) {
+            let mut a = Matrix::<i64, 4, 0>::new();
+            for v in m.null_space() {
+                a = a.hstack(&v);
+            }
+            assert_eq!(a.rank(), 4 - m.rank());
+        }
     }
 }
