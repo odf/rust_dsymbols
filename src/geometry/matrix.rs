@@ -1010,7 +1010,7 @@ mod property_based_tests {
     use super::*;
 
     fn matrix_from_values<T, const N: usize>(v: &[T]) -> Matrix<T, N, N>
-        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+        where T: Scalar + Clone + From<i32> + std::fmt::Debug
     {
         let mut result = Matrix::new();
 
@@ -1025,21 +1025,21 @@ mod property_based_tests {
         result
     }
 
-    fn entry<T>() -> BoxedStrategy<T>
+    fn entry<T>(size: i32) -> BoxedStrategy<T>
         where T: From<i32> + std::fmt::Debug
     {
-        (-100..100).prop_map(|i: i32| i.into()).boxed()
+        (-size..size).prop_map(|i: i32| i.into()).boxed()
     }
 
-    fn matrix<T, const N: usize>() -> BoxedStrategy<Matrix<T, N, N>>
+    fn matrix<T, const N: usize>(size: i32) -> BoxedStrategy<Matrix<T, N, N>>
         where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
     {
-        vec(entry(), N * N).prop_map(|v| matrix_from_values(&v)).boxed()
+        vec(entry(size), N * N).prop_map(|v| matrix_from_values(&v)).boxed()
     }
 
     proptest! {
         #[test]
-        fn test_nullspace_rank_2d(m in matrix()) {
+        fn test_nullspace_rank_2d(m in matrix(100)) {
             let mut a = Matrix::<i64, 2, 0>::new();
             for v in m.null_space() {
                 a = a.hstack(&v);
@@ -1048,7 +1048,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_nullspace_rank_2d_float(m in matrix()) {
+        fn test_nullspace_rank_2d_float(m in matrix(1000)) {
             let mut a = Matrix::<f64, 2, 0>::new();
             for v in m.null_space() {
                 a = a.hstack(&v);
@@ -1057,7 +1057,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_nullspace_rank_3d(m in matrix()) {
+        fn test_nullspace_rank_3d(m in matrix(100)) {
             let mut a = Matrix::<i64, 3, 0>::new();
             for v in m.null_space() {
                 a = a.hstack(&v);
@@ -1066,7 +1066,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_nullspace_rank_4d(m in matrix()) {
+        fn test_nullspace_rank_4d(m in matrix(100)) {
             let mut a = Matrix::<i64, 4, 0>::new();
             for v in m.null_space() {
                 a = a.hstack(&v);
