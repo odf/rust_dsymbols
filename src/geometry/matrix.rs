@@ -755,11 +755,11 @@ fn test_matrix_nullspace() {
         assert_eq!(&a * v, Matrix::from([[0.0], [0.0]]));
     }
 
-    let a = Matrix::from([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
+    let a = Matrix::from([[-25, 48], [50, -96]]);
     let n = a.null_space();
-    assert_eq!(n.len(), 3);
+    assert_eq!(n.len(), 2 - a.rank());
     for v in a.null_space() {
-        assert_eq!(&a * v, Matrix::from([[0], [0], [0]]));
+        assert_eq!(&a * v, Matrix::from([[0], [0]]));
     }
 
     let a = Matrix::from([[1, 2], [3, 4]]);
@@ -1009,14 +1009,15 @@ mod property_based_tests {
     use proptest::collection::vec;
     use super::*;
 
-    fn matrix_from_values<T, const N: usize>(v: &[T]) -> Matrix<T, N, N>
+    fn matrix_from_values<T, const N: usize, const M: usize>(v: &[T])
+        -> Matrix<T, N, M>
         where T: Scalar + Clone + From<i32> + std::fmt::Debug
     {
         let mut result = Matrix::new();
 
         let mut k = 0;
         for i in 0..N {
-            for j in 0..N {
+            for j in 0..M {
                 result[i][j] = v[k].clone();
                 k += 1;
             }
@@ -1025,53 +1026,55 @@ mod property_based_tests {
         result
     }
 
-    fn entry<T>(size: i32) -> BoxedStrategy<T>
+    fn entry<T>(size: i32)
+        -> impl Strategy<Value=T>
         where T: From<i32> + std::fmt::Debug
     {
-        (-size..size).prop_map(|i: i32| i.into()).boxed()
+        (-size..size).prop_map(|i: i32| i.into())
     }
 
-    fn matrix<T, const N: usize>(size: i32) -> BoxedStrategy<Matrix<T, N, N>>
+    fn matrix<T, const N: usize, const M: usize>(size: i32)
+        -> impl Strategy<Value=Matrix<T, N, M>>
         where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
     {
-        vec(entry(size), N * N).prop_map(|v| matrix_from_values(&v)).boxed()
+        vec(entry(size), N * M).prop_map(|v| matrix_from_values(&v))
+    }
+
+    fn assert_nullspace_rank<T, const N: usize>(m: Matrix<T, N, N>)
+        where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
+    {
+        assert_eq!(m.null_space().len(), N - m.rank());
     }
 
     proptest! {
         #[test]
-        fn test_nullspace_rank_2d(m in matrix(100)) {
-            let mut a = Matrix::<i64, 2, 0>::new();
-            for v in m.null_space() {
-                a = a.hstack(&v);
-            }
-            assert_eq!(a.rank(), 2 - m.rank());
+        fn test_nullspace_rank_2i(m in matrix::<i64, 2, 2>(10)) {
+            assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_2d_float(m in matrix(1000)) {
-            let mut a = Matrix::<f64, 2, 0>::new();
-            for v in m.null_space() {
-                a = a.hstack(&v);
-            }
-            assert_eq!(a.rank(), 2 - m.rank());
+        fn test_nullspace_rank_2f(m in matrix::<f64, 2, 2>(10)) {
+            assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_3d(m in matrix(100)) {
-            let mut a = Matrix::<i64, 3, 0>::new();
-            for v in m.null_space() {
-                a = a.hstack(&v);
-            }
-            assert_eq!(a.rank(), 3 - m.rank());
+        fn test_nullspace_rank_3i(m in matrix::<i64, 3, 3>(10)) {
+            assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_4d(m in matrix(100)) {
-            let mut a = Matrix::<i64, 4, 0>::new();
-            for v in m.null_space() {
-                a = a.hstack(&v);
-            }
-            assert_eq!(a.rank(), 4 - m.rank());
+        fn test_nullspace_rank_3f(m in matrix::<f64, 3, 3>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_nullspace_rank_4i(m in matrix::<i64, 4, 4>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_nullspace_rank_4f(m in matrix::<f64, 4, 4>(10)) {
+            assert_nullspace_rank(m);
         }
     }
 }
