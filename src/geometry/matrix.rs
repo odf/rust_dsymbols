@@ -1009,53 +1009,37 @@ mod property_based_tests {
     use proptest::collection::vec;
     use super::*;
 
-    prop_compose! {
-        fn arb_entry()(x in -100..100) -> i64 {
-            x as i64
-        }
-    }
+    fn matrix_from_values<T, const N: usize>(v: &[T]) -> Matrix<T, N, N>
+        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+    {
+        let mut result = Matrix::new();
 
-    prop_compose!{
-        fn arb_matrix2()(v in vec(arb_entry(), 4)) -> Matrix<i64, 2, 2>
-        {
-            let data = [[v[0], v[1]], [v[2], v[3]]];
-            Matrix { data }
-        }
-    }
-
-    prop_compose!{
-        fn arb_matrix3()(v in vec(arb_entry(), 9)) -> Matrix<i64, 3, 3>
-        {
-            let mut data = [[0; 3]; 3];
-            let mut k = 0;
-            for i in 0..3 {
-                for j in 0..3 {
-                    data[i][j] = v[k];
-                    k += 1;
-                }
+        let mut k = 0;
+        for i in 0..N {
+            for j in 0..N {
+                result[i][j] = v[k].clone();
+                k += 1;
             }
-            Matrix { data }
         }
+
+        result
     }
 
-    prop_compose!{
-        fn arb_matrix4()(v in vec(arb_entry(), 16)) -> Matrix<i64, 4, 4>
-        {
-            let mut data = [[0; 4]; 4];
-            let mut k = 0;
-            for i in 0..4 {
-                for j in 0..4 {
-                    data[i][j] = v[k];
-                    k += 1;
-                }
-            }
-            Matrix { data }
-        }
+    fn entry<T>() -> BoxedStrategy<T>
+        where T: From<i32> + std::fmt::Debug
+    {
+        (-100..100).prop_map(|i: i32| i.into()).boxed()
+    }
+
+    fn matrix<T, const N: usize>() -> BoxedStrategy<Matrix<T, N, N>>
+        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+    {
+        vec(entry(), N * N).prop_map(|v| matrix_from_values(&v)).boxed()
     }
 
     proptest! {
         #[test]
-        fn test_nullspace_rank_2d(m in arb_matrix2()) {
+        fn test_nullspace_rank_2d(m in matrix()) {
             let mut a = Matrix::<i64, 2, 0>::new();
             for v in m.null_space() {
                 a = a.hstack(&v);
@@ -1064,7 +1048,16 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_nullspace_rank_3d(m in arb_matrix3()) {
+        fn test_nullspace_rank_2d_float(m in matrix()) {
+            let mut a = Matrix::<f64, 2, 0>::new();
+            for v in m.null_space() {
+                a = a.hstack(&v);
+            }
+            assert_eq!(a.rank(), 2 - m.rank());
+        }
+
+        #[test]
+        fn test_nullspace_rank_3d(m in matrix()) {
             let mut a = Matrix::<i64, 3, 0>::new();
             for v in m.null_space() {
                 a = a.hstack(&v);
@@ -1073,7 +1066,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_nullspace_rank_4d(m in arb_matrix4()) {
+        fn test_nullspace_rank_4d(m in matrix()) {
             let mut a = Matrix::<i64, 4, 0>::new();
             for v in m.null_space() {
                 a = a.hstack(&v);
