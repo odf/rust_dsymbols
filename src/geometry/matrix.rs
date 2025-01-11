@@ -1005,9 +1005,33 @@ mod test_big_rational {
 
 
 mod property_based_tests {
+    use super::*;
+    use num_rational::BigRational;
+    use num_traits::FromPrimitive;
     use proptest::prelude::*;
     use proptest::collection::vec;
-    use super::*;
+
+    trait From_I32 {
+        fn from(i: i32) -> Self;
+    }
+
+    impl From_I32 for i64 {
+        fn from(i: i32) -> Self {
+            i as Self
+        }
+    }
+
+    impl From_I32 for f64 {
+        fn from(i: i32) -> Self {
+            i as Self
+        }
+    }
+
+    impl From_I32 for BigRational {
+        fn from(i: i32) -> Self {
+            BigRational::from_i32(i).unwrap()
+        }
+    }
 
     fn matrix_from_values<T, const N: usize, const M: usize>(v: &[T])
         -> Matrix<T, N, M>
@@ -1045,21 +1069,21 @@ mod property_based_tests {
 
     fn entry<T>(size: i32)
         -> impl Strategy<Value=T>
-        where T: From<i32> + std::fmt::Debug
+        where T: From_I32 + std::fmt::Debug
     {
-        (-size..size).prop_map(|i: i32| i.into())
+        (-size..size).prop_map(|i: i32| T::from(i))
     }
 
     fn matrix<T, const N: usize, const M: usize>(size: i32)
         -> impl Strategy<Value=Matrix<T, N, M>>
-        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+        where T: Scalar + Clone + From_I32 + std::fmt::Debug + 'static
     {
         vec(entry(size), N * M).prop_map(|v| matrix_from_values(&v))
     }
 
     fn singular<T, const N: usize>(size: i32)
         -> impl Strategy<Value=Matrix<T, N, N>>
-        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+        where T: Scalar + Clone + From_I32 + std::fmt::Debug + 'static
     {
         vec(entry(size), N * N).prop_map(|v|
             singularize(matrix_from_values(&v))
@@ -1120,6 +1144,38 @@ mod property_based_tests {
 
         #[test]
         fn test_matrix_4f(m in matrix::<f64, 4, 4>(10)) {
+            assert_nullspace_rank(m);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_matrix_2q(m in matrix::<BigRational, 2, 2>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_2q_singular(m in singular::<BigRational, 2>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_3q(m in matrix::<BigRational, 3, 3>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_3q_singular(m in singular::<BigRational, 3>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_4q(m in matrix::<BigRational, 4, 4>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_4q_singular(m in singular::<BigRational, 4>(10)) {
             assert_nullspace_rank(m);
         }
     }
