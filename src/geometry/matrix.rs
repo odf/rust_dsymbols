@@ -1090,50 +1090,66 @@ mod property_based_tests {
         )
     }
 
-    fn test_int_matrix<T, const N: usize>(m: &Matrix<T, N, N>)
-        where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
+    fn test_generic_matrix<T, const N: usize>(m: &Matrix<T, N, N>)
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
     {
-        assert_eq!(m.null_space().len(), N - m.rank());
+        let zero = Matrix::new();
+        let one = Matrix::identity();
+
         assert_eq!(m.determinant().is_zero(), m.rank() < N);
+        assert_eq!(m.null_space().len(), N - m.rank());
+
+        for v in m.null_space() {
+            assert_eq!(m * v, zero);
+        }
+
+
+        if let Some(inv) = m.inverse() {
+            assert_eq!(m * inv, one);
+        }
     }
 
     fn test_rational_matrix<T, const N: usize>(m: &Matrix<T, N, N>)
-        where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
     {
-        assert_eq!(m.null_space().len(), N - m.rank());
-        assert_eq!(m.determinant().is_zero(), m.rank() < N);
+        test_generic_matrix(m);
+
         assert_eq!(m.inverse().is_some(), m.rank() == N);
     }
 
     proptest! {
         #[test]
         fn test_matrix_2i(m in matrix::<i64, 2, 2>(10)) {
-            test_int_matrix(&m);
+            test_generic_matrix(&m);
         }
 
         #[test]
         fn test_matrix_2i_singular(m in singular::<i64, 2>(10)) {
-            test_int_matrix(&m);
+            test_generic_matrix(&m);
         }
 
         #[test]
         fn test_matrix_3i(m in matrix::<i64, 3, 3>(10)) {
-            test_int_matrix(&m);
+            test_generic_matrix(&m);
         }
 
         #[test]
         fn test_matrix_3i_singular(m in singular::<i64, 3>(10)) {
-            test_int_matrix(&m);
+            test_generic_matrix(&m);
         }
 
         #[test]
         fn test_matrix_4i(m in matrix::<i64, 4, 4>(10)) {
-            test_int_matrix(&m);
+            test_generic_matrix(&m);
         }
 
         #[test]
         fn test_matrix_4i_singular(m in singular::<i64, 4>(10)) {
-            test_int_matrix(&m);
+            test_generic_matrix(&m);
         }
     }
 
