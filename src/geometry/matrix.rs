@@ -1121,6 +1121,17 @@ mod property_based_tests {
         assert_eq!(m.inverse().is_some(), m.rank() == N);
     }
 
+    fn test_solver<T, const N: usize, const M: usize>(
+        m: &Matrix<T, N, M>, v: &Matrix<T, M, 1>
+    )
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
+    {
+        let b = m * v;
+        assert_eq!(m * &m.solve(&b).unwrap(), b);
+    }
+
     proptest! {
         #[test]
         fn test_matrix_2i(m in matrix::<i64, 2, 2>(1000)) {
@@ -1130,6 +1141,22 @@ mod property_based_tests {
         #[test]
         fn test_matrix_2i_singular(m in singular::<i64, 2>(1000)) {
             test_generic_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_2i(
+            m in matrix::<i64, 2, 2>(1000),
+            v in matrix::<i64, 2, 1>(1000)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_2i_singular(
+            m in singular::<i64, 2>(1000),
+            v in matrix::<i64, 2, 1>(1000)
+        ) {
+            test_solver(&m, &v);
         }
 
         #[test]
