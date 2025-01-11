@@ -1123,22 +1123,22 @@ mod property_based_tests {
 
     proptest! {
         #[test]
-        fn test_matrix_2i(m in matrix::<i64, 2, 2>(10)) {
+        fn test_matrix_2i(m in matrix::<i64, 2, 2>(1000)) {
             test_generic_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_2i_singular(m in singular::<i64, 2>(10)) {
+        fn test_matrix_2i_singular(m in singular::<i64, 2>(1000)) {
             test_generic_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_3i(m in matrix::<i64, 3, 3>(10)) {
+        fn test_matrix_3i(m in matrix::<i64, 3, 3>(100)) {
             test_generic_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_3i_singular(m in singular::<i64, 3>(10)) {
+        fn test_matrix_3i_singular(m in singular::<i64, 3>(100)) {
             test_generic_matrix(&m);
         }
 
@@ -1155,32 +1155,32 @@ mod property_based_tests {
 
     proptest! {
         #[test]
-        fn test_matrix_2q(m in matrix::<BigRational, 2, 2>(10)) {
+        fn test_matrix_2q(m in matrix::<BigRational, 2, 2>(1000)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_2q_singular(m in singular::<BigRational, 2>(10)) {
+        fn test_matrix_2q_singular(m in singular::<BigRational, 2>(1000)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_3q(m in matrix::<BigRational, 3, 3>(10)) {
+        fn test_matrix_3q(m in matrix::<BigRational, 3, 3>(1000)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_3q_singular(m in singular::<BigRational, 3>(10)) {
+        fn test_matrix_3q_singular(m in singular::<BigRational, 3>(1000)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_4q(m in matrix::<BigRational, 4, 4>(10)) {
+        fn test_matrix_4q(m in matrix::<BigRational, 4, 4>(1000)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_4q_singular(m in singular::<BigRational, 4>(10)) {
+        fn test_matrix_4q_singular(m in singular::<BigRational, 4>(1000)) {
             test_rational_matrix(&m);
         }
     }
