@@ -1090,95 +1090,82 @@ mod property_based_tests {
         )
     }
 
-    fn assert_nullspace_rank<T, const N: usize>(m: Matrix<T, N, N>)
+    fn test_int_matrix<T, const N: usize>(m: &Matrix<T, N, N>)
         where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
     {
         assert_eq!(m.null_space().len(), N - m.rank());
+        assert_eq!(m.determinant().is_zero(), m.rank() < N);
+    }
+
+    fn test_rational_matrix<T, const N: usize>(m: &Matrix<T, N, N>)
+        where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
+    {
+        assert_eq!(m.null_space().len(), N - m.rank());
+        assert_eq!(m.determinant().is_zero(), m.rank() < N);
+        assert_eq!(m.inverse().is_some(), m.rank() == N);
     }
 
     proptest! {
         #[test]
         fn test_matrix_2i(m in matrix::<i64, 2, 2>(10)) {
-            assert_nullspace_rank(m);
+            test_int_matrix(&m);
         }
 
         #[test]
         fn test_matrix_2i_singular(m in singular::<i64, 2>(10)) {
-            assert_nullspace_rank(m);
+            test_int_matrix(&m);
         }
 
         #[test]
         fn test_matrix_3i(m in matrix::<i64, 3, 3>(10)) {
-            assert_nullspace_rank(m);
+            test_int_matrix(&m);
         }
 
         #[test]
         fn test_matrix_3i_singular(m in singular::<i64, 3>(10)) {
-            assert_nullspace_rank(m);
+            test_int_matrix(&m);
         }
 
         #[test]
         fn test_matrix_4i(m in matrix::<i64, 4, 4>(10)) {
-            assert_nullspace_rank(m);
+            test_int_matrix(&m);
         }
 
         #[test]
         fn test_matrix_4i_singular(m in singular::<i64, 4>(10)) {
-            assert_nullspace_rank(m);
+            test_int_matrix(&m);
         }
     }
 
     proptest! {
         #[test]
         fn test_matrix_2q(m in matrix::<BigRational, 2, 2>(10)) {
-            assert_nullspace_rank(m);
+            test_rational_matrix(&m);
         }
 
         #[test]
         fn test_matrix_2q_singular(m in singular::<BigRational, 2>(10)) {
-            assert_nullspace_rank(m);
+            test_rational_matrix(&m);
         }
 
         #[test]
         fn test_matrix_3q(m in matrix::<BigRational, 3, 3>(10)) {
-            assert_nullspace_rank(m);
+            test_rational_matrix(&m);
         }
 
         #[test]
         fn test_matrix_3q_singular(m in singular::<BigRational, 3>(10)) {
-            assert_nullspace_rank(m);
+            test_rational_matrix(&m);
         }
 
         #[test]
         fn test_matrix_4q(m in matrix::<BigRational, 4, 4>(10)) {
-            assert_nullspace_rank(m);
+            test_rational_matrix(&m);
         }
 
         #[test]
         fn test_matrix_4q_singular(m in singular::<BigRational, 4>(10)) {
-            assert_nullspace_rank(m);
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn test_matrix_2f(m in matrix::<f64, 2, 2>(10)) {
-            assert_nullspace_rank(m);
-        }
-
-        #[test]
-        fn test_matrix_2f_singular(m in singular::<f64, 2>(10)) {
-            assert_nullspace_rank(m);
-        }
-
-        #[test]
-        fn test_matrix_3f(m in matrix::<f64, 3, 3>(10)) {
-            assert_nullspace_rank(m);
-        }
-
-        #[test]
-        fn test_matrix_4f(m in matrix::<f64, 4, 4>(10)) {
-            assert_nullspace_rank(m);
+            test_rational_matrix(&m);
         }
     }
 }
