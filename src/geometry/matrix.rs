@@ -1011,7 +1011,7 @@ mod property_based_tests {
 
     fn matrix_from_values<T, const N: usize, const M: usize>(v: &[T])
         -> Matrix<T, N, M>
-        where T: Scalar + Clone + From<i32> + std::fmt::Debug
+        where T: Scalar + Clone
     {
         let mut result = Matrix::new();
 
@@ -1021,6 +1021,23 @@ mod property_based_tests {
                 result[i][j] = v[k].clone();
                 k += 1;
             }
+        }
+
+        result
+    }
+
+    fn singularize<T, const N: usize>(m: Matrix<T, N, N>)
+        -> Matrix<T, N, N>
+        where T: Scalar + Clone
+    {
+        let mut result = m.clone();
+
+        for i in 0..N {
+            let mut s = T::zero();
+            for j in 1..N {
+                s = s + m[i][j].clone();
+            }
+            result[i][0] = -s;
         }
 
         result
@@ -1040,6 +1057,15 @@ mod property_based_tests {
         vec(entry(size), N * M).prop_map(|v| matrix_from_values(&v))
     }
 
+    fn singular<T, const N: usize>(size: i32)
+        -> impl Strategy<Value=Matrix<T, N, N>>
+        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+    {
+        vec(entry(size), N * N).prop_map(|v|
+            singularize(matrix_from_values(&v))
+        )
+    }
+
     fn assert_nullspace_rank<T, const N: usize>(m: Matrix<T, N, N>)
         where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
     {
@@ -1048,32 +1074,52 @@ mod property_based_tests {
 
     proptest! {
         #[test]
-        fn test_nullspace_rank_2i(m in matrix::<i64, 2, 2>(10)) {
+        fn test_matrix_2i(m in matrix::<i64, 2, 2>(10)) {
             assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_2f(m in matrix::<f64, 2, 2>(10)) {
+        fn test_matrix_2i_singular(m in singular::<i64, 2>(10)) {
             assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_3i(m in matrix::<i64, 3, 3>(10)) {
+        fn test_matrix_2f(m in matrix::<f64, 2, 2>(10)) {
             assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_3f(m in matrix::<f64, 3, 3>(10)) {
+        fn test_matrix_2f_singular(m in singular::<f64, 2>(10)) {
             assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_4i(m in matrix::<i64, 4, 4>(10)) {
+        fn test_matrix_3i(m in matrix::<i64, 3, 3>(10)) {
             assert_nullspace_rank(m);
         }
 
         #[test]
-        fn test_nullspace_rank_4f(m in matrix::<f64, 4, 4>(10)) {
+        fn test_matrix_3i_singular(m in singular::<i64, 3>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_3f(m in matrix::<f64, 3, 3>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_4i(m in matrix::<i64, 4, 4>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_4i_singular(m in singular::<i64, 4>(10)) {
+            assert_nullspace_rank(m);
+        }
+
+        #[test]
+        fn test_matrix_4f(m in matrix::<f64, 4, 4>(10)) {
             assert_nullspace_rank(m);
         }
     }
