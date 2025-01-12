@@ -1011,23 +1011,23 @@ mod property_based_tests {
     use proptest::prelude::*;
     use proptest::collection::vec;
 
-    trait From_I32 {
+    trait FromI32 {
         fn from(i: i32) -> Self;
     }
 
-    impl From_I32 for i64 {
+    impl FromI32 for i64 {
         fn from(i: i32) -> Self {
             i as Self
         }
     }
 
-    impl From_I32 for f64 {
+    impl FromI32 for f64 {
         fn from(i: i32) -> Self {
             i as Self
         }
     }
 
-    impl From_I32 for BigRational {
+    impl FromI32 for BigRational {
         fn from(i: i32) -> Self {
             BigRational::from_i32(i).unwrap()
         }
@@ -1069,21 +1069,21 @@ mod property_based_tests {
 
     fn entry<T>(size: i32)
         -> impl Strategy<Value=T>
-        where T: From_I32 + std::fmt::Debug
+        where T: FromI32 + std::fmt::Debug
     {
         (-size..size).prop_map(|i: i32| T::from(i))
     }
 
     fn matrix<T, const N: usize, const M: usize>(size: i32)
         -> impl Strategy<Value=Matrix<T, N, M>>
-        where T: Scalar + Clone + From_I32 + std::fmt::Debug + 'static
+        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
     {
         vec(entry(size), N * M).prop_map(|v| matrix_from_values(&v))
     }
 
     fn singular<T, const N: usize>(size: i32)
         -> impl Strategy<Value=Matrix<T, N, N>>
-        where T: Scalar + Clone + From_I32 + std::fmt::Debug + 'static
+        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
     {
         vec(entry(size), N * N).prop_map(|v|
             singularize(matrix_from_values(&v))
