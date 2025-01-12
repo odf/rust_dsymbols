@@ -1170,13 +1170,45 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_4i(m in matrix::<i64, 4, 4>(10)) {
+        fn test_solver_3i(
+            m in matrix::<i64, 3, 3>(100),
+            v in matrix::<i64, 3, 1>(100)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_3i_singular(
+            m in singular::<i64, 3>(100),
+            v in matrix::<i64, 3, 1>(100)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_matrix_4i(m in matrix::<i64, 4, 4>(100)) {
             test_generic_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_4i_singular(m in singular::<i64, 4>(10)) {
+        fn test_matrix_4i_singular(m in singular::<i64, 4>(100)) {
             test_generic_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_4i(
+            m in matrix::<i64, 4, 4>(100),
+            v in matrix::<i64, 4, 1>(100)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_4i_singular(
+            m in singular::<i64, 4>(100),
+            v in matrix::<i64, 4, 1>(100)
+        ) {
+            test_solver(&m, &v);
         }
     }
 
@@ -1192,6 +1224,22 @@ mod property_based_tests {
         }
 
         #[test]
+        fn test_solver_2q(
+            m in matrix::<BigRational, 2, 2>(1000),
+            v in matrix::<BigRational, 2, 1>(1000)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_2q_singular(
+            m in singular::<BigRational, 2>(1000),
+            v in matrix::<BigRational, 2, 1>(1000)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
         fn test_matrix_3q(m in matrix::<BigRational, 3, 3>(1000)) {
             test_rational_matrix(&m);
         }
@@ -1199,6 +1247,22 @@ mod property_based_tests {
         #[test]
         fn test_matrix_3q_singular(m in singular::<BigRational, 3>(1000)) {
             test_rational_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_3q(
+            m in matrix::<BigRational, 3, 3>(1000),
+            v in matrix::<BigRational, 3, 1>(1000)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_3q_singular(
+            m in singular::<BigRational, 3>(1000),
+            v in matrix::<BigRational, 3, 1>(1000)
+        ) {
+            test_solver(&m, &v);
         }
 
         #[test]
