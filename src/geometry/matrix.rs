@@ -1010,6 +1010,7 @@ mod property_based_tests {
     use num_traits::FromPrimitive;
     use proptest::prelude::*;
     use proptest::collection::vec;
+    use crate::geometry::traits::allclose;
 
     trait FromI32 {
         fn from(i: i32) -> Self;
@@ -1090,7 +1091,25 @@ mod property_based_tests {
         )
     }
 
-    fn test_generic_matrix<T, const N: usize>(m: &Matrix<T, N, N>)
+    fn test_numerical_matrix<const N: usize>(m: &Matrix<f64, N, N>) {
+        let zero = Matrix::new();
+        let one = Matrix::identity();
+
+        assert_eq!(m.determinant().is_zero(), m.rank() < N);
+        assert_eq!(m.null_space().len(), N - m.rank());
+
+        for v in m.null_space() {
+            assert!(allclose(&(m * v), &zero, 1e-9, 1e-9));
+        }
+
+        if let Some(inv) = m.inverse() {
+            assert!(allclose(&(m * inv), &one, 1e-9, 1e-9));
+        }
+
+        assert_eq!(m.inverse().is_some(), m.rank() == N);
+    }
+
+    fn test_exact_matrix<T, const N: usize>(m: &Matrix<T, N, N>)
         where
             T: Entry + Clone + PartialEq + std::fmt::Debug,
             for <'a> &'a T: ScalarPtr<T>
@@ -1105,7 +1124,6 @@ mod property_based_tests {
             assert_eq!(m * v, zero);
         }
 
-
         if let Some(inv) = m.inverse() {
             assert_eq!(m * inv, one);
         }
@@ -1116,7 +1134,7 @@ mod property_based_tests {
             T: Entry + Clone + PartialEq + std::fmt::Debug,
             for <'a> &'a T: ScalarPtr<T>
     {
-        test_generic_matrix(m);
+        test_exact_matrix(m);
 
         assert_eq!(m.inverse().is_some(), m.rank() == N);
     }
@@ -1135,12 +1153,12 @@ mod property_based_tests {
     proptest! {
         #[test]
         fn test_matrix_2i(m in matrix::<i64, 2, 2>(1000)) {
-            test_generic_matrix(&m);
+            test_exact_matrix(&m);
         }
 
         #[test]
         fn test_matrix_2i_singular(m in singular::<i64, 2>(1000)) {
-            test_generic_matrix(&m);
+            test_exact_matrix(&m);
         }
 
         #[test]
@@ -1161,12 +1179,12 @@ mod property_based_tests {
 
         #[test]
         fn test_matrix_3i(m in matrix::<i64, 3, 3>(100)) {
-            test_generic_matrix(&m);
+            test_exact_matrix(&m);
         }
 
         #[test]
         fn test_matrix_3i_singular(m in singular::<i64, 3>(100)) {
-            test_generic_matrix(&m);
+            test_exact_matrix(&m);
         }
 
         #[test]
@@ -1187,12 +1205,12 @@ mod property_based_tests {
 
         #[test]
         fn test_matrix_4i(m in matrix::<i64, 4, 4>(100)) {
-            test_generic_matrix(&m);
+            test_exact_matrix(&m);
         }
 
         #[test]
         fn test_matrix_4i_singular(m in singular::<i64, 4>(100)) {
-            test_generic_matrix(&m);
+            test_exact_matrix(&m);
         }
 
         #[test]
@@ -1273,6 +1291,23 @@ mod property_based_tests {
         #[test]
         fn test_matrix_4q_singular(m in singular::<BigRational, 4>(1000)) {
             test_rational_matrix(&m);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_matrix_2f(m in matrix::<f64, 2, 2>(1000)) {
+            test_numerical_matrix(&m);
+        }
+
+        #[test]
+        fn test_matrix_3f(m in matrix::<f64, 3, 3>(1000)) {
+            test_numerical_matrix(&m);
+        }
+
+        #[test]
+        fn test_matrix_4f(m in matrix::<f64, 4, 4>(1000)) {
+            test_numerical_matrix(&m);
         }
     }
 }
