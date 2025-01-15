@@ -1070,249 +1070,232 @@ mod test_big_rational {
         let a = matrix([[1, 2], [3, 6]]);
         assert!(a.inverse().is_none());
     }
+}
 
 
-    mod property_based_tests {
-        use super::*;
-        use num_rational::BigRational;
-        use num_traits::{FromPrimitive, Zero};
-        use proptest::prelude::*;
-        use proptest::collection::vec;
-        use crate::geometry::traits::allclose;
-    
-        trait FromI32 {
-            fn from(i: i32) -> Self;
+mod property_based_tests {
+    use super::*;
+    use num_rational::BigRational;
+    use num_traits::{FromPrimitive, Zero};
+    use proptest::prelude::*;
+    use proptest::collection::vec;
+    use crate::geometry::traits::allclose;
+
+    trait FromI32 {
+        fn from(i: i32) -> Self;
+    }
+
+    impl FromI32 for i64 {
+        fn from(i: i32) -> Self {
+            i as Self
         }
-    
-        impl FromI32 for i64 {
-            fn from(i: i32) -> Self {
-                i as Self
-            }
+    }
+
+    impl FromI32 for f64 {
+        fn from(i: i32) -> Self {
+            i as Self
         }
-    
-        impl FromI32 for f64 {
-            fn from(i: i32) -> Self {
-                i as Self
-            }
+    }
+
+    impl FromI32 for BigRational {
+        fn from(i: i32) -> Self {
+            BigRational::from_i32(i).unwrap()
         }
-    
-        impl FromI32 for BigRational {
-            fn from(i: i32) -> Self {
-                BigRational::from_i32(i).unwrap()
-            }
-        }
-    
-        fn matrix_from_values<T>(v: &[T], m: usize) -> VecMatrix<T>
-            where T: Scalar + Clone
-        {
-            let n = v.len() / m;
-            let mut result = VecMatrix::new(n, m);
-    
-            let mut k = 0;
-            for i in 0..n {
-                for j in 0..m{
-                    result[i][j] = v[k].clone();
-                    k += 1;
-                }
-            }
-    
-            result
-        }
-    
-        fn singularize<T>(m: VecMatrix<T>) -> VecMatrix<T>
-            where T: Scalar + Clone
-        {
-            assert_eq!(m.nr_rows(), m.nr_columns());
-            let mut result = m.clone();
-    
-            for i in 0..m.nr_rows() {
-                let mut s = T::zero();
-                for j in 1..m.nr_columns() {
-                    s = s + m[i][j].clone();
-                }
-                result[i][0] = -s;
-            }
-    
-            result
-        }
-    
-        fn entry<T>(size: i32)
-            -> impl Strategy<Value=T>
-            where T: FromI32 + std::fmt::Debug
-        {
-            (-size..size).prop_map(|i: i32| T::from(i))
-        }
-    
-        fn matrix<T>(size: i32, n: usize, m: usize)
-            -> impl Strategy<Value=VecMatrix<T>>
-            where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
-        {
-            vec(entry(size), n * m).prop_map(move |v| matrix_from_values(&v, m))
-        }
-    
-        fn singular<T>(size: i32, n: usize)
-            -> impl Strategy<Value=VecMatrix<T>>
-            where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
-        {
-            vec(entry(size), n * n).prop_map(move |v|
-                singularize(matrix_from_values(&v, n))
-            )
-        }
-    
-        fn test_numerical_matrix(m: &VecMatrix<f64>) {
-            let n = m.nr_rows();
-            let zero = VecMatrix::new(n, n);
-            let one = VecMatrix::identity(n);
-    
-            assert_eq!(m.determinant().is_zero(), m.rank() < n);
-            assert_eq!(m.null_space().len(), n - m.rank());
-    
-            for v in m.null_space() {
-                assert!(allclose(&(m * v), &zero, 1e-9, 1e-9));
-            }
-    
-            if let Some(inv) = m.inverse() {
-                assert!(allclose(&(m * inv), &one, 1e-9, 1e-9));
-            }
-    
-            assert_eq!(m.inverse().is_some(), m.rank() == n);
-        }
-    
-        fn test_exact_matrix<T>(m: &VecMatrix<T>)
-            where
-                T: Entry + Clone + PartialEq + std::fmt::Debug,
-                for <'a> &'a T: ScalarPtr<T>
-        {
-            let n = m.nr_rows();
-            let zero = VecMatrix::new(n, 1);
-            let one = VecMatrix::identity(n);
-    
-            assert_eq!(m.determinant().is_zero(), m.rank() < n);
-            assert_eq!(m.null_space().len(), n - m.rank());
-    
-            for v in m.null_space() {
-                assert_eq!(m * v, zero);
-            }
-    
-            if let Some(inv) = m.inverse() {
-                assert_eq!(m * inv, one);
-            }
-        }
-    
-        fn test_rational_matrix<T>(m: &VecMatrix<T>)
-            where
-                T: Entry + Clone + PartialEq + std::fmt::Debug,
-                for <'a> &'a T: ScalarPtr<T>
-        {
-            test_exact_matrix(m);
-    
-            assert_eq!(m.inverse().is_some(), m.rank() == m.nr_rows());
-        }
-    
-        fn test_solver<T>(m: &VecMatrix<T>, v: &VecMatrix<T>)
-            where
-                T: Entry + Clone + PartialEq + std::fmt::Debug,
-                for <'a> &'a T: ScalarPtr<T>
-        {
-            let b = m * v;
-            assert_eq!(m * &m.solve(&b).unwrap(), b);
-        }
-    
-        proptest! {
-            #[test]
-            fn test_matrix_2i(m in matrix::<i64>(1000, 2, 2)) {
-                test_exact_matrix(&m);
-            }
-    
-            #[test]
-            fn test_matrix_2i_singular(m in singular::<i64>(1000, 2)) {
-                test_exact_matrix(&m);
-            }
-    
-            #[test]
-            fn test_solver_2i(
-                m in matrix::<i64>(1000, 2, 2),
-                v in matrix::<i64>(1000, 2, 1)
-            ) {
-                test_solver(&m, &v);
-            }
-    
-            #[test]
-            fn test_solver_2i_singular(
-                m in singular::<i64>(1000, 2),
-                v in matrix::<i64>(1000, 2, 1)
-            ) {
-                test_solver(&m, &v);
-            }
-    
-            #[test]
-            fn test_matrix_3i(m in matrix::<i64>(100, 3, 3)) {
-                test_exact_matrix(&m);
-            }
-    
-            #[test]
-            fn test_matrix_3i_singular(m in singular::<i64>(100, 3)) {
-                test_exact_matrix(&m);
-            }
-    
-            #[test]
-            fn test_solver_3i(
-                m in matrix::<i64>(100, 3, 3),
-                v in matrix::<i64>(100, 3, 1)
-            ) {
-                test_solver(&m, &v);
-            }
-    
-            #[test]
-            fn test_solver_3i_singular(
-                m in singular::<i64>(100, 3),
-                v in matrix::<i64>(100, 3, 1)
-            ) {
-                test_solver(&m, &v);
-            }
-    
-            #[test]
-            fn test_matrix_4i(m in matrix::<i64>(100, 4, 4)) {
-                test_exact_matrix(&m);
-            }
-    
-            #[test]
-            fn test_matrix_4i_singular(m in singular::<i64>(100, 4)) {
-                test_exact_matrix(&m);
-            }
-    
-            #[test]
-            fn test_solver_4i(
-                m in matrix::<i64>(100, 4, 4),
-                v in matrix::<i64>(100, 4, 1)
-            ) {
-                test_solver(&m, &v);
-            }
-    
-            #[test]
-            fn test_solver_4i_singular(
-                m in singular::<i64>(100, 4),
-                v in matrix::<i64>(100, 4, 1)
-            ) {
-                test_solver(&m, &v);
+    }
+
+    fn matrix_from_values<T>(v: &[T], m: usize) -> VecMatrix<T>
+        where T: Scalar + Clone
+    {
+        let n = v.len() / m;
+        let mut result = VecMatrix::new(n, m);
+
+        let mut k = 0;
+        for i in 0..n {
+            for j in 0..m{
+                result[i][j] = v[k].clone();
+                k += 1;
             }
         }
 
-        proptest! {
-            #[test]
-            fn test_matrix_2f(m in matrix::<f64>(1000, 2, 2)) {
-                test_numerical_matrix(&m);
+        result
+    }
+
+    fn singularize<T>(m: VecMatrix<T>) -> VecMatrix<T>
+        where T: Scalar + Clone
+    {
+        assert_eq!(m.nr_rows(), m.nr_columns());
+        let mut result = m.clone();
+
+        for i in 0..m.nr_rows() {
+            let mut s = T::zero();
+            for j in 1..m.nr_columns() {
+                s = s + m[i][j].clone();
             }
-    
-            #[test]
-            fn test_matrix_3f(m in matrix::<f64>(1000, 3, 3)) {
-                test_numerical_matrix(&m);
-            }
-    
-            #[test]
-            fn test_matrix_4f(m in matrix::<f64>(1000, 4, 4)) {
-                test_numerical_matrix(&m);
-            }
+            result[i][0] = -s;
+        }
+
+        result
+    }
+
+    fn entry<T>(size: i32)
+        -> impl Strategy<Value=T>
+        where T: FromI32 + std::fmt::Debug
+    {
+        (-size..size).prop_map(T::from)
+    }
+
+    fn matrix<T>(size: i32, n: usize, m: usize)
+        -> impl Strategy<Value=VecMatrix<T>>
+        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
+    {
+        vec(entry(size), n * m).prop_map(move |v| matrix_from_values(&v, m))
+    }
+
+    fn regular_matrix<T>(entry_size: i32, dmin: usize, dmax: usize)
+        -> impl Strategy<Value=VecMatrix<T>>
+        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
+    {
+        (dmin..=dmax).prop_flat_map(move |n|
+            matrix(entry_size, n, n)
+        )
+    }
+
+    fn singular_matrix<T>(entry_size: i32, dmin: usize, dmax: usize)
+        -> impl Strategy<Value=VecMatrix<T>>
+        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
+    {
+        regular_matrix(entry_size, dmin, dmax).prop_map(singularize)
+    }
+
+    fn equations<T>(entry_size: i32, dmin: usize, dmax: usize)
+        -> impl Strategy<Value=(VecMatrix<T>, VecMatrix<T>)>
+        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
+    {
+        (dmin..=dmax).prop_flat_map(move |n|
+            (matrix(entry_size, n, n), matrix(entry_size, n, 1))
+        )
+    }
+
+    fn singular_equations<T>(entry_size: i32, dmin: usize, dmax: usize)
+        -> impl Strategy<Value=(VecMatrix<T>, VecMatrix<T>)>
+        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
+    {
+        equations(entry_size, dmin, dmax).prop_map(|(m, v)|
+            (singularize(m), v)
+        )
+    }
+
+    fn test_numerical_matrix(m: &VecMatrix<f64>) {
+        let n = m.nr_rows();
+        let zero = VecMatrix::new(n, n);
+        let one = VecMatrix::identity(n);
+
+        assert_eq!(m.determinant().is_zero(), m.rank() < n);
+        assert_eq!(m.null_space().len(), n - m.rank());
+
+        for v in m.null_space() {
+            assert!(allclose(&(m * v), &zero, 1e-9, 1e-9));
+        }
+
+        if let Some(inv) = m.inverse() {
+            assert!(allclose(&(m * inv), &one, 1e-9, 1e-9));
+        }
+
+        assert_eq!(m.inverse().is_some(), m.rank() == n);
+    }
+
+    fn test_exact_matrix<T>(m: &VecMatrix<T>)
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
+    {
+        let n = m.nr_rows();
+        let zero = VecMatrix::new(n, 1);
+        let one = VecMatrix::identity(n);
+
+        assert_eq!(m.determinant().is_zero(), m.rank() < n);
+        assert_eq!(m.null_space().len(), n - m.rank());
+
+        for v in m.null_space() {
+            assert_eq!(m * v, zero);
+        }
+
+        if let Some(inv) = m.inverse() {
+            assert_eq!(m * inv, one);
+        }
+    }
+
+    fn test_rational_matrix<T>(m: &VecMatrix<T>)
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
+    {
+        test_exact_matrix(m);
+
+        assert_eq!(m.inverse().is_some(), m.rank() == m.nr_rows());
+    }
+
+    fn test_solver<T>(m: &VecMatrix<T>, v: &VecMatrix<T>)
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
+    {
+        let b = m * v;
+        assert_eq!(m * &m.solve(&b).unwrap(), b);
+    }
+
+    proptest! {
+        #[test]
+        fn test_matrix_int(m in regular_matrix::<i64>(100, 2, 4)) {
+            test_exact_matrix(&m);
+        }
+
+        #[test]
+        fn test_matrix_int_singular(m in singular_matrix::<i64>(100, 2, 4)) {
+            test_exact_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_int((m, v) in equations::<i64>(100, 2, 4)) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_int_singular((m, v) in singular_equations::<i64>(100, 2, 4)) {
+            test_solver(&m, &v);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_matrix_rational(m in regular_matrix::<BigRational>(1000, 2, 6)) {
+            test_rational_matrix(&m);
+        }
+
+        #[test]
+        fn test_matrix_rational_singular(
+            m in singular_matrix::<BigRational>(1000, 2, 6)
+        ) {
+            test_rational_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_rational((m, v) in equations::<BigRational>(1000, 2, 6)) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_rational_singular(
+            (m, v) in singular_equations::<BigRational>(1000, 2, 6)
+        ) {
+            test_solver(&m, &v);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_matrix_float(m in regular_matrix::<f64>(1000, 2, 6)) {
+            test_numerical_matrix(&m);
         }
     }
 }
