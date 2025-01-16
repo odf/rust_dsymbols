@@ -1248,6 +1248,13 @@ mod property_based_tests {
         }
     }
 
+    fn test_solver_numerical(m: &VecMatrix<f64>, v: &VecMatrix<f64>) {
+        let b = m * v;
+        if let Some(sol) = m.solve(&b) {
+            assert!(allclose(&(m * sol), &b, 1e-9, 1e-9));
+        }
+    }
+
     proptest! {
         #[test]
         fn test_matrix_int(m in regular_matrix::<i64>(10, 2, 4)) {
@@ -1300,6 +1307,11 @@ mod property_based_tests {
         #[test]
         fn test_matrix_float(m in regular_matrix::<f64>(1000, 2, 6)) {
             test_numerical_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_float((m, v) in equations::<f64>(1000, 2, 6)) {
+            test_solver_numerical(&m, &v);
         }
     }
 }
