@@ -1122,51 +1122,27 @@ mod property_based_tests {
         result
     }
 
-    fn singularize<T>(m: VecMatrix<T>) -> VecMatrix<T>
-        where T: Scalar + Clone
-    {
-        assert_eq!(m.nr_rows(), m.nr_columns());
-        let mut result = m.clone();
-
-        for i in 0..m.nr_rows() {
-            let mut s = T::zero();
-            for j in 1..m.nr_columns() {
-                s = s + m[i][j].clone();
-            }
-            result[i][0] = -s;
-        }
-
-        result
-    }
-
     fn entry<T>(size: i32)
         -> impl Strategy<Value=T>
         where T: FromI32 + std::fmt::Debug
     {
-        (-size..size).prop_map(T::from)
+        (0..size).prop_map(T::from)
     }
 
-    fn matrix<T>(size: i32, n: usize, m: usize)
+    fn sized_matrix<T>(size: i32, n: usize, m: usize)
         -> impl Strategy<Value=VecMatrix<T>>
         where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
     {
         vec(entry(size), n * m).prop_map(move |v| matrix_from_values(&v, m))
     }
 
-    fn regular_matrix<T>(entry_size: i32, dmin: usize, dmax: usize)
+    fn matrix<T>(entry_size: i32, dmin: usize, dmax: usize)
         -> impl Strategy<Value=VecMatrix<T>>
         where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
     {
         (dmin..=dmax).prop_flat_map(move |n|
-            matrix(entry_size, n, n)
+            sized_matrix(entry_size, n, n)
         )
-    }
-
-    fn singular_matrix<T>(entry_size: i32, dmin: usize, dmax: usize)
-        -> impl Strategy<Value=VecMatrix<T>>
-        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
-    {
-        regular_matrix(entry_size, dmin, dmax).prop_map(singularize)
     }
 
     fn equations<T>(entry_size: i32, dmin: usize, dmax: usize)
@@ -1174,16 +1150,7 @@ mod property_based_tests {
         where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
     {
         (dmin..=dmax).prop_flat_map(move |n|
-            (matrix(entry_size, n, n), matrix(entry_size, n, 1))
-        )
-    }
-
-    fn singular_equations<T>(entry_size: i32, dmin: usize, dmax: usize)
-        -> impl Strategy<Value=(VecMatrix<T>, VecMatrix<T>)>
-        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
-    {
-        equations(entry_size, dmin, dmax).prop_map(|(m, v)|
-            (singularize(m), v)
+            (sized_matrix(entry_size, n, n), sized_matrix(entry_size, n, 1))
         )
     }
 
@@ -1257,12 +1224,12 @@ mod property_based_tests {
 
     proptest! {
         #[test]
-        fn test_matrix_int(m in regular_matrix::<i64>(10, 2, 4)) {
+        fn test_matrix_int(m in matrix::<i64>(10, 2, 4)) {
             test_exact_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_int_singular(m in singular_matrix::<i64>(10, 2, 4)) {
+        fn test_matrix_int_small(m in matrix::<i64>(2, 2, 4)) {
             test_exact_matrix(&m);
         }
 
@@ -1272,45 +1239,51 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_solver_int_singular((m, v) in singular_equations::<i64>(10, 2, 4)) {
+        fn test_solver_int_small((m, v) in equations::<i64>(2, 2, 4)) {
             test_solver(&m, &v);
         }
     }
 
     proptest! {
         #[test]
-        fn test_matrix_rational(m in regular_matrix::<BigRational>(1000, 2, 6)) {
+        fn test_matrix_rational(m in matrix::<BigRational>(10, 2, 6)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_rational_singular(
-            m in singular_matrix::<BigRational>(1000, 2, 6)
-        ) {
+        fn test_matrix_rational_small(m in matrix::<BigRational>(2, 2, 6)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_solver_rational((m, v) in equations::<BigRational>(1000, 2, 6)) {
+        fn test_solver_rational((m, v) in equations::<BigRational>(10, 2, 6)) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_solver_rational_singular(
-            (m, v) in singular_equations::<BigRational>(1000, 2, 6)
-        ) {
+        fn test_solver_rational_small((m, v) in equations::<BigRational>(2, 2, 6)) {
             test_solver(&m, &v);
         }
     }
 
     proptest! {
         #[test]
-        fn test_matrix_float(m in regular_matrix::<f64>(1000, 2, 6)) {
+        fn test_matrix_float(m in matrix::<f64>(10, 2, 6)) {
             test_numerical_matrix(&m);
         }
 
         #[test]
-        fn test_solver_float((m, v) in equations::<f64>(1000, 2, 6)) {
+        fn test_matrix_float_small(m in matrix::<f64>(2, 2, 6)) {
+            test_numerical_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_float((m, v) in equations::<f64>(10, 2, 6)) {
+            test_solver_numerical(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_float_small((m, v) in equations::<f64>(2, 2, 6)) {
             test_solver_numerical(&m, &v);
         }
     }

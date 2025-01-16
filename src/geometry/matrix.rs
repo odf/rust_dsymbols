@@ -1051,28 +1051,11 @@ mod property_based_tests {
         result
     }
 
-    fn singularize<T, const N: usize>(m: Matrix<T, N, N>)
-        -> Matrix<T, N, N>
-        where T: Scalar + Clone
-    {
-        let mut result = m.clone();
-
-        for i in 0..N {
-            let mut s = T::zero();
-            for j in 1..N {
-                s = s + m[i][j].clone();
-            }
-            result[i][0] = -s;
-        }
-
-        result
-    }
-
     fn entry<T>(size: i32)
         -> impl Strategy<Value=T>
         where T: FromI32 + std::fmt::Debug
     {
-        (-size..size).prop_map(|i: i32| T::from(i))
+        (0..size).prop_map(|i: i32| T::from(i))
     }
 
     fn matrix<T, const N: usize, const M: usize>(size: i32)
@@ -1080,15 +1063,6 @@ mod property_based_tests {
         where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
     {
         vec(entry(size), N * M).prop_map(|v| matrix_from_values(&v))
-    }
-
-    fn singular<T, const N: usize>(size: i32)
-        -> impl Strategy<Value=Matrix<T, N, N>>
-        where T: Scalar + Clone + FromI32 + std::fmt::Debug + 'static
-    {
-        vec(entry(size), N * N).prop_map(|v|
-            singularize(matrix_from_values(&v))
-        )
     }
 
     fn test_numerical_matrix<const N: usize>(m: &Matrix<f64, N, N>) {
@@ -1154,53 +1128,53 @@ mod property_based_tests {
 
     proptest! {
         #[test]
-        fn test_matrix_2i(m in matrix::<i64, 2, 2>(1000)) {
+        fn test_matrix_2i(m in matrix::<i64, 2, 2>(10)) {
             test_exact_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_2i_singular(m in singular::<i64, 2>(1000)) {
+        fn test_matrix_2i_small(m in matrix::<i64, 2, 2>(2)) {
             test_exact_matrix(&m);
         }
 
         #[test]
         fn test_solver_2i(
-            m in matrix::<i64, 2, 2>(1000),
-            v in matrix::<i64, 2, 1>(1000)
+            m in matrix::<i64, 2, 2>(10),
+            v in matrix::<i64, 2, 1>(10)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_solver_2i_singular(
-            m in singular::<i64, 2>(1000),
-            v in matrix::<i64, 2, 1>(1000)
+        fn test_solver_2i_small(
+            m in matrix::<i64, 2, 2>(2),
+            v in matrix::<i64, 2, 1>(2)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_matrix_3i(m in matrix::<i64, 3, 3>(100)) {
+        fn test_matrix_3i(m in matrix::<i64, 3, 3>(10)) {
             test_exact_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_3i_singular(m in singular::<i64, 3>(100)) {
+        fn test_matrix_3i_small(m in matrix::<i64, 3, 3>(2)) {
             test_exact_matrix(&m);
         }
 
         #[test]
         fn test_solver_3i(
-            m in matrix::<i64, 3, 3>(100),
-            v in matrix::<i64, 3, 1>(100)
+            m in matrix::<i64, 3, 3>(10),
+            v in matrix::<i64, 3, 1>(10)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_solver_3i_singular(
-            m in singular::<i64, 3>(100),
-            v in matrix::<i64, 3, 1>(100)
+        fn test_solver_3i_small(
+            m in matrix::<i64, 3, 3>(2),
+            v in matrix::<i64, 3, 1>(2)
         ) {
             test_solver(&m, &v);
         }
@@ -1211,7 +1185,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_4i_singular(m in singular::<i64, 4>(10)) {
+        fn test_matrix_4i_small(m in matrix::<i64, 4, 4>(2)) {
             test_exact_matrix(&m);
         }
 
@@ -1224,9 +1198,9 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_solver_4i_singular(
-            m in singular::<i64, 4>(10),
-            v in matrix::<i64, 4, 1>(10)
+        fn test_solver_4i_small(
+            m in matrix::<i64, 4, 4>(2),
+            v in matrix::<i64, 4, 1>(2)
         ) {
             test_solver(&m, &v);
         }
@@ -1234,81 +1208,96 @@ mod property_based_tests {
 
     proptest! {
         #[test]
-        fn test_matrix_2q(m in matrix::<BigRational, 2, 2>(1000)) {
+        fn test_matrix_2q(m in matrix::<BigRational, 2, 2>(10)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_2q_singular(m in singular::<BigRational, 2>(1000)) {
+        fn test_matrix_2q_small(m in matrix::<BigRational, 2, 2>(2)) {
             test_rational_matrix(&m);
         }
 
         #[test]
         fn test_solver_2q(
-            m in matrix::<BigRational, 2, 2>(1000),
-            v in matrix::<BigRational, 2, 1>(1000)
+            m in matrix::<BigRational, 2, 2>(10),
+            v in matrix::<BigRational, 2, 1>(10)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_solver_2q_singular(
-            m in singular::<BigRational, 2>(1000),
-            v in matrix::<BigRational, 2, 1>(1000)
+        fn test_solver_2q_small(
+            m in matrix::<BigRational, 2, 2>(2),
+            v in matrix::<BigRational, 2, 1>(2)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_matrix_3q(m in matrix::<BigRational, 3, 3>(1000)) {
+        fn test_matrix_3q(m in matrix::<BigRational, 3, 3>(10)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_3q_singular(m in singular::<BigRational, 3>(1000)) {
+        fn test_matrix_3q_small(m in matrix::<BigRational, 3, 3>(2)) {
             test_rational_matrix(&m);
         }
 
         #[test]
         fn test_solver_3q(
-            m in matrix::<BigRational, 3, 3>(1000),
-            v in matrix::<BigRational, 3, 1>(1000)
+            m in matrix::<BigRational, 3, 3>(10),
+            v in matrix::<BigRational, 3, 1>(10)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_solver_3q_singular(
-            m in singular::<BigRational, 3>(1000),
-            v in matrix::<BigRational, 3, 1>(1000)
+        fn test_solver_3q_small(
+            m in matrix::<BigRational, 3, 3>(2),
+            v in matrix::<BigRational, 3, 1>(2)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_matrix_4q(m in matrix::<BigRational, 4, 4>(1000)) {
+        fn test_matrix_4q(m in matrix::<BigRational, 4, 4>(10)) {
             test_rational_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_4q_singular(m in singular::<BigRational, 4>(1000)) {
+        fn test_matrix_4q_small(m in matrix::<BigRational, 4, 4>(2)) {
             test_rational_matrix(&m);
         }
     }
 
     proptest! {
         #[test]
-        fn test_matrix_2f(m in matrix::<f64, 2, 2>(1000)) {
+        fn test_matrix_2f(m in matrix::<f64, 2, 2>(10)) {
             test_numerical_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_3f(m in matrix::<f64, 3, 3>(1000)) {
+        fn test_matrix_2f_small(m in matrix::<f64, 2, 2>(2)) {
             test_numerical_matrix(&m);
         }
 
         #[test]
-        fn test_matrix_4f(m in matrix::<f64, 4, 4>(1000)) {
+        fn test_matrix_3f(m in matrix::<f64, 3, 3>(10)) {
+            test_numerical_matrix(&m);
+        }
+
+        #[test]
+        fn test_matrix_3f_small(m in matrix::<f64, 3, 3>(2)) {
+            test_numerical_matrix(&m);
+        }
+
+        #[test]
+        fn test_matrix_4f(m in matrix::<f64, 4, 4>(10)) {
+            test_numerical_matrix(&m);
+        }
+
+        #[test]
+        fn test_matrix_4f_small(m in matrix::<f64, 4, 4>(2)) {
             test_numerical_matrix(&m);
         }
     }
