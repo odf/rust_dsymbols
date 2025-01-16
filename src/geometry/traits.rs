@@ -1,3 +1,4 @@
+use core::f64;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 use num_rational::BigRational;
 use num_traits::{One, Zero, Signed};
@@ -147,16 +148,22 @@ impl Entry for f64 {
     fn clear_col<A: Array2d<Self>, B: Array2d<Self>>(
         col: usize, row1: usize, row2: usize, a: &mut A, x: Option<&mut B>
     ) {
+        let eps = 1e-12;
+
         let f = a[(row1, col)] / a[(row2, col)];
         a[(row1, col)] = 0.0;
 
         for k in (col + 1)..a.nr_columns() {
-            a[(row1, k)] -= a[(row2, k)] * f;
+            let s = a[(row1, k)];
+            let t = s - a[(row2, k)] * f;
+            a[(row1, k)] = if t.abs() < eps * s.abs() { 0.0 } else { t };
         }
 
         if let Some(x) = x {
             for k in 0..x.nr_columns() {
-                x[(row1, k)] -= x[(row2, k)] * f;
+                let s = x[(row1, k)];
+                let t = s - x[(row2, k)] * f;
+                x[(row1, k)] = if t.abs() < eps * s.abs() { 0.0 } else { t };
             }
         }
     }
