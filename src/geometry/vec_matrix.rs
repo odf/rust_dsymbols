@@ -1229,7 +1229,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_int_small(m in matrix::<i64>(2, 2, 4)) {
+        fn test_matrix_int_small(m in matrix::<i64>(3, 2, 4)) {
             test_exact_matrix(&m);
         }
 
@@ -1239,7 +1239,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_solver_int_small((m, v) in equations::<i64>(2, 2, 4)) {
+        fn test_solver_int_small((m, v) in equations::<i64>(3, 2, 4)) {
             test_solver(&m, &v);
         }
     }
@@ -1251,7 +1251,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_rational_small(m in matrix::<BigRational>(2, 2, 6)) {
+        fn test_matrix_rational_small(m in matrix::<BigRational>(3, 2, 6)) {
             test_rational_matrix(&m);
         }
 
@@ -1261,7 +1261,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_solver_rational_small((m, v) in equations::<BigRational>(2, 2, 6)) {
+        fn test_solver_rational_small((m, v) in equations::<BigRational>(3, 2, 6)) {
             test_solver(&m, &v);
         }
     }
@@ -1273,7 +1273,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_float_small(m in matrix::<f64>(2, 2, 6)) {
+        fn test_matrix_float_small(m in matrix::<f64>(3, 2, 6)) {
             test_numerical_matrix(&m);
         }
 
@@ -1283,7 +1283,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_solver_float_small((m, v) in equations::<f64>(2, 2, 6)) {
+        fn test_solver_float_small((m, v) in equations::<f64>(3, 2, 6)) {
             test_solver_numerical(&m, &v);
         }
     }

@@ -1133,7 +1133,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_2i_small(m in matrix::<i64, 2, 2>(2)) {
+        fn test_matrix_2i_small(m in matrix::<i64, 2, 2>(3)) {
             test_exact_matrix(&m);
         }
 
@@ -1147,8 +1147,8 @@ mod property_based_tests {
 
         #[test]
         fn test_solver_2i_small(
-            m in matrix::<i64, 2, 2>(2),
-            v in matrix::<i64, 2, 1>(2)
+            m in matrix::<i64, 2, 2>(3),
+            v in matrix::<i64, 2, 1>(3)
         ) {
             test_solver(&m, &v);
         }
@@ -1159,7 +1159,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_3i_small(m in matrix::<i64, 3, 3>(2)) {
+        fn test_matrix_3i_small(m in matrix::<i64, 3, 3>(3)) {
             test_exact_matrix(&m);
         }
 
@@ -1173,8 +1173,8 @@ mod property_based_tests {
 
         #[test]
         fn test_solver_3i_small(
-            m in matrix::<i64, 3, 3>(2),
-            v in matrix::<i64, 3, 1>(2)
+            m in matrix::<i64, 3, 3>(3),
+            v in matrix::<i64, 3, 1>(3)
         ) {
             test_solver(&m, &v);
         }
@@ -1185,7 +1185,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_4i_small(m in matrix::<i64, 4, 4>(2)) {
+        fn test_matrix_4i_small(m in matrix::<i64, 4, 4>(3)) {
             test_exact_matrix(&m);
         }
 
@@ -1199,8 +1199,8 @@ mod property_based_tests {
 
         #[test]
         fn test_solver_4i_small(
-            m in matrix::<i64, 4, 4>(2),
-            v in matrix::<i64, 4, 1>(2)
+            m in matrix::<i64, 4, 4>(3),
+            v in matrix::<i64, 4, 1>(3)
         ) {
             test_solver(&m, &v);
         }
@@ -1213,7 +1213,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_2q_small(m in matrix::<BigRational, 2, 2>(2)) {
+        fn test_matrix_2q_small(m in matrix::<BigRational, 2, 2>(3)) {
             test_rational_matrix(&m);
         }
 
@@ -1227,8 +1227,8 @@ mod property_based_tests {
 
         #[test]
         fn test_solver_2q_small(
-            m in matrix::<BigRational, 2, 2>(2),
-            v in matrix::<BigRational, 2, 1>(2)
+            m in matrix::<BigRational, 2, 2>(3),
+            v in matrix::<BigRational, 2, 1>(3)
         ) {
             test_solver(&m, &v);
         }
@@ -1239,7 +1239,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_3q_small(m in matrix::<BigRational, 3, 3>(2)) {
+        fn test_matrix_3q_small(m in matrix::<BigRational, 3, 3>(3)) {
             test_rational_matrix(&m);
         }
 
@@ -1253,8 +1253,8 @@ mod property_based_tests {
 
         #[test]
         fn test_solver_3q_small(
-            m in matrix::<BigRational, 3, 3>(2),
-            v in matrix::<BigRational, 3, 1>(2)
+            m in matrix::<BigRational, 3, 3>(3),
+            v in matrix::<BigRational, 3, 1>(3)
         ) {
             test_solver(&m, &v);
         }
@@ -1265,7 +1265,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_4q_small(m in matrix::<BigRational, 4, 4>(2)) {
+        fn test_matrix_4q_small(m in matrix::<BigRational, 4, 4>(3)) {
             test_rational_matrix(&m);
         }
     }
@@ -1277,7 +1277,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_2f_small(m in matrix::<f64, 2, 2>(2)) {
+        fn test_matrix_2f_small(m in matrix::<f64, 2, 2>(3)) {
             test_numerical_matrix(&m);
         }
 
@@ -1287,7 +1287,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_3f_small(m in matrix::<f64, 3, 3>(2)) {
+        fn test_matrix_3f_small(m in matrix::<f64, 3, 3>(3)) {
             test_numerical_matrix(&m);
         }
 
@@ -1297,7 +1297,7 @@ mod property_based_tests {
         }
 
         #[test]
-        fn test_matrix_4f_small(m in matrix::<f64, 4, 4>(2)) {
+        fn test_matrix_4f_small(m in matrix::<f64, 4, 4>(3)) {
             test_numerical_matrix(&m);
         }
     }
