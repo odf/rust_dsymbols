@@ -204,6 +204,17 @@ pub struct FundamentalGroup {
 }
 
 
+impl FundamentalGroup {
+    pub fn nr_generators(&self) -> usize {
+        self.gen_to_edge.len()
+    }
+
+    pub fn is_free(&self) -> bool {
+        self.relators.is_empty()
+    }
+}
+
+
 pub fn fundamental_group<T: DSym>(ds: &T) -> FundamentalGroup {
     let (edge_to_word, gen_to_edge) = find_generators(ds);
     let mut cones = BTreeSet::new();

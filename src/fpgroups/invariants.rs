@@ -132,9 +132,9 @@ fn diagonalize_in_place(mat: &mut Vec<Vec<isize>>) {
 }
 
 
-pub fn abelian_invariants<I>(nr_gens: usize, rels: I)
+pub fn abelian_invariants<'a, I>(nr_gens: usize, rels: I)
     -> Vec<usize>
-    where I: IntoIterator<Item=FreeWord>
+    where I: IntoIterator<Item=&'a FreeWord>
 {
     let rels: Vec<_> = rels.into_iter().collect();
 
@@ -222,7 +222,7 @@ fn test_abelian_invariants() {
     fn check(nr_gens: usize, rels: &[&[isize]], invariants: &[usize])
     {
         let rels: Vec<_> = rels.iter().map(|&r| Vec::from(r).into()).collect();
-        assert_eq!(abelian_invariants(nr_gens, rels), invariants);
+        assert_eq!(abelian_invariants(nr_gens, &rels), invariants);
     }
 
     check(3,

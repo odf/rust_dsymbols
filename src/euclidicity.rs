@@ -20,7 +20,7 @@ fn bad_subgroup_invariants(
 
     for table in coset_tables(nr_gens, &fg.relators, index) {
         let (sgens, srels) = stabilizer(0, fg.relators.clone(), &table);
-        if abelian_invariants(sgens.len(), srels) != expected {
+        if abelian_invariants(sgens.len(), &srels) != expected {
             return true;
         }
     }
@@ -36,7 +36,7 @@ fn bad_connected_components(ds: &PartialDSym) -> bool {
         let component = subsymbol(ds, 0..ds.dim(), d);
         let fg = fundamental_group(&component);
         let nr_gens = fg.gen_to_edge.len();
-        let invars = abelian_invariants(nr_gens, fg.relators.clone());
+        let invars = abelian_invariants(nr_gens, &fg.relators);
 
         if invars == [0, 0, 0] {
             if seen_z3 || bad_subgroup_invariants(&fg, 2, vec![0, 0, 0]) {
@@ -86,7 +86,7 @@ fn orbifold_invariant<T: DSym>(ds: &T) -> String {
     let (labels, edges) = orbifold_graph(ds);
     let fg = fundamental_group(ds);
     let nr_gens = fg.gen_to_edge.len();
-    let invars = abelian_invariants(nr_gens, fg.relators.clone());
+    let invars = abelian_invariants(nr_gens, &fg.relators);
 
     let mut parts = vec![labels.len().to_string()];
     parts.extend(labels);
@@ -142,12 +142,12 @@ pub fn is_euclidean<T: DSym>(ds: &T) -> Euclidean {
             } else {
                 let fg = fundamental_group(&simp);
                 let invars = abelian_invariants(
-                    fg.gen_to_edge.len(), fg.relators.clone()
+                    fg.nr_generators(), &fg.relators
                 );
 
                 if invars != [0, 0, 0] {
                     fail("cover has at least one handle")
-                } else if fg.relators.is_empty() {
+                } else if fg.is_free() {
                     fail("cover has free fundamental group")
                 } else if bad_subgroup_count(&fg, 2, 8) {
                     fail("bad subgroup count for cover")

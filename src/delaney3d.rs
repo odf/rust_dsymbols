@@ -146,7 +146,7 @@ pub fn pseudo_toroidal_cover<T: DSym>(ds: &T) -> Option<PartialDSym> {
     for tp in point_groups() {
         for table in candidates[&tp].iter() {
             let (sgens, srels) = stabilizer(0, fg.relators.clone(), table);
-            let inv = abelian_invariants(sgens.len(), srels);
+            let inv = abelian_invariants(sgens.len(), &srels);
 
             if inv == vec![0, 0, 0] {
                 return Some(cover_for_table(&ds, table, &fg.edge_to_word));

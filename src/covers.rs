@@ -37,7 +37,7 @@ pub fn subgroup_cover<T: DSym>(ds: &T, subgens: &Vec<FreeWord>)
     -> PartialDSym
 {
     let g = fundamental_group(ds);
-    let table = coset_table(g.gen_to_edge.len(), &g.relators, subgens);
+    let table = coset_table(g.nr_generators(), &g.relators, subgens);
     cover_for_table(ds, &table, &g.edge_to_word)
 }
 
@@ -51,7 +51,7 @@ pub fn covers<T: DSym>(ds: &T, max_deg: usize) -> Vec<PartialDSym> {
     let mut result = Vec::new();
     let g = fundamental_group(ds);
 
-    for table in coset_tables(g.gen_to_edge.len(), &g.relators, max_deg) {
+    for table in coset_tables(g.nr_generators(), &g.relators, max_deg) {
         let cov = cover_for_table(ds, &table, &g.edge_to_word);
         result.push(cov);
     }
