@@ -132,6 +132,21 @@ fn diagonalize_in_place(mat: &mut Vec<Vec<isize>>) {
 }
 
 
+pub fn relator_as_vector(nr_gens: usize, w: &FreeWord) -> Vec<isize> {
+    let mut row = vec![0; nr_gens];
+
+    for &g in w.iter() {
+        if g < 0 {
+            row[(-g - 1) as usize] -= 1;
+        } else {
+            row[(g - 1) as usize] += 1;
+        }
+    }
+
+    row
+}
+
+
 pub fn abelian_invariants<'a, I>(nr_gens: usize, rels: I)
     -> Vec<usize>
     where I: IntoIterator<Item=&'a FreeWord>
@@ -144,21 +159,10 @@ pub fn abelian_invariants<'a, I>(nr_gens: usize, rels: I)
         return vec![0; nr_gens];
     }
 
-    let n = rels.len().min(nr_gens);
-    let mut mat = vec![vec![0 as isize; nr_gens]; rels.len()];
-
-    for i in 0..rels.len() {
-        for &g in rels[i].iter() {
-            if g < 0 {
-                mat[i][(-g - 1) as usize] -= 1;
-            } else {
-                mat[i][(g - 1) as usize] += 1;
-            }
-        }
-    }
-
+    let mut mat = rels.iter().map(|w| relator_as_vector(nr_gens, w)).collect();
     diagonalize_in_place(&mut mat);
 
+    let n = rels.len().min(nr_gens);
     let mut factors: Vec<_> = (0..n).map(|i| mat[i][i]).collect();
 
     for i in 0..n {
