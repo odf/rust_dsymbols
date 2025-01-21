@@ -151,18 +151,19 @@ pub fn abelian_invariants<'a, I>(nr_gens: usize, rels: I)
     -> Vec<usize>
     where I: IntoIterator<Item=&'a FreeWord>
 {
-    let rels: Vec<_> = rels.into_iter().collect();
+    let mut mat: Vec<_> = rels.into_iter()
+        .map(|w| relator_as_vector(nr_gens, w))
+        .collect();
 
     if nr_gens == 0 {
         return vec![];
-    } else if rels.len() == 0 {
+    } else if mat.len() == 0 {
         return vec![0; nr_gens];
     }
 
-    let mut mat = rels.iter().map(|w| relator_as_vector(nr_gens, w)).collect();
     diagonalize_in_place(&mut mat);
 
-    let n = rels.len().min(nr_gens);
+    let n = mat.len().min(nr_gens);
     let mut factors: Vec<_> = (0..n).map(|i| mat[i][i]).collect();
 
     for i in 0..n {
