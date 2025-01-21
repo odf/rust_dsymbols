@@ -849,6 +849,7 @@ fn test_matrix_nullspace() {
     for v in a.null_space() {
         assert_eq!(&a * v, VecMatrix::from([[0.0], [0.0]]));
     }
+    assert!((&a * a.null_space_matrix()).is_zero());
 
     let a = VecMatrix::from([[1.0, 2.0], [3.0, 4.0]]);
     let n = a.null_space();
@@ -860,6 +861,7 @@ fn test_matrix_nullspace() {
     for v in n {
         assert_eq!(&a * v, VecMatrix::from([[0.0]]));
     }
+    assert!((&a * a.null_space_matrix()).is_zero());
 }
 
 
@@ -1055,17 +1057,15 @@ mod test_big_rational {
     fn test_nullspace() {
         let a = matrix([[1, 2], [3, 4]]);
         let n = a.null_space();
-        for v in &n {
-            assert_eq!(&a * v, VecMatrix::zero(2, 1));
-        }
         assert_eq!(n.len(), 0);
 
         let a = matrix([[1, 2], [3, 6]]);
         let n = a.null_space();
+        assert_eq!(n.len(), 1);
         for v in &n {
             assert_eq!(&a * v, VecMatrix::zero(2, 1));
         }
-        assert_eq!(n.len(), 1);
+        assert!((&a * a.null_space_matrix()).is_zero());
     }
 
     #[test]
@@ -1173,6 +1173,13 @@ mod property_based_tests {
             assert!(allclose(&(m * v), &zero, 1e-9, 1e-9));
         }
 
+        let nul = m.null_space_matrix();
+        assert!(allclose(
+            &(m * &nul),
+            &VecMatrix::new(n, nul.nr_columns()),
+            1e-9, 1e-9
+        ));
+
         if let Some(inv) = m.inverse() {
             assert!(allclose(&(m * inv), &one, 1e-9, 1e-9));
         }
@@ -1195,6 +1202,9 @@ mod property_based_tests {
         for v in m.null_space() {
             assert_eq!(m * v, zero);
         }
+
+        let nul = m.null_space_matrix();
+        assert_eq!((m * &nul), VecMatrix::new(n, nul.nr_columns()));
 
         if let Some(inv) = m.inverse() {
             assert_eq!(m * inv, one);
