@@ -320,7 +320,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         VecMatrix::new(nr_rows, nr_cols)
     }
 
-    fn is_zero(&self) -> bool {
+    pub fn is_zero(&self) -> bool {
         for i in 0..self.nr_rows {
             for j in 0..self.nr_cols {
                 if !self[i][j].is_zero() {
@@ -562,11 +562,11 @@ impl<T: Entry + Clone> RowEchelonVecMatrix<T> {
 impl<T: Entry + Clone> VecMatrix<T>
     where for <'a> &'a T: ScalarPtr<T>
 {
-    fn rank(&self) -> usize {
+    pub fn rank(&self) -> usize {
         RowEchelonVecMatrix::new(self).rank
     }
 
-    fn null_space(&self) -> Vec<VecMatrix<T>> {
+    pub fn null_space(&self) -> Vec<VecMatrix<T>> {
         let re = RowEchelonVecMatrix::new(&self.transpose());
         let s = re.multiplier.transpose();
 
@@ -575,7 +575,7 @@ impl<T: Entry + Clone> VecMatrix<T>
             .collect()
     }
 
-    fn solve(&self, rhs: &VecMatrix<T>) -> Option<VecMatrix<T>>
+    pub fn solve(&self, rhs: &VecMatrix<T>) -> Option<VecMatrix<T>>
         where T: Div<T, Output=T>
     {
         let re = RowEchelonVecMatrix::new(self);
@@ -611,7 +611,7 @@ impl<T: Entry + Clone> VecMatrix<T>
 impl<T: Entry + Clone> VecMatrix<T>
     where for <'a> &'a T: ScalarPtr<T>
 {
-    fn determinant(&self) -> T {
+    pub fn determinant(&self) -> T {
         assert_eq!(self.nr_rows(), self.nr_columns());
 
         match self.nr_rows() {
@@ -639,7 +639,7 @@ impl<T: Entry + Clone> VecMatrix<T>
         }
     }
 
-    fn inverse(&self) -> Option<Self>
+    pub fn inverse(&self) -> Option<Self>
         where T: Div<T, Output=T>
     {
         assert_eq!(self.nr_rows(), self.nr_columns());
