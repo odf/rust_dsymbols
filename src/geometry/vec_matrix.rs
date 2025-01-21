@@ -575,6 +575,13 @@ impl<T: Entry + Clone> VecMatrix<T>
             .collect()
     }
 
+    pub fn null_space_matrix(&self) -> VecMatrix<T> {
+        let re = RowEchelonVecMatrix::new(&self.transpose());
+        let s = re.multiplier.transpose();
+
+        s.submatrix(0..s.nr_rows(), re.rank..self.nr_columns())
+    }
+
     pub fn solve(&self, rhs: &VecMatrix<T>) -> Option<VecMatrix<T>>
         where T: Div<T, Output=T>
     {
