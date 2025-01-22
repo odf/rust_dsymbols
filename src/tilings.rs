@@ -16,7 +16,7 @@ fn edge_translations<T: DSym>(cov: &T)
     for (i, w) in fg.relators.iter().enumerate() {
         let row = relator_as_vector(nr_gens, w);
         for j in 0..row.len() {
-            mat[i][j] = row[j] as i64;
+            mat[i][j] = row[j];
         }
     }
 
@@ -24,9 +24,7 @@ fn edge_translations<T: DSym>(cov: &T)
 
     let mut result = BTreeMap::new();
     for ((d, i), w) in fg.edge_to_word {
-        let vec: Vec<_> = relator_as_vector(nr_gens, &w).iter()
-            .map(|&x| x as i64)
-            .collect();
+        let vec = relator_as_vector(nr_gens, &w);
         result.insert((d, i), (VecMatrix::from(vec) * &nul).transpose());
     }
 

@@ -1,3 +1,7 @@
+use std::ops::{AddAssign, SubAssign};
+
+use num_traits::{One, Zero};
+
 use super::free_words::FreeWord;
 
 
@@ -132,14 +136,17 @@ fn diagonalize_in_place(mat: &mut Vec<Vec<isize>>) {
 }
 
 
-pub fn relator_as_vector(nr_gens: usize, w: &FreeWord) -> Vec<isize> {
-    let mut row = vec![0; nr_gens];
+pub fn relator_as_vector<T>(nr_gens: usize, w: &FreeWord)
+    -> Vec<T>
+    where T: Zero + One + Clone + AddAssign + SubAssign
+{
+    let mut row = vec![T::zero(); nr_gens];
 
     for &g in w.iter() {
         if g < 0 {
-            row[(-g - 1) as usize] -= 1;
+            row[(-g - 1) as usize] -= T::one();
         } else {
-            row[(g - 1) as usize] += 1;
+            row[(g - 1) as usize] += T::one();
         }
     }
 
