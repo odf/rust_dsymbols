@@ -14,10 +14,7 @@ fn edge_translations<T: DSym>(cov: &T)
 
     let mut mat = VecMatrix::new(fg.relators.len(), nr_gens);
     for (i, w) in fg.relators.iter().enumerate() {
-        let row = relator_as_vector(nr_gens, w);
-        for j in 0..row.len() {
-            mat[i][j] = row[j];
-        }
+        mat[i].copy_from_slice(&relator_as_vector(nr_gens, w));
     }
 
     let nul = mat.null_space_matrix();
