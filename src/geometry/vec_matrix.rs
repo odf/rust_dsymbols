@@ -76,9 +76,7 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
         let mut result = VecMatrix::new(N, M);
 
         for i in 0..N {
-            for j in 0..M {
-                result[i][j] = data[i][j].clone();
-            }
+            result[i].clone_from_slice(&data[i]);
         }
 
         result
@@ -113,9 +111,7 @@ impl<T: Scalar + Clone> From<&[T]> for VecMatrix<T> {
     fn from(data: &[T]) -> Self {
         let mut result = VecMatrix::new(1, data.len());
 
-        for j in 0..data.len() {
-            result[0][j] = data[j].clone();
-        }
+        result[0].clone_from_slice(&data);
 
         result
     }
@@ -126,9 +122,7 @@ impl<T: Scalar + Clone> From<Vec<T>> for VecMatrix<T> {
     fn from(data: Vec<T>) -> Self {
         let mut result = VecMatrix::new(1, data.len());
 
-        for j in 0..data.len() {
-            result[0][j] = data[j].clone();
-        }
+        result[0].clone_from_slice(&data);
 
         result
     }
@@ -172,15 +166,12 @@ impl<T: Scalar + Clone> VecMatrix<T> {
     pub fn hstack(self, rhs: &VecMatrix<T>) -> VecMatrix<T> {
         assert_eq!(self.nr_rows, rhs.nr_rows);
 
+        let m = self.nr_cols;
         let mut result = VecMatrix::new(self.nr_rows, self.nr_cols + rhs.nr_cols);
 
         for i in 0..self.nr_rows {
-            for j in 0..self.nr_cols {
-                result[i][j] = self[i][j].clone();
-            }
-            for j in 0..rhs.nr_cols {
-                result[i][self.nr_cols + j] = rhs[i][j].clone();
-            }
+            result[i][0..m].clone_from_slice(&self[i]);
+            result[i][m..(m + rhs.nr_cols)].clone_from_slice(&rhs[i]);
         }
         result
     }
@@ -190,14 +181,13 @@ impl<T: Scalar + Clone> VecMatrix<T> {
 
         let mut result = VecMatrix::new(self.nr_rows + rhs.nr_rows, self.nr_cols);
 
-        for j in 0..self.nr_cols {
-            for i in 0..self.nr_rows {
-                result[i][j] = self[i][j].clone();
-            }
-            for i in 0..rhs.nr_rows {
-                result[self.nr_rows + i][j] = rhs[i][j].clone();
-            }
+        for i in 0..self.nr_rows {
+            result[i].clone_from_slice(&self[i]);
         }
+        for i in 0..rhs.nr_rows {
+            result[self.nr_rows + i].clone_from_slice(&rhs[i]);
+        }
+
         result
     }
 
