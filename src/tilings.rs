@@ -31,16 +31,41 @@ fn edge_translations<T: DSym>(cov: &T)
 
 #[test]
 fn test_edge_translations() {
+    use crate::dsets::DSet;
     use crate::delaney3d::pseudo_toroidal_cover;
     use crate::dsyms::PartialDSym;
-    use crate::geometry::traits::Array2d;
-
-    let ds = "<1.1:1 3:1,1,1,1:4,3,4>".parse::<PartialDSym>().unwrap();
-    let cov = pseudo_toroidal_cover(&ds).unwrap();
-    let e2t = edge_translations(&cov);
-
-    for (_, t) in e2t {
-        assert_eq!(t.nr_rows(), 3);
-        assert_eq!(t.nr_columns(), 1);
+    
+    fn test(spec: &str) {
+        let ds = spec.parse::<PartialDSym>().unwrap();
+        let cov = pseudo_toroidal_cover(&ds).unwrap();
+        let e2t = edge_translations(&cov);
+        
+        for i in 0..=cov.dim() {
+            for j in i..=cov.dim() {
+                for d in cov.orbit_reps([i, j], 1..=cov.size()) {
+                    let mut s = VecMatrix::new(3, 1);
+                    let mut e = d;
+                    let mut k = i;
+                    loop {
+                        if let Some(v) = e2t.get(&(e, k)) {
+                            s = s + v;
+                        }
+                        e = cov.op(k, e).unwrap();
+                        k = i + j - k;
+        
+                        if e == d && k == i {
+                            break;
+                        }
+                    }
+        
+                    assert!(s.is_zero());
+                }
+            }
+        }
     }
-}
+
+    test("<1.1:1 3:1,1,1,1:4,3,4>");
+    test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
+    test("<1.1:2 3:1 2,1 2,1 2,2:3 3,3 4,4>");
+    test("<1.1:6 3:2 4 6,1 2 3 5 6,3 4 5 6,2 3 4 5 6:6 4,2 3 3,8 4 4>");
+  }
