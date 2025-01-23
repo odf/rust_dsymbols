@@ -19,13 +19,10 @@ fn edge_translations<T: DSym>(cov: &T)
 
     let nul = mat.null_space_matrix();
 
-    let mut result = BTreeMap::new();
-    for ((d, i), w) in fg.edge_to_word {
-        let vec = relator_as_vector(nr_gens, &w);
-        result.insert((d, i), (VecMatrix::from(vec) * &nul).transpose());
-    }
-
-    result
+    BTreeMap::from_iter(fg.edge_to_word.iter().map(|(&(d, i), w)| (
+        (d, i),
+        (VecMatrix::from(relator_as_vector(nr_gens, w)) * &nul).transpose()
+    )))
 }
 
 
