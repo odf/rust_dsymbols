@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Index, IndexMut, Mul};
+use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 
 use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 use crate::geometry::matrix::Matrix;
@@ -305,6 +305,85 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 }
 
 
+impl<T: Scalar + Clone> Sub<&VecMatrix<T>> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn sub(self, rhs: &VecMatrix<T>) -> Self::Output {
+        assert_eq!(self.nr_rows, rhs.nr_rows);
+        assert_eq!(self.nr_cols, rhs.nr_cols);
+
+        let mut result = VecMatrix::new(self.nr_rows, self.nr_cols);
+
+        for i in 0..self.nr_rows {
+            for j in 0..self.nr_cols {
+                result[i][j] = &self[i][j] - &rhs[i][j];
+            }
+        }
+
+        result
+    }
+}
+
+
+impl<T: Scalar + Clone> Sub<&VecMatrix<T>> for VecMatrix<T>
+where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn sub(self, rhs: &VecMatrix<T>) -> Self::Output {
+        &self - rhs
+    }
+}
+
+
+impl<T: Scalar + Clone> Sub<VecMatrix<T>> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn sub(self, rhs: VecMatrix<T>) -> Self::Output {
+        self - &rhs
+    }
+}
+
+
+impl<T: Scalar + Clone> Sub<VecMatrix<T>> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn sub(self, rhs: VecMatrix<T>) -> Self::Output {
+        self - &rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Sub<[[T; M]; N]> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn sub(self, rhs: [[T; M]; N]) -> Self::Output {
+        self - VecMatrix::from(rhs)
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Sub<[[T; M]; N]> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn sub(self, rhs: [[T; M]; N]) -> Self::Output {
+        self - VecMatrix::from(rhs)
+    }
+}
+
+
 impl<T: Scalar + Clone> VecMatrix<T> {
     pub fn zero(nr_rows: usize, nr_cols: usize) -> Self {
         VecMatrix::new(nr_rows, nr_cols)
@@ -428,10 +507,36 @@ impl<T: Scalar + Clone, const M: usize, const L: usize>
 }
 
 
+impl Mul<&VecMatrix<i64>> for i64 {
+    type Output = VecMatrix<i64>;
+
+    fn mul(self, rhs: &VecMatrix<i64>) -> Self::Output {
+        let mut result = VecMatrix::new(rhs.nr_rows, rhs.nr_cols);
+
+        for i in 0..rhs.nr_rows {
+            for j in 0..rhs.nr_cols {
+                result[i][j] = self * rhs[i][j];
+            }
+        }
+
+        result
+    }
+}
+
+
 impl Mul<VecMatrix<i64>> for i64 {
     type Output = VecMatrix<i64>;
 
     fn mul(self, rhs: VecMatrix<i64>) -> Self::Output {
+        self * &rhs
+    }
+}
+
+
+impl Mul<&VecMatrix<f64>> for f64 {
+    type Output = VecMatrix<f64>;
+
+    fn mul(self, rhs: &VecMatrix<f64>) -> Self::Output {
         let mut result = VecMatrix::new(rhs.nr_rows, rhs.nr_cols);
 
         for i in 0..rhs.nr_rows {
@@ -449,15 +554,7 @@ impl Mul<VecMatrix<f64>> for f64 {
     type Output = VecMatrix<f64>;
 
     fn mul(self, rhs: VecMatrix<f64>) -> Self::Output {
-        let mut result = VecMatrix::new(rhs.nr_rows, rhs.nr_cols);
-
-        for i in 0..rhs.nr_rows {
-            for j in 0..rhs.nr_cols {
-                result[i][j] = self * rhs[i][j];
-            }
-        }
-
-        result
+        self * &rhs
     }
 }
 
@@ -488,6 +585,17 @@ impl<T: Scalar + Clone> Mul<&T> for VecMatrix<T>
 
     fn mul(self, rhs: &T) -> Self::Output {
         &self * rhs
+    }
+}
+
+
+impl<T: Scalar + Clone> Mul<T> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        self * &rhs
     }
 }
 
@@ -702,6 +810,37 @@ fn test_matrix_add() {
     assert_eq!(
         VecMatrix::from([[1, 2], [3, 4]]) + [[4, 3], [2, 1]],
         VecMatrix::from([[5, 5], [5, 5]])
+    );
+}
+
+
+#[test]
+fn test_matrix_sub() {
+    assert_eq!(
+        &VecMatrix::from([[1, 2], [3, 4]]) - &VecMatrix::from([[1, 2], [3, 4]]),
+        VecMatrix::from([[0, 0], [0, 0]])
+    );
+    assert_eq!(
+        &VecMatrix::from([[1, 2], [3, 4]]) - VecMatrix::from([[1, 2], [3, 4]]),
+        VecMatrix::from([[0, 0], [0, 0]])
+    );
+    assert_eq!(
+        VecMatrix::from([[1, 2], [3, 4]]) - &VecMatrix::from([[1, 2], [3, 4]]),
+        VecMatrix::from([[0, 0], [0, 0]])
+    );
+
+    assert_eq!(
+        VecMatrix::from([[1, 2], [3, 4]]) - VecMatrix::from([[1, 2], [3, 4]]),
+        VecMatrix::from([[0, 0], [0, 0]])
+    );
+
+    assert_eq!(
+        &VecMatrix::from([[1, 2], [3, 4]]) - [[4, 3], [2, 1]],
+        VecMatrix::from([[-3, -1], [1, 3]])
+    );
+    assert_eq!(
+        VecMatrix::from([[1, 2], [3, 4]]) - [[4, 3], [2, 1]],
+        VecMatrix::from([[-3, -1], [1, 3]])
     );
 }
 
