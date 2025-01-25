@@ -20,6 +20,14 @@ pub trait DSet: Sized {
     fn dim(&self) -> usize;
     fn op(&self, _i: usize, _d: usize) -> Option<usize>;
 
+    fn elements(&self) -> RangeInclusive<usize> {
+        1..=self.size()
+    }
+
+    fn indices(&self) -> RangeInclusive<usize> {
+        0..=self.dim()
+    }
+
     fn set_count(&self) -> usize { 1 }
     fn symbol_count(&self) -> usize { 1 }
 
@@ -71,7 +79,7 @@ pub trait DSet: Sized {
     }
 
     fn full_traversal(&self) -> Traversal<Self, RangeInclusive<usize>> {
-        self.traversal(0..=self.dim(), 1..=self.size())
+        self.traversal(self.indices(), self.elements())
     }
 
     fn partial_orientation(&self) -> Vec<Sign> {
@@ -94,7 +102,7 @@ pub trait DSet: Sized {
     }
 
     fn full_orbit(&self, seed: usize) -> Vec<usize> {
-        self.orbit(0..=self.dim(), seed)
+        self.orbit(self.indices(), seed)
     }
 
     fn orbit_reps<I1, I2>(&self, indices: I1, seeds: I2) -> Vec<usize>
@@ -120,8 +128,8 @@ pub trait DSet: Sized {
     }
 
     fn is_complete(&self) -> bool {
-        (0..=self.dim()).all(|i|
-            (1..=self.size()).all(|d|
+        self.indices().all(|i|
+            self.elements().all(|d|
                 self.op(i, d).is_some()
             )
         )
@@ -129,8 +137,8 @@ pub trait DSet: Sized {
 
 
     fn is_loopless(&self) -> bool {
-        (0..=self.dim()).all(|i|
-            (1..=self.size()).all(|d|
+        self.indices().all(|i|
+            self.elements().all(|d|
                 self.op(i, d) != Some(d)
             )
         )
