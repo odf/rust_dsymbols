@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
 use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 use crate::geometry::matrix::Matrix;
@@ -399,6 +399,28 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
 
         true
+    }
+}
+
+
+impl<T: Scalar + Clone> Neg for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn neg(self) -> Self::Output {
+        self * -T::one()
+    }
+}
+
+
+impl<T: Scalar + Clone> Neg for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn neg(self) -> Self::Output {
+        self * -T::one()
     }
 }
 
