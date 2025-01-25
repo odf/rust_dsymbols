@@ -1,12 +1,104 @@
 use std::collections::BTreeMap;
+use std::ops::Neg;
 
 use crate::dsyms::DSym;
 use crate::fpgroups::invariants::relator_as_vector;
 use crate::fundamental_group::fundamental_group;
+use crate::geometry::traits::Array2d;
 use crate::geometry::vec_matrix::VecMatrix;
 
 
 type EdgeVectors = BTreeMap<(usize, usize), VecMatrix<i64>>;
+
+
+#[derive(Clone)]
+struct VectorLabelledEdge {
+    head: usize,
+    tail: usize,
+    shift: VecMatrix<i64>
+}
+
+
+impl VectorLabelledEdge {
+    fn from(head: usize, tail: usize, shift: VecMatrix<i64>) -> Self {
+        assert_eq!(shift.nr_columns(), 1);
+        Self { head, tail, shift }
+    }
+
+    fn dim(&self) -> usize {
+        self.shift.nr_rows()
+    }
+
+    fn canonical(&self) -> Self {
+        if self.tail < self.head {
+            return -self;
+        } else if self.tail == self.head {
+            for i in 0..self.dim() {
+                if self.shift[i][0] < 0 {
+                    return -self;
+                }
+            }
+        }
+
+        self.clone()
+    }
+}
+
+
+impl Neg for VectorLabelledEdge {
+    type Output = VectorLabelledEdge;
+
+    fn neg(self) -> Self::Output {
+        VectorLabelledEdge::from(self.tail, self.head, -&self.shift)
+    }
+}
+
+
+impl Neg for &VectorLabelledEdge {
+    type Output = VectorLabelledEdge;
+
+    fn neg(self) -> Self::Output {
+        VectorLabelledEdge::from(self.tail, self.head, -&self.shift)
+    }
+}
+
+
+struct Skeleton {
+    chamber_to_node: Vec<usize>,
+    edge_translations: EdgeVectors,
+    corner_shifts: EdgeVectors,
+    edges: Vec<VectorLabelledEdge>
+}
+
+
+impl Skeleton {
+    fn of<T: DSym>(cov: &T) -> Skeleton {
+        todo!()
+    }
+}
+
+
+fn skeleton_edge<T: DSym>(
+    d: usize,
+    cov: &T,
+    e2t: &EdgeVectors,
+    c2s: &EdgeVectors,
+    c2v: BTreeMap<usize, usize>
+)
+    -> VectorLabelledEdge
+{
+    let e = cov.op(0, d).unwrap();
+    let sd = &c2s[&(d, 0)];
+    let se = &c2s[&(e, 0)];
+
+    let shift = if let Some(t) = e2t.get(&(d, 0)) {
+        se + t - sd
+    } else {
+        se - sd
+    };
+
+    VectorLabelledEdge::from(c2v[&d], c2v[&e], shift)
+}
 
 
 fn edge_translations<T: DSym>(cov: &T) -> EdgeVectors
