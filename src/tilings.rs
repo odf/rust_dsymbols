@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use core::cmp::Ordering;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Neg;
 
 use crate::dsyms::DSym;
@@ -11,7 +12,7 @@ use crate::geometry::vec_matrix::VecMatrix;
 type EdgeVectors = BTreeMap<(usize, usize), VecMatrix<i64>>;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct VectorLabelledEdge {
     head: usize,
     tail: usize,
@@ -45,6 +46,39 @@ impl VectorLabelledEdge {
 }
 
 
+impl PartialOrd for VectorLabelledEdge {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        assert_eq!(self.shift.nr_rows(), other.shift.nr_rows());
+
+        match self.head.partial_cmp(&other.head) {
+            Some(Ordering::Equal) => {}
+            ord => return ord,
+        }
+
+        match self.tail.partial_cmp(&other.tail) {
+            Some(Ordering::Equal) => {}
+            ord => return ord,
+        }
+
+        for i in 0..self.shift.nr_rows() {
+            match self.shift[i][0].partial_cmp(&other.shift[i][0]) {
+                Some(Ordering::Equal) => {}
+                ord => return ord,
+            }
+        }
+
+        Some(Ordering::Equal)
+    }
+}
+
+
+impl Ord for VectorLabelledEdge {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+
 impl Neg for VectorLabelledEdge {
     type Output = VectorLabelledEdge;
 
@@ -73,7 +107,26 @@ struct Skeleton {
 
 impl Skeleton {
     fn of<T: DSym>(cov: &T) -> Skeleton {
-        todo!()
+        let c2n = chamber_to_node(cov);
+        let e2t = edge_translations(cov);
+        let c2s = corner_shifts(cov, &e2t);
+
+        let indices = cov.indices().filter(|&i| i != 1);
+        let mut edges = BTreeSet::new();
+
+        for d in cov.orbit_reps(indices, cov.elements()) {
+            edges.insert(skeleton_edge(d, cov, &e2t, &c2s, &c2n).canonical());
+        }
+
+        let mut edges: Vec<_> = edges.iter().cloned().collect();
+        edges.sort();
+
+        Skeleton {
+            chamber_to_node: c2n,
+            edge_translations: e2t,
+            corner_shifts: c2s,
+            edges
+        }
     }
 }
 
@@ -83,7 +136,7 @@ fn skeleton_edge<T: DSym>(
     cov: &T,
     e2t: &EdgeVectors,
     c2s: &EdgeVectors,
-    c2v: &BTreeMap<usize, usize>
+    c2n: &Vec<usize>
 )
     -> VectorLabelledEdge
 {
@@ -97,17 +150,17 @@ fn skeleton_edge<T: DSym>(
         se - sd
     };
 
-    VectorLabelledEdge::from(c2v[&d], c2v[&e], shift)
+    VectorLabelledEdge::from(c2n[d], c2n[e], shift)
 }
 
 
-fn chamber_to_node<T: DSym>(cov: &T) -> BTreeMap<usize, usize> {
-    let mut result = BTreeMap::new();
+fn chamber_to_node<T: DSym>(cov: &T) -> Vec<usize> {
+    let mut result = vec![0; cov.size() + 1];
     let reps = cov.orbit_reps(1..=cov.dim(), cov.elements());
 
     for (i, &d) in reps.iter().enumerate() {
         for e in cov.orbit(1..=cov.dim(), d) {
-            result.insert(e, i + 1);
+            result[e] = i + 1;
         }
     }
 
@@ -241,19 +294,34 @@ mod test {
 
             for d in cov.elements() {
                 for i in 1..=cov.dim() {
-                    assert_eq!(c2n[&d], c2n[&cov.op(i, d).unwrap()]);
+                    assert_eq!(c2n[d], c2n[cov.op(i, d).unwrap()]);
                 }
             }
 
             let reps = cov.orbit_reps(1..=cov.dim(), cov.elements());
-            for d in &reps {
-                assert!(c2n[&d] > 0);
-                for e in &reps {
+            for &d in &reps {
+                assert!(c2n[d] > 0);
+                for &e in &reps {
                     if d != e {
                         assert_ne!(c2n[d], c2n[e]);
                     }
                 }
             }
+        }
+
+        test("<1.1:1 3:1,1,1,1:4,3,4>");
+        test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
+        test("<1.1:2 3:1 2,1 2,1 2,2:3 3,3 4,4>");
+        test("<1.1:6 3:2 4 6,1 2 3 5 6,3 4 5 6,2 3 4 5 6:6 4,2 3 3,8 4 4>");
+    }
+
+    #[test]
+    fn test_skeleton() {
+        fn test(spec: &str) {
+            let ds = spec.parse::<PartialDSym>().unwrap();
+            let cov = pseudo_toroidal_cover(&ds).unwrap();
+            let skel = Skeleton::of(&cov);
+            println!("{:?}", &skel.edges);
         }
 
         test("<1.1:1 3:1,1,1,1:4,3,4>");

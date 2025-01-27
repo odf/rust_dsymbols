@@ -4,7 +4,7 @@ use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 use crate::geometry::matrix::Matrix;
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VecMatrix<T> {
     data: Vec<T>,
     nr_rows: usize,
