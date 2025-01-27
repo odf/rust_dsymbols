@@ -138,6 +138,17 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
     }
 
+    pub fn convert_to<S>(&self)
+        -> VecMatrix<S>
+        where S: Scalar + Clone + From<T>
+    {
+        VecMatrix {
+            data: self.data.iter().map(|x| x.clone().into()).collect(),
+            nr_rows: self.nr_rows,
+            nr_cols: self.nr_cols
+        }
+    }
+
     pub fn transpose(&self) -> VecMatrix<T> {
         let mut result = VecMatrix::new(self.nr_cols, self.nr_rows);
 

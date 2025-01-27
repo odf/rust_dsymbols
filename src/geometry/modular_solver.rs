@@ -242,10 +242,12 @@ pub fn solve(a: &Matrix, b: &Matrix) -> Option<Vec<Vec<BigRational>>> {
 
 
 mod test {
-    use crate::geometry::traits::Array2d;
+    use crate::geometry::traits::{Array2d, Scalar};
     use crate::geometry::vec_matrix::VecMatrix;
 
     use super::*;
+
+    impl Scalar for BigInt {}
 
     fn unpack(m: &VecMatrix<i64>) -> Matrix {
         let mut result = vec![];
@@ -264,14 +266,7 @@ mod test {
     }
 
     fn convert(m: &VecMatrix<i64>) -> VecMatrix<BigRational> {
-        let mut result = VecMatrix::new(m.nr_rows(), m.nr_columns());
-
-        for i in 0..m.nr_rows() {
-            for j in 0..m.nr_columns() {
-                result[i][j] = BigRational::from(BigInt::from(m[i][j]));
-            }
-        }
-        result
+        m.convert_to::<BigInt>().convert_to()
     }
 
     #[test]
