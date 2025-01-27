@@ -83,7 +83,7 @@ fn skeleton_edge<T: DSym>(
     cov: &T,
     e2t: &EdgeVectors,
     c2s: &EdgeVectors,
-    c2v: BTreeMap<usize, usize>
+    c2v: &BTreeMap<usize, usize>
 )
     -> VectorLabelledEdge
 {
@@ -98,6 +98,20 @@ fn skeleton_edge<T: DSym>(
     };
 
     VectorLabelledEdge::from(c2v[&d], c2v[&e], shift)
+}
+
+
+fn chamber_to_node<T: DSym>(cov: &T) -> BTreeMap<usize, usize> {
+    let mut result = BTreeMap::new();
+    let reps = cov.orbit_reps(1..=cov.dim(), cov.elements());
+
+    for (i, &d) in reps.iter().enumerate() {
+        for e in cov.orbit(1..=cov.dim(), d) {
+            result.insert(e, i + 1);
+        }
+    }
+
+    result
 }
 
 
@@ -206,6 +220,37 @@ mod test {
                                 assert_eq!(sd, sdj);
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        test("<1.1:1 3:1,1,1,1:4,3,4>");
+        test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
+        test("<1.1:2 3:1 2,1 2,1 2,2:3 3,3 4,4>");
+        test("<1.1:6 3:2 4 6,1 2 3 5 6,3 4 5 6,2 3 4 5 6:6 4,2 3 3,8 4 4>");
+    }
+
+
+    #[test]
+    fn test_chamber_to_node() {
+        fn test(spec: &str) {
+            let ds = spec.parse::<PartialDSym>().unwrap();
+            let cov = pseudo_toroidal_cover(&ds).unwrap();
+            let c2n = chamber_to_node(&cov);
+
+            for d in cov.elements() {
+                for i in 1..=cov.dim() {
+                    assert_eq!(c2n[&d], c2n[&cov.op(i, d).unwrap()]);
+                }
+            }
+
+            let reps = cov.orbit_reps(1..=cov.dim(), cov.elements());
+            for d in &reps {
+                assert!(c2n[&d] > 0);
+                for e in &reps {
+                    if d != e {
+                        assert_ne!(c2n[d], c2n[e]);
                     }
                 }
             }
