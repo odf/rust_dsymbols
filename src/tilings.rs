@@ -112,14 +112,11 @@ impl Skeleton {
         let c2s = corner_shifts(cov, &e2t);
 
         let indices = cov.indices().filter(|&i| i != 1);
-        let mut edges = BTreeSet::new();
 
-        for d in cov.orbit_reps(indices, cov.elements()) {
-            edges.insert(skeleton_edge(d, cov, &e2t, &c2s, &c2n).canonical());
-        }
-
-        let mut edges: Vec<_> = edges.iter().cloned().collect();
-        edges.sort();
+        let edges = cov.orbit_reps(indices, cov.elements()).iter()
+            .map(|&d| skeleton_edge(d, cov, &e2t, &c2s, &c2n).canonical())
+            .collect::<BTreeSet<_>>().iter().cloned() // sorts and deduplicates
+            .collect();
 
         Skeleton {
             chamber_to_node: c2n,
