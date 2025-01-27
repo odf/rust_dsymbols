@@ -1,5 +1,6 @@
 use core::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
 use std::ops::Neg;
 
 use crate::dsyms::DSym;
@@ -42,6 +43,24 @@ impl VectorLabelledEdge {
         }
 
         self.clone()
+    }
+}
+
+
+impl fmt::Display for VectorLabelledEdge {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {}, [", self.head, self.tail)?;
+
+        for i in 0..self.shift.nr_rows() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", self.shift[i][0])?;
+        }
+
+        write!(f, "])")?;
+
+        Ok(())
     }
 }
 
@@ -318,7 +337,11 @@ mod test {
             let ds = spec.parse::<PartialDSym>().unwrap();
             let cov = pseudo_toroidal_cover(&ds).unwrap();
             let skel = Skeleton::of(&cov);
-            println!("{:?}", &skel.edges);
+
+            for e in skel.edges {
+                println!("{e}");
+            }
+            println!();
         }
 
         test("<1.1:1 3:1,1,1,1:4,3,4>");
