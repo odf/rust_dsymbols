@@ -121,7 +121,7 @@ pub fn modular_matrix_product(a: &Matrix, b: &Matrix, prime: i64) -> Matrix {
         let mut row_out = vec![];
         for j in 0..ncols_b {
             let p = (0..ncols_a)
-                .map(|i| (row[i] * b[i][j]) % prime)
+                .map(|i| ((row[i] % prime) * (b[i][j] % prime)) % prime)
                 .reduce(|p, q| (p + q) % prime)
                 .unwrap();
             row_out.push(p);
@@ -244,10 +244,42 @@ pub fn solve(a: &Matrix, b: &Matrix) -> Option<Vec<Vec<BigRational>>> {
 mod test {
     use crate::geometry::traits::{Array2d, Scalar};
     use crate::geometry::vec_matrix::VecMatrix;
+    use proptest::prelude::*;
+    use proptest::collection::vec;
 
     use super::*;
 
     impl Scalar for BigInt {}
+
+    fn matrix_from_values(v: &[i64], m: usize) -> VecMatrix<i64> {
+        let n = v.len() / m;
+        let mut result = VecMatrix::new(n, m);
+
+        let mut k = 0;
+        for i in 0..n {
+            for j in 0..m{
+                result[i][j] = v[k];
+                k += 1;
+            }
+        }
+
+        result
+    }
+
+    fn sized_matrix(size: i64, n: usize, m: usize)
+        -> impl Strategy<Value=VecMatrix<i64>>
+    {
+        vec(0..size, n * m).prop_map(move |v| matrix_from_values(&v, m))
+    }
+
+    fn equations(entry_size: i64, dmin: usize, dmax: usize)
+        -> impl Strategy<Value=(VecMatrix<i64>, VecMatrix<i64>)>
+    {
+        (dmin..=dmax).prop_flat_map(move |n| (
+            sized_matrix(entry_size, n, n),
+            sized_matrix(entry_size, n, 1)
+        ))
+    }
 
     fn unpack(m: &VecMatrix<i64>) -> Matrix {
         let mut result = vec![];
@@ -269,25 +301,39 @@ mod test {
         m.convert_to::<BigInt>().convert_to()
     }
 
+    fn test_solver(a: VecMatrix<i64>, b: VecMatrix<i64>) {
+        let ab = &a * &b;
+
+        let x = solve(&unpack(&a), &unpack(&ab));
+
+        if let Some(x) = x {
+            assert_eq!(&convert(&a) * &pack(&x), convert(&ab));
+        }
+    }
+
+    fn test_solver_on_arrays<const N: usize, const M: usize, const L: usize>(
+        a: [[i64; M]; N], b: [[i64; L]; M]
+    )
+    {
+        test_solver(VecMatrix::from(a), VecMatrix::from(b));
+    }
+
     #[test]
-    fn test_modular_solver() {
-        fn test<const N: usize, const M: usize, const L: usize>(
-            a: [[i64; M]; N], b: [[i64; L]; M]
-        )
-        {
-            let a = VecMatrix::from(a);
-            let b = VecMatrix::from(b);
-            let ab = &a * &b;
+    fn test_solver_examples() {
+        test_solver_on_arrays([[1, 2], [3, 4]], [[1, 0], [1, -3]]);
+        test_solver_on_arrays([[1, 2], [3, 6]], [[1], [1]]);
+        test_solver_on_arrays([[0, 0], [0, 1]], [[0], [-1]]);
+    }
 
-            let x = solve(&unpack(&a), &unpack(&ab));
-
-            if let Some(x) = x {
-                assert_eq!(&convert(&a) * &pack(&x), convert(&ab));
-            }
+    proptest! {
+        #[test]
+        fn test_solver_generated_small((m, v) in equations(3, 2, 6)) {
+            test_solver(m, v);
         }
 
-        test([[1, 2], [3, 4]], [[1, 0], [1, -3]]);
-        test([[1, 2], [3, 6]], [[1], [1]]);
-        test([[0, 0], [0, 1]], [[0], [-1]]);
+        #[test]
+        fn test_solver_generated_large((m, v) in equations(1_000_000_000, 2, 10)) {
+            test_solver(m, v);
+        }
     }
 }
