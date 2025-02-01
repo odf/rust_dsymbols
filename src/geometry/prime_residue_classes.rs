@@ -46,6 +46,7 @@ fn test_valid() {
     assert!(PrimeResidueClass::<2>::valid());
     assert!(PrimeResidueClass::<61>::valid());
     assert!(PrimeResidueClass::<9999991>::valid());
+    assert!(PrimeResidueClass::<3037000493>::valid()); // largest prime we can use
 }
 
 
@@ -54,4 +55,5 @@ fn test_invalid() {
     assert!(!PrimeResidueClass::<1>::valid());
     assert!(!PrimeResidueClass::<77>::valid());
     assert!(!PrimeResidueClass::<9999992>::valid());
+    assert!(!PrimeResidueClass::<3037000507>::valid()); // prime, but too large
 }
