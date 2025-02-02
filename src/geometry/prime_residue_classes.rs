@@ -119,8 +119,8 @@ impl<const P: i64> One for PrimeResidueClass<P> {
 
 
 mod test {
+    use num_traits::one;
     use proptest::prelude::*;
-    use proptest::collection::vec;
 
     use super::*;
 
@@ -148,17 +148,18 @@ mod test {
         assert_eq!(a + 47.into() - 47.into(), a);
     }
 
+
     proptest! {
         #[test]
         fn test_binomial(n in 0..61) {
             let n = PrimeResidueClass::<61>::from(n as i64);
-            assert_eq!((n - 1.into()) * (n + 1.into()), n * n - 1.into());
+            assert_eq!((n - one()) * (n + one()), n * n - one());
         }
 
         #[test]
         fn test_binomial_large(n in 0..3037000493u32) {
             let n = PrimeResidueClass::<3037000493>::from(n as i64);
-            assert_eq!((n - 1.into()) * (n + 1.into()), n * n - 1.into());
+            assert_eq!((n - one()) * (n + one()), n * n - one());
         }
 
         #[test]
@@ -167,13 +168,15 @@ mod test {
             let b = PrimeResidueClass::<61>::from(b as i64);
 
             assert_eq!(a * b / b, a);
+            assert_eq!(a / b * b, a);
         }
 
         #[test]
         fn test_div_mul_large(a in 0..3037000493u32, b in 1..3037000493u32) {
             let a = PrimeResidueClass::<3037000493>::from(a as i64);
             let b = PrimeResidueClass::<3037000493>::from(b as i64);
-            assert_eq!(a * b / b, a);
+
+            assert_eq!(a / b * b, a);
         }
     }
 }
