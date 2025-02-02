@@ -118,33 +118,54 @@ impl<const P: i64> One for PrimeResidueClass<P> {
 }
 
 
-#[test]
-fn test_valid() {
-    assert!(PrimeResidueClass::<2>::valid());
-    assert!(PrimeResidueClass::<61>::valid());
-    assert!(PrimeResidueClass::<9999991>::valid());
-    assert!(PrimeResidueClass::<3037000493>::valid()); // largest prime we can use
-}
+mod test {
+    use proptest::prelude::*;
+    use proptest::collection::vec;
+
+    use super::*;
+
+    #[test]
+    fn test_valid() {
+        assert!(PrimeResidueClass::<2>::valid());
+        assert!(PrimeResidueClass::<61>::valid());
+        assert!(PrimeResidueClass::<9999991>::valid());
+        assert!(PrimeResidueClass::<3037000493>::valid()); // largest prime we can use
+    }
 
 
-#[test]
-fn test_invalid() {
-    assert!(!PrimeResidueClass::<1>::valid());
-    assert!(!PrimeResidueClass::<77>::valid());
-    assert!(!PrimeResidueClass::<9999992>::valid());
-    assert!(!PrimeResidueClass::<3037000507>::valid()); // prime, but too large
-}
+    #[test]
+    fn test_invalid() {
+        assert!(!PrimeResidueClass::<1>::valid());
+        assert!(!PrimeResidueClass::<77>::valid());
+        assert!(!PrimeResidueClass::<9999992>::valid());
+        assert!(!PrimeResidueClass::<3037000507>::valid()); // prime, but too large
+    }
 
 
-#[test]
-fn test_add_sub() {
-    let a = PrimeResidueClass::<61>::from(54);
-    assert_eq!(a + 47.into() - 47.into(), a);
-}
+    #[test]
+    fn test_add_sub() {
+        let a = PrimeResidueClass::<61>::from(54);
+        assert_eq!(a + 47.into() - 47.into(), a);
+    }
 
 
-#[test]
-fn test_div_mul() {
-    let a = PrimeResidueClass::<61>::from(54);
-    assert_eq!(a * 47.into() / 47.into(), a);
+    #[test]
+    fn test_div_mul() {
+        let a = PrimeResidueClass::<61>::from(54);
+        assert_eq!(a * 47.into() / 47.into(), a);
+    }
+
+    proptest! {
+        #[test]
+        fn test_binomial(n in 0..61) {
+            let n = PrimeResidueClass::<61>::from(n as i64);
+            assert_eq!((n - 1.into()) * (n + 1.into()), n * n - 1.into());
+        }
+
+        #[test]
+        fn test_binomial_large(n in 0..3037000493u32) {
+            let n = PrimeResidueClass::<3037000493>::from(n as i64);
+            assert_eq!((n - 1.into()) * (n + 1.into()), n * n - 1.into());
+        }
+    }
 }
