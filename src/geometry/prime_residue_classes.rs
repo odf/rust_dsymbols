@@ -148,13 +148,6 @@ mod test {
         assert_eq!(a + 47.into() - 47.into(), a);
     }
 
-
-    #[test]
-    fn test_div_mul() {
-        let a = PrimeResidueClass::<61>::from(54);
-        assert_eq!(a * 47.into() / 47.into(), a);
-    }
-
     proptest! {
         #[test]
         fn test_binomial(n in 0..61) {
@@ -166,6 +159,21 @@ mod test {
         fn test_binomial_large(n in 0..3037000493u32) {
             let n = PrimeResidueClass::<3037000493>::from(n as i64);
             assert_eq!((n - 1.into()) * (n + 1.into()), n * n - 1.into());
+        }
+
+        #[test]
+        fn test_div_mul(a in 0..61, b in 1..61) {
+            let a = PrimeResidueClass::<61>::from(a as i64);
+            let b = PrimeResidueClass::<61>::from(b as i64);
+
+            assert_eq!(a * b / b, a);
+        }
+
+        #[test]
+        fn test_div_mul_large(a in 0..3037000493u32, b in 1..3037000493u32) {
+            let a = PrimeResidueClass::<3037000493>::from(a as i64);
+            let b = PrimeResidueClass::<3037000493>::from(b as i64);
+            assert_eq!(a * b / b, a);
         }
     }
 }
