@@ -44,7 +44,6 @@ impl<const P: i64> Entry for PrimeResidueClass<P> {
 }
 
 
-
 mod property_based_tests {
     use super::*;
     use proptest::prelude::*;
@@ -137,31 +136,34 @@ mod property_based_tests {
         }
     }
 
+    const P_SMALL: i64 = 61;
+    const P_LARGE: i64 = 3_037_000_493;
+
     proptest! {
         #[test]
-        fn test_matrix_big(
-            m in matrix::<PrimeResidueClass<61>>(10, 2, 6)
-        ) {
-            test_matrix(&m);
-        }
-
-        #[test]
         fn test_matrix_small(
-            m in matrix::<PrimeResidueClass<61>>(3, 2, 6)
+            m in matrix::<PrimeResidueClass<P_SMALL>>(3, 2, 8)
         ) {
             test_matrix(&m);
         }
 
         #[test]
-        fn test_solver_big(
-            (m, v) in equations::<PrimeResidueClass<61>>(10, 2, 6)
+        fn test_matrix_large(
+            m in matrix::<PrimeResidueClass<P_LARGE>>(1_000_000_000, 2, 16)
+        ) {
+            test_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_small(
+            (m, v) in equations::<PrimeResidueClass<P_SMALL>>(3, 2, 8)
         ) {
             test_solver(&m, &v);
         }
 
         #[test]
-        fn test_solver_small(
-            (m, v) in equations::<PrimeResidueClass<61>>(3, 2, 6)
+        fn test_solver_large(
+            (m, v) in equations::<PrimeResidueClass<P_LARGE>>(1_000_000_000, 2, 16)
         ) {
             test_solver(&m, &v);
         }
