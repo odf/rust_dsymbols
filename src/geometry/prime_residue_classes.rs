@@ -4,7 +4,7 @@ use num_traits::{One, Zero};
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct PrimeResidueClass<const P: i64> {
+pub struct PrimeResidueClass<const P: i64> {
     value: i64
 }
 
@@ -51,10 +51,37 @@ impl<const P: i64> From<i64> for PrimeResidueClass<P> {
 }
 
 
+impl<const P: i64> From<i32> for PrimeResidueClass<P> {
+    fn from(n: i32) -> Self {
+        PrimeResidueClass {
+            value: if n >= 0 { (n as i64) % P } else { (n as i64) % P + P }
+        }
+    }
+}
+
+
 impl<const P: i64> Add<PrimeResidueClass<P>> for PrimeResidueClass<P> {
     type Output = Self;
 
     fn add(self, rhs: PrimeResidueClass<P>) -> Self::Output {
+        (self.value + rhs.value).into()
+    }
+}
+
+
+impl<const P: i64> Add<PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn add(self, rhs: PrimeResidueClass<P>) -> Self::Output {
+        (self.value + rhs.value).into()
+    }
+}
+
+
+impl<const P: i64> Add<&PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn add(self, rhs: &PrimeResidueClass<P>) -> Self::Output {
         (self.value + rhs.value).into()
     }
 }
@@ -69,8 +96,26 @@ impl<const P: i64> Sub<PrimeResidueClass<P>> for PrimeResidueClass<P> {
 }
 
 
+impl<const P: i64> Sub<PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn sub(self, rhs: PrimeResidueClass<P>) -> Self::Output {
+        (self.value - rhs.value).into()
+    }
+}
+
+
+impl<const P: i64> Sub<&PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn sub(self, rhs: &PrimeResidueClass<P>) -> Self::Output {
+        (self.value - rhs.value).into()
+    }
+}
+
+
 impl<const P: i64> Mul<PrimeResidueClass<P>> for PrimeResidueClass<P> {
-    type Output = Self;
+    type Output = PrimeResidueClass<P>;
 
     fn mul(self, rhs: PrimeResidueClass<P>) -> Self::Output {
         (self.value * rhs.value).into()
@@ -78,8 +123,26 @@ impl<const P: i64> Mul<PrimeResidueClass<P>> for PrimeResidueClass<P> {
 }
 
 
+impl<const P: i64> Mul<PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn mul(self, rhs: PrimeResidueClass<P>) -> Self::Output {
+        (self.value * rhs.value).into()
+    }
+}
+
+
+impl<const P: i64> Mul<&PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn mul(self, rhs: &PrimeResidueClass<P>) -> Self::Output {
+        (self.value * rhs.value).into()
+    }
+}
+
+
 impl<const P: i64> Div<PrimeResidueClass<P>> for PrimeResidueClass<P> {
-    type Output = Self;
+    type Output = PrimeResidueClass<P>;
 
     fn div(self, rhs: PrimeResidueClass<P>) -> Self::Output {
         self * rhs.inverse()
@@ -87,8 +150,35 @@ impl<const P: i64> Div<PrimeResidueClass<P>> for PrimeResidueClass<P> {
 }
 
 
+impl<const P: i64> Div<PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn div(self, rhs: PrimeResidueClass<P>) -> Self::Output {
+        self * rhs.inverse()
+    }
+}
+
+
+impl<const P: i64> Div<&PrimeResidueClass<P>> for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
+
+    fn div(self, rhs: &PrimeResidueClass<P>) -> Self::Output {
+        self * rhs.inverse()
+    }
+}
+
+
 impl<const P: i64> Neg for PrimeResidueClass<P> {
-    type Output = Self;
+    type Output = PrimeResidueClass<P>;
+
+    fn neg(self) -> Self::Output {
+        (-self.value).into()
+    }
+}
+
+
+impl<const P: i64> Neg for &PrimeResidueClass<P> {
+    type Output = PrimeResidueClass<P>;
 
     fn neg(self) -> Self::Output {
         (-self.value).into()
