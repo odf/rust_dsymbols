@@ -60,6 +60,13 @@ impl<const P: i64> From<i32> for PrimeResidueClass<P> {
 }
 
 
+impl<const P: i64> From<PrimeResidueClass<P>> for i64 {
+    fn from(n: PrimeResidueClass<P>) -> Self {
+        n.value
+    }
+}
+
+
 impl<const P: i64> Add<PrimeResidueClass<P>> for PrimeResidueClass<P> {
     type Output = Self;
 
