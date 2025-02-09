@@ -51,6 +51,13 @@ fn number_of_p_adic_steps_needed(
     a: &VecMatrix<i64>, b: &VecMatrix<i64>, prime: i64
 ) -> u64
 {
+    fn column_norm(a: &VecMatrix<i64>, j: usize) -> f64 {
+        (0..a.nr_rows())
+            .map(|i| (a[i][j] as f64).powf(2.0))
+            .sum::<f64>()
+            .sqrt()
+    }
+
     let mut log_norms: Vec<_> = (0..a.nr_columns())
         .map(|j| column_norm(a, j).ln())
         .collect();
@@ -65,11 +72,6 @@ fn number_of_p_adic_steps_needed(
     let golden_ratio = (1.0 + (5 as f64).sqrt()) / 2.0;
 
     (2.0 * (log_delta + golden_ratio.ln()) / (prime as f64).ln()).ceil() as u64
-}
-
-
-fn column_norm(a: &VecMatrix<i64>, j: usize) -> f64 {
-    (0..a.nr_rows()).map(|i| (a[i][j] as f64).powf(2.0)).sum::<f64>().sqrt()
 }
 
 
@@ -232,6 +234,15 @@ mod property_based_tests {
         }
     }
 
+    fn test_modular_solver(m: &VecMatrix<i64>, v: &VecMatrix<i64>) {
+        let convert = |m: &VecMatrix<i64>| m.convert_to::<BigInt>().convert_to();
+
+        let b = m * v;
+        if let Some(sol) = solve(m, &b) {
+            assert_eq!(convert(m) * sol, convert(&b));
+        }
+    }
+
     const P_SMALL: i64 = 61;
     const P_LARGE: i64 = 3_037_000_493;
 
@@ -262,6 +273,20 @@ mod property_based_tests {
             (m, v) in equations::<PrimeResidueClass<P_LARGE>>(1_000_000_000, 2, 16)
         ) {
             test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_modular_solver_small(
+            (m, v) in equations::<i64>(3, 2, 6)
+        ) {
+            test_modular_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_modular_solver_large(
+            (m, v) in equations::<i64>(1_000_000_000, 2, 10)
+        ) {
+            test_modular_solver(&m, &v);
         }
     }
 }
