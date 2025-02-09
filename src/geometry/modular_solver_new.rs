@@ -175,32 +175,32 @@ mod property_based_tests {
         result
     }
 
-    fn entry<T>(size: i32)
+    fn entry<T>(size: i64)
         -> impl Strategy<Value=T>
-        where T: From<i32> + std::fmt::Debug
+        where T: From<i64> + std::fmt::Debug
     {
         (0..size).prop_map(T::from)
     }
 
-    fn sized_matrix<T>(size: i32, n: usize, m: usize)
+    fn sized_matrix<T>(size: i64, n: usize, m: usize)
         -> impl Strategy<Value=VecMatrix<T>>
-        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+        where T: Scalar + Clone + From<i64> + std::fmt::Debug + 'static
     {
         vec(entry(size), n * m).prop_map(move |v| matrix_from_values(&v, m))
     }
 
-    fn matrix<T>(entry_size: i32, dmin: usize, dmax: usize)
+    fn matrix<T>(entry_size: i64, dmin: usize, dmax: usize)
         -> impl Strategy<Value=VecMatrix<T>>
-        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+        where T: Scalar + Clone + From<i64> + std::fmt::Debug + 'static
     {
         (dmin..=dmax).prop_flat_map(move |n|
             sized_matrix(entry_size, n, n)
         )
     }
 
-    fn equations<T>(entry_size: i32, dmin: usize, dmax: usize)
+    fn equations<T>(entry_size: i64, dmin: usize, dmax: usize)
         -> impl Strategy<Value=(VecMatrix<T>, VecMatrix<T>)>
-        where T: Scalar + Clone + From<i32> + std::fmt::Debug + 'static
+        where T: Scalar + Clone + From<i64> + std::fmt::Debug + 'static
     {
         (dmin..=dmax).prop_flat_map(move |n|
             (sized_matrix(entry_size, n, n), sized_matrix(entry_size, n, 1))
@@ -266,7 +266,7 @@ mod property_based_tests {
 
         #[test]
         fn test_matrix_large(
-            m in matrix::<PrimeResidueClass<P_LARGE>>(1_000_000_000, 2, 16)
+            m in matrix::<PrimeResidueClass<P_LARGE>>(10_000_000_000, 2, 16)
         ) {
             test_matrix(&m);
         }
@@ -280,7 +280,7 @@ mod property_based_tests {
 
         #[test]
         fn test_solver_large(
-            (m, v) in equations::<PrimeResidueClass<P_LARGE>>(1_000_000_000, 2, 16)
+            (m, v) in equations::<PrimeResidueClass<P_LARGE>>(10_000_000_000, 2, 16)
         ) {
             test_solver(&m, &v);
         }
