@@ -1,5 +1,6 @@
 use core::f64;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
+use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Zero, Signed};
 
@@ -14,6 +15,7 @@ pub trait Scalar:
 {
 }
 
+impl Scalar for BigInt {}
 impl Scalar for BigRational {}
 impl Scalar for f64 {}
 impl Scalar for i64 {}
@@ -29,6 +31,7 @@ pub trait ScalarPtr<T>:
 {
 }
 
+impl ScalarPtr<BigInt> for &BigInt {}
 impl ScalarPtr<BigRational> for &BigRational {}
 impl ScalarPtr<f64> for &f64 {}
 impl ScalarPtr<i64> for &i64 {}

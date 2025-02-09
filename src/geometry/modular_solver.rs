@@ -249,8 +249,6 @@ mod test {
 
     use super::*;
 
-    impl Scalar for BigInt {}
-
     fn matrix_from_values(v: &[i64], m: usize) -> VecMatrix<i64> {
         let n = v.len() / m;
         let mut result = VecMatrix::new(n, m);
