@@ -1,7 +1,10 @@
+use num_bigint::BigInt;
+use num_rational::BigRational;
 use num_traits::Zero;
 
 use super::prime_residue_classes::PrimeResidueClass;
 use super::traits::{Array2d, Entry, Scalar, ScalarPtr};
+use super::vec_matrix::VecMatrix;
 
 
 impl<const P: i64> Scalar for PrimeResidueClass<P> {}
@@ -9,7 +12,7 @@ impl<const P: i64> ScalarPtr<PrimeResidueClass<P>> for &PrimeResidueClass<P> {}
 
 
 impl<const P: i64> Entry for PrimeResidueClass<P> {
-    fn can_divide(a: &Self, b: &Self) -> bool {
+    fn can_divide(_: &Self, b: &Self) -> bool {
         !b.is_zero()
     }
 
@@ -44,11 +47,104 @@ impl<const P: i64> Entry for PrimeResidueClass<P> {
 }
 
 
+fn number_of_p_adic_steps_needed(
+    a: &VecMatrix<i64>, b: &VecMatrix<i64>, prime: i64
+) -> u64
+{
+    let mut log_norms: Vec<_> = (0..a.nr_columns())
+        .map(|j| column_norm(a, j).ln())
+        .collect();
+    log_norms.push((0..b.nr_columns())
+        .map(|j| column_norm(b, j).ln())
+        .max_by(|a, b| a.total_cmp(b))
+        .unwrap());
+
+    log_norms.sort_by(|a, b| a.total_cmp(b));
+
+    let log_delta: f64 = log_norms.iter().skip(1).sum();
+    let golden_ratio = (1.0 + (5 as f64).sqrt()) / 2.0;
+
+    (2.0 * (log_delta + golden_ratio.ln()) / (prime as f64).ln()).ceil() as u64
+}
+
+
+fn column_norm(a: &VecMatrix<i64>, j: usize) -> f64 {
+    (0..a.nr_rows()).map(|i| (a[i][j] as f64).powf(2.0)).sum::<f64>().sqrt()
+}
+
+
+fn rational_reconstruction(s: &BigInt, h: &BigInt) -> BigRational {
+    let (mut u, mut u1) = (h.clone(), s.clone());
+    let (mut v, mut v1) = (BigInt::from(0), BigInt::from(1));
+    let mut sign = BigInt::from(1);
+
+    while &u1.pow(2) > &h {
+        let (q, r) = (&u / &u1, &u % &u1);
+
+        (u, u1) = (u1, r);
+
+        let v1_next = v + q * &v1;
+        (v, v1) = (v1, v1_next);
+
+        sign = -sign;
+    }
+
+    BigRational::new(sign * u1, v1)
+}
+
+
+const PRIME: i64 = 9999991;
+
+
+pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
+    -> Option<VecMatrix<BigRational>>
+{
+    if let Some(c) = a.convert_to::<PrimeResidueClass<PRIME>>().inverse() {
+        let nr_steps = number_of_p_adic_steps_needed(a, b, PRIME);
+        let nrows = b.nr_rows();
+        let ncols = b.nr_columns();
+
+        let mut p = BigInt::from(1);
+        let mut b = b.clone();
+        let mut s = VecMatrix::<BigInt>::new(nrows, ncols);
+
+        for step in 0..nr_steps {
+            let x = (&c * b.convert_to()).convert_to();
+            for i in 0..nrows {
+                for j in 0..ncols {
+                    s[i][j] += &p * x[i][j];
+                }
+            }
+
+            p *= PRIME;
+
+            if step + 1 < nr_steps {
+                let ax = a * x;
+                for i in 0..nrows {
+                    for j in 0..ncols {
+                        b[i][j] = (b[i][j] - ax[i][j]) / PRIME;
+                    }
+                }
+            }
+        }
+
+        let mut result = VecMatrix::new(nrows, ncols);
+        for i in 0..nrows {
+            for j in 0..ncols {
+                result[i][j] = rational_reconstruction(&s[i][j], &p);
+            }
+        }
+        Some(result)
+    } else {
+        None
+    }
+}
+
+
 mod property_based_tests {
     use super::*;
     use proptest::prelude::*;
     use proptest::collection::vec;
-    use crate::geometry::vec_matrix::VecMatrix;
 
     fn matrix_from_values<T>(v: &[T], m: usize) -> VecMatrix<T>
         where T: Scalar + Clone
