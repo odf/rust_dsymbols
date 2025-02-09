@@ -138,7 +138,7 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
     }
 
-    pub fn convert_to<S>(&self)
+    pub fn to<S>(&self)
         -> VecMatrix<S>
         where S: Scalar + Clone + From<T>
     {

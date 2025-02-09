@@ -101,7 +101,7 @@ const PRIME: i64 = 9999991;
 pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
     -> Option<VecMatrix<BigRational>>
 {
-    if let Some(c) = a.convert_to::<PrimeResidueClass<PRIME>>().inverse() {
+    if let Some(c) = a.to::<PrimeResidueClass<PRIME>>().inverse() {
         let nr_steps = number_of_p_adic_steps_needed(a, b, PRIME);
         let nrows = b.nr_rows();
         let ncols = b.nr_columns();
@@ -111,7 +111,7 @@ pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
         let mut s = VecMatrix::<BigInt>::new(nrows, ncols);
 
         for step in 0..nr_steps {
-            let x = (&c * b.convert_to()).convert_to();
+            let x = (&c * b.to()).to();
             for i in 0..nrows {
                 for j in 0..ncols {
                     s[i][j] += &p * x[i][j];
@@ -235,7 +235,7 @@ mod property_based_tests {
     }
 
     fn test_modular_solver(m: &VecMatrix<i64>, v: &VecMatrix<i64>) {
-        let convert = |m: &VecMatrix<i64>| m.convert_to::<BigInt>().convert_to();
+        let convert = |m: &VecMatrix<i64>| m.to::<BigInt>().to();
 
         let b = m * v;
         if let Some(sol) = solve(m, &b) {

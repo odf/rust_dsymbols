@@ -298,7 +298,7 @@ mod test {
     }
 
     fn convert(m: &VecMatrix<i64>) -> VecMatrix<BigRational> {
-        m.convert_to::<BigInt>().convert_to()
+        m.to::<BigInt>().to()
     }
 
     fn test_solver(a: VecMatrix<i64>, b: VecMatrix<i64>) {
