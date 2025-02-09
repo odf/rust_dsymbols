@@ -118,31 +118,25 @@ pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
 {
     if let Some(c) = a.to::<PrimeResidueClass<PRIME>>().inverse() {
         let nr_steps = number_of_p_adic_steps_needed(a, b, PRIME);
+        let prime = BigInt::from(PRIME);
+
         let nrows = b.nr_rows();
         let ncols = b.nr_columns();
 
         let a: VecMatrix<BigInt> = a.to();
+
         let mut b: VecMatrix<BigInt> = b.to();
         let mut s = VecMatrix::new(nrows, ncols);
         let mut p = BigInt::from(1);
 
         for step in 0..nr_steps {
             let x = (&c * b.to()).to();
-            for i in 0..nrows {
-                for j in 0..ncols {
-                    s[i][j] += &p * &x[i][j];
-                }
-            }
 
-            p *= PRIME;
+            s = s + &x * &p;
+            p *= &prime;
 
             if step + 1 < nr_steps {
-                let ax = &a * x;
-                for i in 0..nrows {
-                    for j in 0..ncols {
-                        b[i][j] = (&b[i][j] - &ax[i][j]) / PRIME;
-                    }
-                }
+                b = &(b - &a * x) / &prime;
             }
         }
 
