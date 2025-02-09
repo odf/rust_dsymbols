@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::Zero;
+use num_traits::{FromPrimitive, ToPrimitive, Zero};
 
 use super::prime_residue_classes::PrimeResidueClass;
 use super::traits::{Array2d, Entry, Scalar, ScalarPtr};
@@ -43,6 +43,20 @@ impl<const P: i64> Entry for PrimeResidueClass<P> {
                 x[(row1, k)] = x[(row1, k)] - x[(row2, k)] * f;
             }
         }
+    }
+}
+
+
+impl<const P: i64> From<BigInt> for PrimeResidueClass<P> {
+    fn from(n: BigInt) -> Self {
+        (n % BigInt::from_i64(P).unwrap()).to_i64().unwrap().into()
+    }
+}
+
+
+impl<const P: i64> From<PrimeResidueClass<P>> for BigInt {
+    fn from(n: PrimeResidueClass<P>) -> Self {
+        BigInt::from_i64(n.into()).unwrap()
     }
 }
 
@@ -95,7 +109,8 @@ fn rational_reconstruction(s: &BigInt, h: &BigInt) -> BigRational {
 }
 
 
-const PRIME: i64 = 9999991;
+//const PRIME: i64 = 9_999_991;
+const PRIME: i64 = 3_037_000_493;
 
 
 pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
@@ -106,25 +121,26 @@ pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
         let nrows = b.nr_rows();
         let ncols = b.nr_columns();
 
-        let mut p = BigInt::from(1);
-        let mut b = b.clone();
+        let a: VecMatrix<BigInt> = a.to();
+        let mut b: VecMatrix<BigInt> = b.to();
         let mut s = VecMatrix::<BigInt>::new(nrows, ncols);
+        let mut p = BigInt::from(1);
 
         for step in 0..nr_steps {
             let x = (&c * b.to()).to();
             for i in 0..nrows {
                 for j in 0..ncols {
-                    s[i][j] += &p * x[i][j];
+                    s[i][j] += &p * &x[i][j];
                 }
             }
 
             p *= PRIME;
 
             if step + 1 < nr_steps {
-                let ax = a * x;
+                let ax = &a * x;
                 for i in 0..nrows {
                     for j in 0..ncols {
-                        b[i][j] = (b[i][j] - ax[i][j]) / PRIME;
+                        b[i][j] = (&b[i][j] - &ax[i][j]) / PRIME;
                     }
                 }
             }
