@@ -123,7 +123,7 @@ pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
 
         let a: VecMatrix<BigInt> = a.to();
         let mut b: VecMatrix<BigInt> = b.to();
-        let mut s = VecMatrix::<BigInt>::new(nrows, ncols);
+        let mut s = VecMatrix::new(nrows, ncols);
         let mut p = BigInt::from(1);
 
         for step in 0..nr_steps {
