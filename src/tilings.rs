@@ -116,33 +116,48 @@ impl Neg for &VectorLabelledEdge {
 }
 
 
+struct PeriodicGraph {
+    edges: Vec<VectorLabelledEdge>
+}
+
+
+impl<I> From<I> for PeriodicGraph
+    where I: IntoIterator<Item=VectorLabelledEdge>
+{
+    fn from(edges: I) -> PeriodicGraph {
+        let edges = edges.into_iter()
+            .map(|e| e.canonical())
+            .collect::<BTreeSet<_>>().iter().cloned() // sorts and deduplicates
+            .collect();
+
+        PeriodicGraph { edges }
+    }
+}
+
+
 struct Skeleton {
     chamber_to_node: Vec<usize>,
     edge_translations: EdgeVectors,
     corner_shifts: EdgeVectors,
-    edges: Vec<VectorLabelledEdge>
+    graph: PeriodicGraph
 }
 
 
 impl Skeleton {
     fn of<T: DSym>(cov: &T) -> Skeleton {
-        let c2n = chamber_to_node(cov);
-        let e2t = edge_translations(cov);
-        let c2s = corner_shifts(cov, &e2t);
+        let chamber_to_node = chamber_to_node(cov);
+        let edge_translations = edge_translations(cov);
+        let corner_shifts = corner_shifts(cov, &edge_translations);
 
         let indices = cov.indices().filter(|&i| i != 1);
 
-        let edges = cov.orbit_reps(indices, cov.elements()).iter()
-            .map(|&d| skeleton_edge(d, cov, &e2t, &c2s, &c2n).canonical())
-            .collect::<BTreeSet<_>>().iter().cloned() // sorts and deduplicates
-            .collect();
+        let graph = cov.orbit_reps(indices, cov.elements()).iter()
+            .map(|&d| skeleton_edge(
+                d, cov, &edge_translations, &corner_shifts, &chamber_to_node
+            ))
+            .into();
 
-        Skeleton {
-            chamber_to_node: c2n,
-            edge_translations: e2t,
-            corner_shifts: c2s,
-            edges
-        }
+        Skeleton { chamber_to_node, edge_translations, corner_shifts, graph }
     }
 }
 
@@ -338,7 +353,7 @@ mod test {
             let cov = pseudo_toroidal_cover(&ds).unwrap();
             let skel = Skeleton::of(&cov);
 
-            for e in skel.edges {
+            for e in skel.graph.edges {
                 println!("{e}");
             }
             println!();
