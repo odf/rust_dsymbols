@@ -1,5 +1,5 @@
 use core::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 use std::ops::Neg;
 
@@ -21,11 +21,11 @@ impl VectorLabelledEdge {
         Self { head, tail, shift }
     }
 
-    fn dim(&self) -> usize {
+    pub fn dim(&self) -> usize {
         self.shift.nr_rows()
     }
 
-    fn canonical(&self) -> Self {
+    pub fn canonical(&self) -> Self {
         if self.tail < self.head {
             return -self;
         } else if self.tail == self.head {
@@ -111,7 +111,9 @@ impl Neg for &VectorLabelledEdge {
 
 
 pub struct PeriodicGraph {
-    pub edges: Vec<VectorLabelledEdge>
+    edges: Vec<VectorLabelledEdge>,
+    vertices: Vec<usize>,
+    incidences: HashMap<usize, Vec<VectorLabelledEdge>>
 }
 
 
@@ -119,11 +121,47 @@ impl<I> From<I> for PeriodicGraph
 where I: IntoIterator<Item=VectorLabelledEdge>
 {
     fn from(edges: I) -> PeriodicGraph {
-        let edges = edges.into_iter()
+        let edges: Vec<_> = edges.into_iter()
             .map(|e| e.canonical())
-            .collect::<BTreeSet<_>>().iter().cloned() // sorts and deduplicates
+            .collect::<BTreeSet<_>>().into_iter() // sorts and deduplicates
             .collect();
 
-        PeriodicGraph { edges }
+        assert!(edges.len() > 0);
+        let d = edges[0].dim();
+        assert!(edges.iter().all(|e| e.dim() == d));
+
+        let mut vertices = BTreeSet::new();
+        for e in edges.iter() {
+            vertices.insert(e.head);
+            vertices.insert(e.tail);
+        }
+        let vertices: Vec<_> = vertices.into_iter().collect();
+
+        let mut incidences: HashMap<_, Vec<_>> = HashMap::new();
+        for e in edges.iter() {
+            incidences.entry(e.head).or_default().push(e.clone());
+            incidences.entry(e.tail).or_default().push(-e);
+        }
+
+        PeriodicGraph { edges, vertices, incidences }
+    }
+}
+
+
+impl PeriodicGraph {
+    pub fn dim(&self) -> usize {
+        self.edges[0].dim()
+    }
+
+    pub fn edges(&self) -> &Vec<VectorLabelledEdge> {
+        &self.edges
+    }
+
+    pub fn vertices(&self) -> &Vec<usize> {
+        &self.vertices
+    }
+
+    pub fn incidences(&self, v: usize) -> Option<&Vec<VectorLabelledEdge>> {
+        self.incidences.get(&v)
     }
 }

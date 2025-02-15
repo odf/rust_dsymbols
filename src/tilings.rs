@@ -229,8 +229,16 @@ mod test {
             let cov = pseudo_toroidal_cover(&ds).unwrap();
             let skel = Skeleton::of(&cov);
 
-            for e in skel.graph.edges {
+            println!("Vertices: {:?}", skel.graph.vertices());
+            for e in skel.graph.edges() {
                 println!("{e}");
+            }
+            for &v in skel.graph.vertices() {
+                print!("{v}:");
+                for e in skel.graph.incidences(v).unwrap() {
+                    print!(" {e}");
+                }
+                println!();
             }
             println!();
         }
