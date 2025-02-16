@@ -240,6 +240,13 @@ mod test {
                 }
                 println!();
             }
+            for &v in skel.graph.vertices() {
+                print!("{v}:");
+                for x in skel.graph.position(v)[0].iter() {
+                    print!(" {x}");
+                }
+                println!();
+            }
             println!();
         }
 

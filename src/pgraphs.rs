@@ -1,10 +1,14 @@
 use core::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap};
+use std::cell::UnsafeCell;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
 use std::ops::Neg;
 
+use num_rational::BigRational;
+
 use crate::geometry::traits::Array2d;
 use crate::geometry::vec_matrix::VecMatrix;
+use crate::geometry::modular_solver_new::solve;
 
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -113,7 +117,8 @@ impl Neg for &VectorLabelledEdge {
 pub struct PeriodicGraph {
     edges: Vec<VectorLabelledEdge>,
     vertices: Vec<usize>,
-    incidences: HashMap<usize, Vec<VectorLabelledEdge>>
+    incidences: HashMap<usize, Vec<VectorLabelledEdge>>,
+    positions: UnsafeCell<HashMap<usize, VecMatrix<BigRational>>>
 }
 
 
@@ -143,7 +148,9 @@ where I: IntoIterator<Item=VectorLabelledEdge>
             incidences.entry(e.tail).or_default().push(-e);
         }
 
-        PeriodicGraph { edges, vertices, incidences }
+        let positions = UnsafeCell::new(HashMap::new());
+
+        PeriodicGraph { edges, vertices, incidences, positions }
     }
 }
 
@@ -164,4 +171,54 @@ impl PeriodicGraph {
     pub fn incidences(&self, v: usize) -> Option<&Vec<VectorLabelledEdge>> {
         self.incidences.get(&v)
     }
+
+    pub fn position(&self, v: usize) -> VecMatrix<BigRational> {
+        assert!(self.incidences.contains_key(&v));
+
+        if let Some(output) = unsafe { (*self.positions.get()).get(&v) } {
+            output.clone()
+        } else {
+            let positions = barycentric_placement(self);
+            let output = positions[&v].clone();
+            unsafe { *self.positions.get() = positions };
+            output
+        }
+    }
+}
+
+
+fn barycentric_placement(g: &PeriodicGraph) -> HashMap<usize, VecMatrix<BigRational>> {
+    let verts = g.vertices();
+    let vidcs: BTreeMap<_, _> = verts.iter().enumerate()
+        .map(|(i, &e)| (e, i)).collect();
+
+    let n = verts.len();
+    let d = g.dim();
+
+    let mut a = VecMatrix::<i64>::new(n, n);
+    let mut t = VecMatrix::<i64>::new(n, d);
+
+    a[0][0] = 1;
+
+    for i in 1..n {
+        for ngb in g.incidences(verts[i]).unwrap() {
+            let j = vidcs[&ngb.tail];
+            a[i][j] -= 1;
+            a[i][i] += 1;
+
+            let s = &ngb.shift;
+            for k in 0..d {
+                t[i][k] = t[i][k] + s[k][0];
+            }
+        }
+    }
+
+    let p = solve(&a, &t).unwrap();
+
+    let mut result = HashMap::new();
+    for i in 0..n {
+        result.insert(verts[i], p.submatrix([i], 0..d));
+    }
+
+    result
 }
