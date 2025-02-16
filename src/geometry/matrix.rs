@@ -1,10 +1,10 @@
-use std::ops::{Add, Div, Index, IndexMut, Mul};
+use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 use num_traits::Zero;
 
 use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Matrix<T, const N: usize, const M: usize> {
     data: [[T; M]; N]
 }
@@ -233,6 +233,18 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
 
 impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Add<&Matrix<T, N, M>> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn add(self, rhs: &Matrix<T, N, M>) -> Self::Output {
+        &self + rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
     Add<Matrix<T, N, M>> for Matrix<T, N, M>
     where for <'a> &'a T: ScalarPtr<T>
 {
@@ -256,6 +268,62 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 }
 
 
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Sub<&Matrix<T, N, M>> for &Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn sub(self, rhs: &Matrix<T, N, M>) -> Self::Output {
+        let mut result = Matrix::new();
+
+        for i in 0..N {
+            for j in 0..M {
+                result[i][j] = &self[i][j] - &rhs[i][j];
+            }
+        }
+
+        result
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Sub<&Matrix<T, N, M>> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn sub(self, rhs: &Matrix<T, N, M>) -> Self::Output {
+        &self - rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Sub<Matrix<T, N, M>> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn sub(self, rhs: Matrix<T, N, M>) -> Self::Output {
+        &self - &rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Sub<[[T; M]; N]> for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn sub(self, rhs: [[T; M]; N]) -> Self::Output {
+        self - Matrix::from(rhs)
+    }
+}
+
+
 impl<T: Scalar + Clone, const N: usize, const M: usize> Zero for Matrix<T, N, M>
     where for <'a> &'a T: ScalarPtr<T>
 {
@@ -273,6 +341,28 @@ impl<T: Scalar + Clone, const N: usize, const M: usize> Zero for Matrix<T, N, M>
         }
 
         true
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize> Neg for Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn neg(self) -> Self::Output {
+        self * -T::one()
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize> Neg for &Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn neg(self) -> Self::Output {
+        self * -T::one()
     }
 }
 
@@ -436,6 +526,18 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
     fn mul(self, rhs: &T) -> Self::Output {
         &self * rhs
+    }
+}
+
+
+impl<T: Scalar + Clone, const N: usize, const M: usize>
+    Mul<T> for &Matrix<T, N, M>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = Matrix<T, N, M>;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        self * &rhs
     }
 }
 
