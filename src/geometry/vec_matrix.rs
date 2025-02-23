@@ -1,3 +1,4 @@
+use std::iter::Sum;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
 use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
@@ -312,6 +313,15 @@ impl<T: Scalar + Clone, const N: usize, const M: usize>
 
     fn add(self, rhs: [[T; M]; N]) -> Self::Output {
         self + VecMatrix::from(rhs)
+    }
+}
+
+
+impl<T: Scalar + Clone> Sum for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.reduce(|v, w| v + w).unwrap_or(VecMatrix::zero(0, 0))
     }
 }
 
