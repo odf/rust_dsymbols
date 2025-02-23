@@ -251,9 +251,11 @@ mod test {
             let g = make_graph(spec);
 
             for &v in g.vertices() {
+                let ngbs = g.incidences(v).unwrap();
+                let n = BigRational::from(BigInt::from(ngbs.len()));
                 let p = g.position(v);
-                let q = g.incidences(v).unwrap().iter().map(|e|
-                        g.position(e.tail) + e.shift.to::<BigInt>().to()
+                let q = ngbs.iter().map(|e|
+                        (g.position(e.tail) + e.shift.to::<BigInt>().to()) / &n
                     ).sum();
 
                 assert_eq!(p, q);
@@ -265,6 +267,14 @@ mod test {
             1, 1, 1, 0, 0,
             1, 1, 0, 1, 0,
             1, 1, 0, 0, 1,
+        ]);
+
+        test(&[
+            3,
+            1, 2, 0, 0, 0,
+            1, 2, 1, 0, 0,
+            1, 2, 0, 1, 0,
+            1, 2, 0, 0, 1,
         ]);
     }
 }
