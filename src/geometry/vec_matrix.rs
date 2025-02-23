@@ -673,6 +673,39 @@ impl<T: Scalar + Clone> Div<&T> for &VecMatrix<T>
 }
 
 
+impl<T: Scalar + Clone> Div<&T> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn div(self, rhs: &T) -> Self::Output {
+        &self / rhs
+    }
+}
+
+
+impl<T: Scalar + Clone> Div<T> for &VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        self / &rhs
+    }
+}
+
+
+impl<T: Scalar + Clone> Div<T> for VecMatrix<T>
+    where for <'a> &'a T: ScalarPtr<T>
+{
+    type Output = VecMatrix<T>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        &self / &rhs
+    }
+}
+
+
 #[derive(Debug)]
 pub struct RowEchelonVecMatrix<T: Entry> {
     multiplier: VecMatrix<T>,
