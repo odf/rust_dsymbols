@@ -8,7 +8,7 @@ use num_rational::BigRational;
 
 use crate::geometry::traits::Array2d;
 use crate::geometry::vec_matrix::VecMatrix;
-use crate::geometry::modular_solver_new::solve;
+use crate::geometry::modular_solver::solve;
 
 
 #[derive(Clone, Debug, Eq, PartialEq)]

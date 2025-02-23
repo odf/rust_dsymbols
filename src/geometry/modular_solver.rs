@@ -1,164 +1,81 @@
 use num_bigint::BigInt;
 use num_rational::BigRational;
+use num_traits::{FromPrimitive, ToPrimitive, Zero};
+
+use super::prime_residue_classes::PrimeResidueClass;
+use super::traits::{Array2d, Entry, Scalar, ScalarPtr};
+use super::vec_matrix::VecMatrix;
 
 
-pub fn modular_inverse(argument: i64, modulus: i64) -> Option<i64> {
-    let (mut t, mut t1) = (0, 1);
-    let (mut r, mut r1) = (modulus, argument);
+impl<const P: i64> Scalar for PrimeResidueClass<P> {}
+impl<const P: i64> ScalarPtr<PrimeResidueClass<P>> for &PrimeResidueClass<P> {}
 
-    while r1 != 0 {
-        let q = r / r1;
-        (t, t1) = (t1, t - q * t1);
-        (r, r1) = (r1, r - q * r1);
+
+impl<const P: i64> Entry for PrimeResidueClass<P> {
+    fn can_divide(_: &Self, b: &Self) -> bool {
+        !b.is_zero()
     }
 
-    if r == 1 {
-        Some(if t < 0 { t + modulus } else { t })
-    } else {
+    fn pivot_row<M: Array2d<Self>>(col: usize, row0: usize, a: &M)
+        -> Option<usize>
+    {
+        for row in row0..a.nr_rows() {
+            if !a[(row, col)].is_zero() {
+                return Some(row);
+            }
+        }
+
         None
     }
-}
 
+    fn clear_col<A: Array2d<Self>, B: Array2d<Self>>(
+        col: usize, row1: usize, row2: usize, a: &mut A, x: Option<&mut B>
+    ) {
+        let f = a[(row1, col)] / a[(row2, col)];
+        a[(row1, col)] = Self::zero();
 
-type Matrix = Vec<Vec<i64>>;
-
-pub fn modular_row_echelon_form(matrix: &Matrix, prime: i64) -> Matrix {
-    if matrix.len() == 0 {
-        return matrix.clone();
-    }
-
-    let mut a: Matrix = vec![];
-
-    for row in matrix {
-        assert!(a.len() == 0 || row.len() == a[0].len());
-        let row = row.iter()
-            .map(|&n| n % prime + if n < 0 { prime } else { 0 })
-            .collect();
-        a.push(row);
-    }
-
-    let (nrows, ncols) = (a.len(), a[0].len());
-
-    let mut irow = 0;
-    for icol in 0..ncols {
-        if let Some(r) = (irow..nrows).find(|&r| a[r][icol] != 0) {
-            if r != irow {
-                swap_rows(&mut a, irow, r);
-            }
-
-            let f = modular_inverse(a[irow][icol], prime).unwrap();
-            for j in icol..ncols {
-                a[irow][j] = (a[irow][j] * f) % prime;
-            }
-
-            for i in 0..nrows {
-                if i != irow && a[i][icol] != 0 {
-                    let f = a[i][icol];
-                    for j in icol..ncols {
-                        if a[irow][j] != 0 {
-                            a[i][j] = (
-                                prime - (a[irow][j] * f) % prime + a[i][j]
-                            ) % prime;
-                        }
-                    }
-                }
-            }
+        for k in (col + 1)..a.nr_columns() {
+            a[(row1, k)] = a[(row1, k)] - a[(row2, k)] * f;
         }
 
-        irow += 1;
-    }
-
-    a
-}
-
-
-fn swap_rows<T>(a: &mut Vec<Vec<T>>, i: usize, j: usize) {
-    let row_i = std::mem::take(&mut a[i]);
-    let row_j = std::mem::take(&mut a[j]);
-    a[i] = row_j;
-    a[j] = row_i;
-}
-
-
-pub fn modular_matrix_inverse(matrix: &Matrix, prime: i64) -> Option<Matrix> {
-    let n = matrix.len();
-
-    if n == 0 {
-        return None;
-    }
-
-    let mut a = vec![];
-    for (i, row) in matrix.iter().enumerate() {
-        assert!(row.len() == n);
-        let mut row = row.clone();
-        row.extend(std::iter::repeat(0).take(n));
-        row[n + i] = 1;
-        a.push(row);
-    }
-
-    let a = modular_row_echelon_form(&a, prime);
-
-    for i in 0..n {
-        for j in 0..n {
-            if a[i][j] != (i == j) as i64 {
-                return None;
+        if let Some(x) = x {
+            for k in 0..x.nr_columns() {
+                x[(row1, k)] = x[(row1, k)] - x[(row2, k)] * f;
             }
         }
     }
-
-    Some(a.iter().map(|row| row[n..].to_vec()).collect())
 }
 
 
-pub fn modular_matrix_product(a: &Matrix, b: &Matrix, prime: i64) -> Matrix {
-    let ncols_a = a[0].len();
-    let ncols_b = b[0].len();
-
-    assert!(ncols_a == b.len());
-
-    let mut product = vec![];
-    for row in a {
-        let mut row_out = vec![];
-        for j in 0..ncols_b {
-            let p = (0..ncols_a)
-                .map(|i| ((row[i] % prime) * (b[i][j] % prime)) % prime)
-                .reduce(|p, q| (p + q) % prime)
-                .unwrap();
-            row_out.push(p);
-        }
-        product.push(row_out);
+impl<const P: i64> From<BigInt> for PrimeResidueClass<P> {
+    fn from(n: BigInt) -> Self {
+        (n % BigInt::from_i64(P).unwrap()).to_i64().unwrap().into()
     }
-
-    product
 }
 
 
-pub fn integer_matrix_product(a: &Matrix, b: &Matrix) -> Matrix {
-    let ncols_a = a[0].len();
-    let ncols_b = b[0].len();
-
-    assert!(ncols_a == b.len());
-
-    let mut product = vec![];
-    for row in a {
-        let mut row_out = vec![];
-        for j in 0..ncols_b {
-            let p = (0..ncols_a).map(|i| row[i] * b[i][j]).sum();
-            row_out.push(p);
-        }
-        product.push(row_out);
+impl<const P: i64> From<PrimeResidueClass<P>> for BigInt {
+    fn from(n: PrimeResidueClass<P>) -> Self {
+        BigInt::from_i64(n.into()).unwrap()
     }
-
-    product
 }
 
 
-fn number_of_p_adic_steps_needed(a: &Matrix, b: &Matrix, prime: i64) -> u64
+fn number_of_p_adic_steps_needed(
+    a: &VecMatrix<i64>, b: &VecMatrix<i64>, prime: i64
+) -> u64
 {
-    let mut log_norms: Vec<_> = (0..a[0].len())
+    fn column_norm(a: &VecMatrix<i64>, j: usize) -> f64 {
+        (0..a.nr_rows())
+            .map(|i| (a[i][j] as f64).powf(2.0))
+            .sum::<f64>()
+            .sqrt()
+    }
+
+    let mut log_norms: Vec<_> = (0..a.nr_columns())
         .map(|j| column_norm(a, j).ln())
         .collect();
-    log_norms.push((0..b[0].len())
+    log_norms.push((0..b.nr_columns())
         .map(|j| column_norm(b, j).ln())
         .max_by(|a, b| a.total_cmp(b))
         .unwrap());
@@ -169,11 +86,6 @@ fn number_of_p_adic_steps_needed(a: &Matrix, b: &Matrix, prime: i64) -> u64
     let golden_ratio = (1.0 + (5 as f64).sqrt()) / 2.0;
 
     (2.0 * (log_delta + golden_ratio.ln()) / (prime as f64).ln()).ceil() as u64
-}
-
-
-fn column_norm(a: &Matrix, j: usize) -> f64 {
-    (0..a.len()).map(|i| (a[i][j] as f64).powf(2.0)).sum::<f64>().sqrt()
 }
 
 
@@ -197,66 +109,65 @@ fn rational_reconstruction(s: &BigInt, h: &BigInt) -> BigRational {
 }
 
 
-pub fn solve(a: &Matrix, b: &Matrix) -> Option<Vec<Vec<BigRational>>> {
-    let prime = 9999991;
+//const PRIME: i64 = 9_999_991;
+const PRIME: i64 = 3_037_000_493;
 
-    if let Some(c) = modular_matrix_inverse(a, prime) {
-        let nr_steps = number_of_p_adic_steps_needed(a, b, prime);
-        let nrows = b.len();
-        let ncols = b[0].len();
 
+pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
+    -> Option<VecMatrix<BigRational>>
+{
+    if let Some(c) = a.to::<PrimeResidueClass<PRIME>>().inverse() {
+        let nr_steps = number_of_p_adic_steps_needed(a, b, PRIME);
+        let prime = BigInt::from(PRIME);
+
+        let nrows = b.nr_rows();
+        let ncols = b.nr_columns();
+
+        let a: VecMatrix<BigInt> = a.to();
+
+        let mut b: VecMatrix<BigInt> = b.to();
+        let mut s = VecMatrix::new(nrows, ncols);
         let mut p = BigInt::from(1);
-        let mut b = b.clone();
-
-        let mut s: Vec<Vec<_>> = (0..nrows).map(|_| {
-            (0..ncols).map(|_| { BigInt::from(0) }).collect()
-        }).collect();
 
         for step in 0..nr_steps {
-            let x = modular_matrix_product(&c, &b, prime);
-            for i in 0..nrows {
-                for j in 0..ncols {
-                    s[i][j] += &p * x[i][j];
-                }
-            }
+            let x = (&c * b.to()).to();
 
-            p *= prime;
+            s = s + &x * &p;
+            p *= &prime;
 
             if step + 1 < nr_steps {
-                let ax = integer_matrix_product(a, &x);
-                for i in 0..nrows {
-                    for j in 0..ncols {
-                        b[i][j] = (b[i][j] - ax[i][j]) / prime;
-                    }
-                }
+                b = &(b - &a * x) / &prime;
             }
         }
 
-        Some(s.iter().map(|row| {
-            row.iter().map(|x| { rational_reconstruction(x, &p) }).collect()
-        }).collect())
+        let mut result = VecMatrix::new(nrows, ncols);
+        for i in 0..nrows {
+            for j in 0..ncols {
+                result[i][j] = rational_reconstruction(&s[i][j], &p);
+            }
+        }
+        Some(result)
     } else {
         None
     }
 }
 
 
-mod test {
-    use crate::geometry::traits::{Array2d, Scalar};
-    use crate::geometry::vec_matrix::VecMatrix;
+mod property_based_tests {
+    use super::*;
     use proptest::prelude::*;
     use proptest::collection::vec;
 
-    use super::*;
-
-    fn matrix_from_values(v: &[i64], m: usize) -> VecMatrix<i64> {
+    fn matrix_from_values<T>(v: &[T], m: usize) -> VecMatrix<T>
+        where T: Scalar + Clone
+    {
         let n = v.len() / m;
         let mut result = VecMatrix::new(n, m);
 
         let mut k = 0;
         for i in 0..n {
             for j in 0..m{
-                result[i][j] = v[k];
+                result[i][j] = v[k].clone();
                 k += 1;
             }
         }
@@ -264,74 +175,128 @@ mod test {
         result
     }
 
-    fn sized_matrix(size: i64, n: usize, m: usize)
-        -> impl Strategy<Value=VecMatrix<i64>>
+    fn entry<T>(size: i64)
+        -> impl Strategy<Value=T>
+        where T: From<i64> + std::fmt::Debug
     {
-        vec(0..size, n * m).prop_map(move |v| matrix_from_values(&v, m))
+        (0..size).prop_map(T::from)
     }
 
-    fn equations(entry_size: i64, dmin: usize, dmax: usize)
-        -> impl Strategy<Value=(VecMatrix<i64>, VecMatrix<i64>)>
+    fn sized_matrix<T>(size: i64, n: usize, m: usize)
+        -> impl Strategy<Value=VecMatrix<T>>
+        where T: Scalar + Clone + From<i64> + std::fmt::Debug + 'static
     {
-        (dmin..=dmax).prop_flat_map(move |n| (
-            sized_matrix(entry_size, n, n),
-            sized_matrix(entry_size, n, 1)
-        ))
+        vec(entry(size), n * m).prop_map(move |v| matrix_from_values(&v, m))
     }
 
-    fn unpack(m: &VecMatrix<i64>) -> Matrix {
-        let mut result = vec![];
-        for i in 0..m.nr_rows() {
-            result.push(m[i].iter().cloned().collect());
-        }
-        result
-    }
-
-    fn pack(m: &Vec<Vec<BigRational>>) -> VecMatrix<BigRational> {
-        let mut result = VecMatrix::new(m.len(), m[0].len());
-        for i in 0..m.len() {
-            result[i].clone_from_slice(&m[i]);
-        }
-        result
-    }
-
-    fn convert(m: &VecMatrix<i64>) -> VecMatrix<BigRational> {
-        m.to::<BigInt>().to()
-    }
-
-    fn test_solver(a: VecMatrix<i64>, b: VecMatrix<i64>) {
-        let ab = &a * &b;
-
-        let x = solve(&unpack(&a), &unpack(&ab));
-
-        if let Some(x) = x {
-            assert_eq!(&convert(&a) * &pack(&x), convert(&ab));
-        }
-    }
-
-    fn test_solver_on_arrays<const N: usize, const M: usize, const L: usize>(
-        a: [[i64; M]; N], b: [[i64; L]; M]
-    )
+    fn matrix<T>(entry_size: i64, dmin: usize, dmax: usize)
+        -> impl Strategy<Value=VecMatrix<T>>
+        where T: Scalar + Clone + From<i64> + std::fmt::Debug + 'static
     {
-        test_solver(VecMatrix::from(a), VecMatrix::from(b));
+        (dmin..=dmax).prop_flat_map(move |n|
+            sized_matrix(entry_size, n, n)
+        )
     }
 
-    #[test]
-    fn test_solver_examples() {
-        test_solver_on_arrays([[1, 2], [3, 4]], [[1, 0], [1, -3]]);
-        test_solver_on_arrays([[1, 2], [3, 6]], [[1], [1]]);
-        test_solver_on_arrays([[0, 0], [0, 1]], [[0], [-1]]);
+    fn equations<T>(entry_size: i64, dmin: usize, dmax: usize)
+        -> impl Strategy<Value=(VecMatrix<T>, VecMatrix<T>)>
+        where T: Scalar + Clone + From<i64> + std::fmt::Debug + 'static
+    {
+        (dmin..=dmax).prop_flat_map(move |n|
+            (sized_matrix(entry_size, n, n), sized_matrix(entry_size, n, 1))
+        )
     }
+
+    fn test_matrix<T>(m: &VecMatrix<T>)
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
+    {
+        let n = m.nr_rows();
+        let zero = VecMatrix::new(n, 1);
+        let one = VecMatrix::identity(n);
+
+        assert_eq!(m.determinant().is_zero(), m.rank() < n);
+        assert_eq!(m.null_space().len(), n - m.rank());
+
+        for v in m.null_space() {
+            assert_eq!(m * v, zero);
+        }
+
+        let nul = m.null_space_matrix();
+        assert_eq!((m * &nul), VecMatrix::new(n, nul.nr_columns()));
+
+        if let Some(inv) = m.inverse() {
+            assert_eq!(m * inv, one);
+        }
+
+        assert_eq!(m.inverse().is_some(), m.rank() == m.nr_rows());
+    }
+
+    fn test_solver<T>(m: &VecMatrix<T>, v: &VecMatrix<T>)
+        where
+            T: Entry + Clone + PartialEq + std::fmt::Debug,
+            for <'a> &'a T: ScalarPtr<T>
+    {
+        let b = m * v;
+        if let Some(sol) = m.solve(&b) {
+            assert_eq!(m * sol, b);
+        }
+    }
+
+    fn test_modular_solver(m: &VecMatrix<i64>, v: &VecMatrix<i64>) {
+        let convert = |m: &VecMatrix<i64>| m.to::<BigInt>().to();
+
+        let b = m * v;
+        if let Some(sol) = solve(m, &b) {
+            assert_eq!(convert(m) * sol, convert(&b));
+        }
+    }
+
+    const P_SMALL: i64 = 61;
+    const P_LARGE: i64 = 3_037_000_493;
 
     proptest! {
         #[test]
-        fn test_solver_generated_small((m, v) in equations(3, 2, 6)) {
-            test_solver(m, v);
+        fn test_matrix_small(
+            m in matrix::<PrimeResidueClass<P_SMALL>>(3, 2, 8)
+        ) {
+            test_matrix(&m);
         }
 
         #[test]
-        fn test_solver_generated_large((m, v) in equations(1_000_000_000, 2, 10)) {
-            test_solver(m, v);
+        fn test_matrix_large(
+            m in matrix::<PrimeResidueClass<P_LARGE>>(10_000_000_000, 2, 16)
+        ) {
+            test_matrix(&m);
+        }
+
+        #[test]
+        fn test_solver_small(
+            (m, v) in equations::<PrimeResidueClass<P_SMALL>>(3, 2, 8)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_solver_large(
+            (m, v) in equations::<PrimeResidueClass<P_LARGE>>(10_000_000_000, 2, 16)
+        ) {
+            test_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_modular_solver_small(
+            (m, v) in equations::<i64>(3, 2, 6)
+        ) {
+            test_modular_solver(&m, &v);
+        }
+
+        #[test]
+        fn test_modular_solver_large(
+            (m, v) in equations::<i64>(1_000_000_000, 2, 10)
+        ) {
+            test_modular_solver(&m, &v);
         }
     }
 }
