@@ -217,8 +217,54 @@ fn barycentric_placement(g: &PeriodicGraph) -> HashMap<usize, VecMatrix<BigRatio
 
     let mut result = HashMap::new();
     for i in 0..n {
-        result.insert(verts[i], p.submatrix([i], 0..d));
+        result.insert(verts[i], p.submatrix([i], 0..d).transpose());
     }
 
     result
+}
+
+
+mod test {
+    use num_bigint::BigInt;
+
+    use super::*;
+
+    fn make_graph(spec: &[i64]) -> PeriodicGraph {
+        let dim = spec[0] as usize;
+        let step = dim + 2;
+        let mut edges = vec![];
+
+        for i in (1..spec.len()).step_by(step) {
+            let head = spec[i] as usize;
+            let tail = spec[i + 1] as usize;
+            let shift = VecMatrix::from(&spec[(i + 2)..(i + step)]).transpose();
+            edges.push(VectorLabelledEdge::make(head, tail, shift));
+        }
+
+        PeriodicGraph::from(edges)
+    }
+
+
+    #[test]
+    fn test_barycentric_positions() {
+        fn test(spec: &[i64]) {
+            let g = make_graph(spec);
+
+            for &v in g.vertices() {
+                let p = g.position(v);
+                let q = g.incidences(v).unwrap().iter().map(|e|
+                        g.position(e.tail) + e.shift.to::<BigInt>().to()
+                    ).sum();
+
+                assert_eq!(p, q);
+            }
+        }
+
+        test(&[
+            3,
+            1, 1, 1, 0, 0,
+            1, 1, 0, 1, 0,
+            1, 1, 0, 0, 1,
+        ]);
+    }
 }
