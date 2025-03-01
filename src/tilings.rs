@@ -234,16 +234,16 @@ mod test {
                 println!("{e}");
             }
             for &v in skel.graph.vertices() {
-                print!("{v}:");
+                println!("{v}:");
                 for e in skel.graph.incidences(v).unwrap() {
-                    print!(" {e}");
+                    println!(" {e}");
                 }
                 println!();
             }
             for &v in skel.graph.vertices() {
                 print!("{v}:");
-                for x in skel.graph.position(v)[0].iter() {
-                    print!(" {x}");
+                for i in 0..skel.graph.dim() {
+                    print!(" {}", skel.graph.position(v)[i][0]);
                 }
                 println!();
             }
