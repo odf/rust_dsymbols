@@ -47,7 +47,7 @@ impl VectorLabelledEdge {
 
 impl fmt::Display for VectorLabelledEdge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}, {}, [", self.head, self.tail)?;
+        write!(f, "{} --(", self.head)?;
 
         for i in 0..self.shift.nr_rows() {
             if i > 0 {
@@ -56,7 +56,7 @@ impl fmt::Display for VectorLabelledEdge {
             write!(f, "{}", self.shift[i][0])?;
         }
 
-        write!(f, "])")?;
+        write!(f, ")-> {}", self.tail)?;
 
         Ok(())
     }
