@@ -113,22 +113,6 @@ impl CosetTable {
 
         result
     }
-
-    fn as_map(&self) -> Vec<BTreeMap<isize, usize>> {
-        let mut result = vec![];
-
-        for k in 0..self.len() {
-            let mut row = BTreeMap::new();
-            for g in self.all_gens() {
-                if let Some(c) = self.get(k, g) {
-                    row.insert(g, c);
-                }
-            }
-            result.push(row);
-        }
-
-        result
-    }
 }
 
 
@@ -522,6 +506,24 @@ pub fn coset_tables(nr_gens: usize, rels: &Vec<FreeWord>, max_rows: usize)
 #[cfg(test)]
 mod coset_tests {
     use super::*;
+
+    impl CosetTable {
+        fn as_map(&self) -> Vec<BTreeMap<isize, usize>> {
+            let mut result = vec![];
+
+            for k in 0..self.len() {
+                let mut row = BTreeMap::new();
+                for g in self.all_gens() {
+                    if let Some(c) = self.get(k, g) {
+                        row.insert(g, c);
+                    }
+                }
+                result.push(row);
+            }
+
+            result
+        }
+    }
 
     fn make_table(nr_gens: usize, rels: &[&[isize]], subgens: &[&[isize]])
         -> CosetTable

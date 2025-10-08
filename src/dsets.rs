@@ -71,14 +71,14 @@ pub trait DSet: Sized {
         }
     }
 
-    fn traversal<I1, I2>(&self, indices: I1, seeds: I2)
-        -> Traversal<Self, I2::IntoIter>
+    fn traversal<I1, I2>(&'_ self, indices: I1, seeds: I2)
+        -> Traversal<'_, Self, I2::IntoIter>
         where I1: IntoIterator<Item=usize>, I2: IntoIterator<Item=usize>
     {
         Traversal::new(self, indices.into_iter(), seeds.into_iter())
     }
 
-    fn full_traversal(&self) -> Traversal<Self, RangeInclusive<usize>> {
+    fn full_traversal(&'_ self) -> Traversal<'_, Self, RangeInclusive<usize>> {
         self.traversal(self.indices(), self.elements())
     }
 
