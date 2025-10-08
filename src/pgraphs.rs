@@ -224,6 +224,7 @@ fn barycentric_placement(g: &PeriodicGraph) -> HashMap<usize, VecMatrix<BigRatio
 }
 
 
+#[cfg(test)]
 mod test {
     use num_bigint::BigInt;
 
@@ -255,7 +256,7 @@ mod test {
                 let n = BigRational::from(BigInt::from(ngbs.len()));
                 let p = g.position(v);
                 let q = ngbs.iter().map(|e|
-                        (g.position(e.tail) + e.shift.to::<BigInt>().to())
+                        g.position(e.tail) + e.shift.to::<BigInt>().to()
                     ).sum::<VecMatrix<_>>() / &n;
 
                 assert_eq!(p, q);

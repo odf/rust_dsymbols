@@ -1181,6 +1181,7 @@ fn test_matrix_inverse_f64() {
 }
 
 
+#[cfg(test)]
 mod test_big_rational {
     use super::*;
     use num_bigint::BigInt;
@@ -1306,6 +1307,7 @@ mod test_big_rational {
 }
 
 
+#[cfg(test)]
 mod property_based_tests {
     use super::*;
     use num_rational::BigRational;

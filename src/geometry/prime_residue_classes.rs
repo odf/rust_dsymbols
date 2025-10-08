@@ -10,7 +10,7 @@ pub struct PrimeResidueClass<const P: i64> {
 
 
 impl<const P: i64> PrimeResidueClass<P> {
-    fn valid() -> bool {
+    pub fn valid() -> bool {
         if P < 2 || P as f64 > (i64::MAX as f64).sqrt() {
             false
         } else {
@@ -25,7 +25,7 @@ impl<const P: i64> PrimeResidueClass<P> {
         }
     }
 
-    fn inverse(self) -> Self {
+    pub fn inverse(self) -> Self {
         let (mut t, mut t1) = (0, 1);
         let (mut r, mut r1) = (P, self.value);
 
@@ -215,6 +215,7 @@ impl<const P: i64> One for PrimeResidueClass<P> {
 }
 
 
+#[cfg(test)]
 mod test {
     use num_traits::one;
     use proptest::prelude::*;

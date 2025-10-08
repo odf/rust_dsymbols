@@ -8,9 +8,9 @@ use crate::derived::canonical;
 use crate::dsets::DSet;
 use crate::dsets::PartialDSet;
 
-pub(crate) struct DrawingInstructions<'a>
+pub struct DrawingInstructions<'a>
 {
-    pub(crate) ds: &'a PartialDSet
+    pub ds: &'a PartialDSet
 }
 
 impl<'a> DrawingInstructions<'a>

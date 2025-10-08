@@ -5,7 +5,7 @@ use crate::geometry::matrix::Matrix;
 use super::traits::{Scalar, ScalarPtr, gcdx};
 
 
-trait Entry: Scalar {
+pub trait Entry: Scalar {
     fn clear_column(col: usize, v: &mut [Self], b: &mut [Self]);
     fn normalize_column(col: usize, v: &mut [Self]);
     fn reduce_column(col: usize, v: &mut [Self], b: &[Self]);
@@ -85,7 +85,7 @@ fn pivot_column<T: Zero>(v: &[T]) -> Option<usize> {
 
 
 #[derive(Debug, PartialEq)]
-struct Basis<T: Entry, const N: usize> {
+pub struct Basis<T: Entry, const N: usize> {
     vectors: Matrix<T, N, N>,
     rank: usize
 }
@@ -94,18 +94,18 @@ struct Basis<T: Entry, const N: usize> {
 impl<T: Copy + Entry, const N: usize> Basis<T, N>
     where for <'a> &'a T: ScalarPtr<T>
 {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Basis {
             vectors: Matrix::new(),
             rank: 0
         }
     }
 
-    fn extend(&mut self, v: &[T; N]) {
+    pub fn extend(&mut self, v: &[T; N]) {
         let mut v = v.clone();
 
         for i in 0..self.rank {
-            let mut b = &mut self.vectors[i];
+            let b = &mut self.vectors[i];
 
             if let Some(col) = pivot_column(&v) {
                 let col_b = pivot_column(b).unwrap();
@@ -136,7 +136,7 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N>
         }
     }
 
-    fn reduce(&mut self) {
+    pub fn reduce(&mut self) {
         let mut col = 0;
         for row in 0..self.rank {
             while self.vectors[row][col].is_zero() {
@@ -152,11 +152,11 @@ impl<T: Copy + Entry, const N: usize> Basis<T, N>
         }
     }
 
-    fn rank(&self) -> usize {
+    pub fn rank(&self) -> usize {
         self.rank
     }
 
-    fn vectors(&self) -> Vec<[T; N]> {
+    pub fn vectors(&self) -> Vec<[T; N]> {
         (0..self.rank).map(|i| self.vectors[i]).collect()
     }
 }

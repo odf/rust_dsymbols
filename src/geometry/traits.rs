@@ -92,7 +92,7 @@ pub trait Entry: Scalar {
 
 
 impl Entry for BigRational {
-    fn can_divide(a: &Self, b: &Self) -> bool {
+    fn can_divide(_a: &Self, b: &Self) -> bool {
         !b.is_zero()
     }
 

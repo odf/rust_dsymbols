@@ -153,6 +153,7 @@ pub fn solve(a: &VecMatrix<i64>, b: &VecMatrix<i64>)
 }
 
 
+#[cfg(test)]
 mod property_based_tests {
     use super::*;
     use proptest::prelude::*;

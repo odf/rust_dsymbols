@@ -11,16 +11,16 @@ use crate::geometry::vec_matrix::VecMatrix;
 type EdgeVectors = BTreeMap<(usize, usize), VecMatrix<i64>>;
 
 
-struct Skeleton {
-    chamber_to_node: Vec<usize>,
-    edge_translations: EdgeVectors,
-    corner_shifts: EdgeVectors,
-    graph: PeriodicGraph
+pub struct Skeleton {
+    pub chamber_to_node: Vec<usize>,
+    pub edge_translations: EdgeVectors,
+    pub corner_shifts: EdgeVectors,
+    pub graph: PeriodicGraph
 }
 
 
 impl Skeleton {
-    fn of<T: DSym>(cov: &T) -> Skeleton {
+    pub fn of<T: DSym>(cov: &T) -> Skeleton {
         let chamber_to_node = chamber_to_node(cov);
         let edge_translations = edge_translations(cov);
         let corner_shifts = corner_shifts(cov, &edge_translations);
@@ -115,6 +115,7 @@ fn corner_shifts<T: DSym>(cov: &T, e2t: &EdgeVectors) -> EdgeVectors {
 }
 
 
+#[cfg(test)]
 mod test {
     use crate::dsets::DSet;
     use crate::delaney3d::pseudo_toroidal_cover;
