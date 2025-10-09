@@ -126,7 +126,7 @@ pub struct PeriodicGraph {
 
 
 impl<I> From<I> for PeriodicGraph
-where I: IntoIterator<Item=VectorLabelledEdge>
+    where I: IntoIterator<Item=VectorLabelledEdge>
 {
     fn from(edges: I) -> PeriodicGraph {
         let edges: Vec<_> = edges.into_iter()
@@ -211,7 +211,7 @@ fn barycentric_placement(g: &PeriodicGraph) -> HashMap<usize, VecMatrix<BigRatio
 
             let s = &ngb.shift;
             for k in 0..d {
-                t[i][k] = t[i][k] + s[k][0];
+                t[i][k] += s[k][0];
             }
         }
     }
