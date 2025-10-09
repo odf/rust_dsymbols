@@ -34,7 +34,10 @@ impl VectorLabelledEdge {
             return -self;
         } else if self.tail == self.head {
             for i in 0..self.dim() {
-                if self.shift[i][0] < 0 {
+                if self.shift[i][0] > 0 {
+                    break;
+                }
+                else if self.shift[i][0] < 0 {
                     return -self;
                 }
             }
@@ -230,6 +233,12 @@ mod test {
 
     use super::*;
 
+
+    fn make_edge(head: usize, tail: usize, shift: &[i64]) -> VectorLabelledEdge {
+        VectorLabelledEdge::make(head, tail, VecMatrix::from(shift).transpose())
+    }
+
+
     fn make_graph(spec: &[i64]) -> PeriodicGraph {
         let dim = spec[0] as usize;
         let step = dim + 2;
@@ -238,11 +247,31 @@ mod test {
         for i in (1..spec.len()).step_by(step) {
             let head = spec[i] as usize;
             let tail = spec[i + 1] as usize;
-            let shift = VecMatrix::from(&spec[(i + 2)..(i + step)]).transpose();
-            edges.push(VectorLabelledEdge::make(head, tail, shift));
+            edges.push(make_edge(head, tail, &spec[i + 2 .. i + step]));
         }
 
         PeriodicGraph::from(edges)
+    }
+
+
+    #[test]
+    fn test_edge_canonical() {
+        assert_eq!(
+            make_edge(1, 1, &[0, -1, -1]).canonical(),
+            make_edge(1, 1, &[0, 1, 1])
+        );
+        assert_eq!(
+            make_edge(1, 1, &[0, 1, -1]).canonical(),
+            make_edge(1, 1, &[0, 1, -1])
+        );
+        assert_eq!(
+            make_edge(2, 1, &[0, -1, -1]).canonical(),
+            make_edge(1, 2, &[0, 1, 1])
+        );
+        assert_eq!(
+            make_edge(1, 2, &[0, -1, -1]).canonical(),
+            make_edge(1, 2, &[0, -1, -1])
+        );
     }
 
 
