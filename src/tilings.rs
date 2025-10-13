@@ -225,35 +225,18 @@ mod test {
 
     #[test]
     fn test_skeleton() {
-        fn test(spec: &str) {
+        fn test(spec: &str, nv: usize, ne: usize) {
             let ds = spec.parse::<PartialDSym>().unwrap();
             let cov = pseudo_toroidal_cover(&ds).unwrap();
             let skel = Skeleton::of(&cov);
 
-            println!("Vertices: {:?}", skel.graph.vertices());
-            for e in skel.graph.edges() {
-                println!("{e}");
-            }
-            for &v in skel.graph.vertices() {
-                println!("{v}:");
-                for e in skel.graph.incidences(v).unwrap() {
-                    println!(" {e}");
-                }
-                println!();
-            }
-            for &v in skel.graph.vertices() {
-                print!("{v}:");
-                for i in 0..skel.graph.dim() {
-                    print!(" {}", skel.graph.position(v)[i][0]);
-                }
-                println!();
-            }
-            println!();
+            assert_eq!(skel.graph.vertices().len(), nv);
+            assert_eq!(skel.graph.edges().len(), ne);
         }
 
-        test("<1.1:1 3:1,1,1,1:4,3,4>");
-        test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
-        test("<1.1:2 3:1 2,1 2,1 2,2:3 3,3 4,4>");
-        test("<1.1:6 3:2 4 6,1 2 3 5 6,3 4 5 6,2 3 4 5 6:6 4,2 3 3,8 4 4>");
+        test("<1.1:1 3:1,1,1,1:4,3,4>", 1, 3);
+        test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", 2, 4);
+        test("<1.1:2 3:1 2,1 2,1 2,2:3 3,3 4,4>", 1, 6);
+        test("<1.1:6 3:2 4 6,1 2 3 5 6,3 4 5 6,2 3 4 5 6:6 4,2 3 3,8 4 4>", 4, 12);
     }
 }
