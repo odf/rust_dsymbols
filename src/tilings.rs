@@ -2,7 +2,10 @@ use std::collections::BTreeMap;
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
+use num_traits::Signed;
 
+use crate::dsets::Sign;
+use crate::geometry::traits::{Array2d, Entry, ScalarPtr};
 use crate::pgraphs::{PeriodicGraph, VectorLabelledEdge};
 
 use crate::dsyms::DSym;
@@ -11,13 +14,13 @@ use crate::fundamental_group::fundamental_group;
 use crate::geometry::vec_matrix::VecMatrix;
 
 
-type EdgeVectors = BTreeMap<(usize, usize), VecMatrix<i64>>;
+type EdgeVectors<T> = BTreeMap<(usize, usize), VecMatrix<T>>;
 
 
 pub struct Skeleton {
     pub chamber_to_node: Vec<usize>,
-    pub edge_translations: EdgeVectors,
-    pub corner_shifts: EdgeVectors,
+    pub edge_translations: EdgeVectors<i64>,
+    pub corner_shifts: EdgeVectors<i64>,
     pub graph: PeriodicGraph
 }
 
@@ -44,8 +47,8 @@ impl Skeleton {
 fn skeleton_edge<T: DSym>(
     d: usize,
     cov: &T,
-    e2t: &EdgeVectors,
-    c2s: &EdgeVectors,
+    e2t: &EdgeVectors<i64>,
+    c2s: &EdgeVectors<i64>,
     c2n: &Vec<usize>
 )
     -> VectorLabelledEdge
@@ -78,7 +81,7 @@ fn chamber_to_node<T: DSym>(cov: &T) -> Vec<usize> {
 }
 
 
-fn edge_translations<T: DSym>(cov: &T) -> EdgeVectors
+fn edge_translations<T: DSym>(cov: &T) -> EdgeVectors<i64>
 {
     let fg = fundamental_group(cov);
     let nr_gens = fg.nr_generators();
@@ -97,7 +100,7 @@ fn edge_translations<T: DSym>(cov: &T) -> EdgeVectors
 }
 
 
-fn corner_shifts<T: DSym>(cov: &T, e2t: &EdgeVectors) -> EdgeVectors {
+fn corner_shifts<T: DSym>(cov: &T, e2t: &EdgeVectors<i64>) -> EdgeVectors<i64> {
     let zero = VecMatrix::new(3, 1);
 
     let mut result = BTreeMap::new();
@@ -119,7 +122,7 @@ fn corner_shifts<T: DSym>(cov: &T, e2t: &EdgeVectors) -> EdgeVectors {
 
 
 pub fn chamber_positions<T: DSym>(cov: &T, skel: &Skeleton)
-    -> BTreeMap<(usize, usize), VecMatrix<BigRational>>
+    -> EdgeVectors<BigRational>
 {
     let graph = &skel.graph;
     let nodes = &skel.chamber_to_node;
@@ -153,6 +156,59 @@ pub fn chamber_positions<T: DSym>(cov: &T, skel: &Skeleton)
     }
 
     result
+}
+
+
+fn chamber_basis<T>(pos: &EdgeVectors<T>, d: usize)
+    -> VecMatrix<T>
+    where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
+{
+    let c0 = &pos[&(d, 0)];
+    let dim = c0.nr_rows();
+
+    let mut result = VecMatrix::zero(dim, dim);
+    for i in 0..dim {
+        let row = (&pos[&(d, i + 1)] - c0).transpose();
+        result[i].clone_from_slice(&row[0]);
+    }
+
+    result
+}
+
+
+fn normalized_orientation<D, T>(cov: &D, pos: &EdgeVectors<T>)
+    -> Vec<Sign>
+    where
+        D: DSym,
+        T: Entry + Signed + Clone, for <'a> &'a T: ScalarPtr<T>
+{
+    let mut vol = T::zero();
+    for d in cov.elements() {
+        vol = vol + chamber_basis(pos, d).determinant();
+    }
+
+    let ori = cov.partial_orientation();
+    if vol.is_negative() {
+        ori.iter().map(|s|
+            match s {
+                Sign::PLUS => Sign::MINUS,
+                Sign::MINUS => Sign::PLUS,
+                Sign::ZERO => Sign::ZERO,
+            }
+        ).collect()
+    } else {
+        ori
+    }
+}
+
+
+fn non_degenerate_chamber<D, T>(cov: &D, pos: &EdgeVectors<T>)
+    -> Option<usize>
+    where
+        D: DSym,
+        T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
+{
+    cov.elements().find(|&d| !chamber_basis(pos, d).determinant().is_zero())
 }
 
 
