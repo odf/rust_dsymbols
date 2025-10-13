@@ -1,5 +1,8 @@
 use std::collections::BTreeMap;
 
+use num_bigint::BigInt;
+use num_rational::BigRational;
+
 use crate::pgraphs::{PeriodicGraph, VectorLabelledEdge};
 
 use crate::dsyms::DSym;
@@ -115,8 +118,47 @@ fn corner_shifts<T: DSym>(cov: &T, e2t: &EdgeVectors) -> EdgeVectors {
 }
 
 
+pub fn chamber_positions<T: DSym>(cov: &T, skel: &Skeleton)
+    -> BTreeMap<(usize, usize), VecMatrix<BigRational>>
+{
+    let graph = &skel.graph;
+    let nodes = &skel.chamber_to_node;
+    let shifts = &skel.corner_shifts;
+
+    let shift = |d, i| shifts[&(d, i)].to::<BigInt>().to::<BigRational>();
+
+    let corners: BTreeMap<_, _> = cov.elements().map(|d|
+        (d, graph.position(nodes[d]) + shift(d, 0))
+    ).collect();
+
+    let mut result = BTreeMap::new();
+    for (d, p) in &corners {
+        result.insert((*d, 0), p.clone());
+    }
+
+    for i in 1..=cov.dim() {
+        for d0 in cov.orbit_reps(0..i, cov.elements()) {
+            let orb = cov.orbit(0..i, d0);
+
+            let mut sum = VecMatrix::zero(cov.dim(), 1);
+            for d in &orb {
+                sum = sum + &corners[d] - shift(*d, i);
+            }
+            let center = sum / BigRational::from(BigInt::from(orb.len()));
+
+            for d in &orb {
+                result.insert((*d, i), &center + shift(*d, i));
+            }
+        }
+    }
+
+    result
+}
+
+
 #[cfg(test)]
 mod test {
+    use crate::derived::canonical;
     use crate::dsets::DSet;
     use crate::delaney3d::pseudo_toroidal_cover;
     use crate::dsyms::PartialDSym;
@@ -238,5 +280,29 @@ mod test {
         test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>", 2, 4);
         test("<1.1:2 3:1 2,1 2,1 2,2:3 3,3 4,4>", 1, 6);
         test("<1.1:6 3:2 4 6,1 2 3 5 6,3 4 5 6,2 3 4 5 6:6 4,2 3 3,8 4 4>", 4, 12);
+    }
+
+    #[test]
+    fn test_chamber_positions() {
+        fn test(spec: &str) {
+            let ds = spec.parse::<PartialDSym>().unwrap();
+            let cov = canonical(&pseudo_toroidal_cover(&ds).unwrap());
+            let skel = Skeleton::of(&cov);
+            let pos = chamber_positions(&cov, &skel);
+
+            for d in cov.elements() {
+                print!("{d}: ");
+                for i in cov.indices() {
+                    let p = &pos[&(d, i)];
+                    print!("   ");
+                    for k in 0..3 {
+                        print!(" {}", p[(k, 0)]);
+                    }
+                }
+                println!();
+            }
+        }
+
+        test("<1.1:1 3:1,1,1,1:4,3,4>");
     }
 }
