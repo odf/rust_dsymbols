@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::Signed;
+use num_traits::{FromPrimitive, Signed};
 
 use crate::dsets::Sign;
 use crate::geometry::traits::{Array2d, Entry, ScalarPtr};
@@ -176,15 +176,14 @@ fn chamber_basis<T>(pos: &EdgeVectors<T>, d: usize)
 }
 
 
-fn normalized_orientation<D, T>(cov: &D, pos: &EdgeVectors<T>)
-    -> Vec<Sign>
-    where
-        D: DSym,
-        T: Entry + Signed + Clone, for <'a> &'a T: ScalarPtr<T>
+fn normalized_orientation<D>(cov: &D, skel: &Skeleton) -> Vec<Sign>
+    where D: DSym,
 {
-    let mut vol = T::zero();
+    let pos = chamber_positions(cov, skel);
+
+    let mut vol = BigRational::from_i64(0).unwrap();
     for d in cov.elements() {
-        vol = vol + chamber_basis(pos, d).determinant();
+        vol = vol + chamber_basis(&pos, d).determinant();
     }
 
     let ori = cov.partial_orientation();
@@ -209,6 +208,68 @@ fn non_degenerate_chamber<D, T>(cov: &D, pos: &EdgeVectors<T>)
         T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
 {
     cov.elements().find(|&d| !chamber_basis(pos, d).determinant().is_zero())
+}
+
+
+fn orbit_indices<T, I1, I2>(ds: &T, indices: I1, seeds: I2) -> Vec<usize>
+    where T: DSym, I1: IntoIterator<Item=usize>, I2: IntoIterator<Item=usize>
+{
+    let mut result = vec![0; ds.size() + 1];
+    let mut next_index = 0;
+
+    for (i, d, _) in ds.traversal(indices, seeds) {
+        if i.is_none() {
+            next_index += 1;
+        }
+        result[d] = next_index - 1;
+    }
+
+    result
+}
+
+
+fn tile_surface<S, D, I>(
+    cov: &D,
+    skel: &Skeleton,
+    vertex_pos: BTreeMap<usize, VecMatrix<S>>,
+    seeds: I
+)
+    -> Vec<(Vec<VecMatrix<S>>, Vec<Vec<usize>>)>
+    where
+        S: Entry + Clone + From<i64>, for <'a> &'a S: ScalarPtr<S>,
+        D: DSym,
+        I: IntoIterator<Item=usize>
+{
+    let dim = cov.dim();
+    let ori = normalized_orientation(cov, skel);
+    let mut result = vec![];
+
+    for d0 in seeds {
+        let tile = cov.orbit(0..dim, d0);
+        let corner_indices = orbit_indices(cov, 1..dim, tile.clone());
+
+        let pos = cov.orbit_reps(1..dim, tile.clone()).iter().map(|&d|
+            &vertex_pos[&skel.chamber_to_node[d]] + skel.corner_shifts[&(d, 0)].to()
+        ).collect();
+
+        let mut faces = vec![];
+        for d in cov.orbit_reps([0, 1], tile) {
+            let e = match ori[d] {
+                Sign::MINUS => cov.op(1, d).unwrap(),
+                _ => d
+            };
+            faces.push(
+                cov.orbit([0, 1], e).into_iter()
+                    .step_by(2)
+                    .map(|d| corner_indices[d])
+                    .collect()
+            );
+        }
+
+        result.push((pos, faces))
+    }
+
+    result
 }
 
 
