@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Signed};
 
@@ -128,7 +127,7 @@ pub fn chamber_positions<T: DSym>(cov: &T, skel: &Skeleton)
     let nodes = &skel.chamber_to_node;
     let shifts = &skel.corner_shifts;
 
-    let shift = |d, i| shifts[&(d, i)].to::<BigInt>().to::<BigRational>();
+    let shift = |d, i| shifts[&(d, i)].upcast().unwrap();
 
     let corners: BTreeMap<_, _> = cov.elements().map(|d|
         (d, graph.position(nodes[d]) + shift(d, 0))
@@ -147,7 +146,7 @@ pub fn chamber_positions<T: DSym>(cov: &T, skel: &Skeleton)
             for d in &orb {
                 sum = sum + &corners[d] - shift(*d, i);
             }
-            let center = sum / BigRational::from(BigInt::from(orb.len()));
+            let center = sum / BigRational::from_usize(orb.len()).unwrap();
 
             for d in &orb {
                 result.insert((*d, i), &center + shift(*d, i));
@@ -236,7 +235,7 @@ fn tile_surface<S, D, I>(
 )
     -> Vec<(Vec<VecMatrix<S>>, Vec<Vec<usize>>)>
     where
-        S: Entry + Clone + From<i64>, for <'a> &'a S: ScalarPtr<S>,
+        S: Entry + Clone + FromPrimitive, for <'a> &'a S: ScalarPtr<S>,
         D: DSym,
         I: IntoIterator<Item=usize>
 {
@@ -249,7 +248,8 @@ fn tile_surface<S, D, I>(
         let corner_indices = orbit_indices(cov, 1..dim, tile.clone());
 
         let pos = cov.orbit_reps(1..dim, tile.clone()).iter().map(|&d|
-            &vertex_pos[&skel.chamber_to_node[d]] + skel.corner_shifts[&(d, 0)].to()
+            &vertex_pos[&skel.chamber_to_node[d]] +
+            skel.corner_shifts[&(d, 0)].upcast().unwrap()
         ).collect();
 
         let mut faces = vec![];
@@ -407,19 +407,33 @@ mod test {
             let skel = Skeleton::of(&cov);
             let pos = chamber_positions(&cov, &skel);
 
-            for d in cov.elements() {
-                print!("{d}: ");
-                for i in cov.indices() {
-                    let p = &pos[&(d, i)];
-                    print!("   ");
-                    for k in 0..3 {
-                        print!(" {}", p[(k, 0)]);
+            for i in 1..=cov.dim() {
+                let mut sum: VecMatrix<BigRational> = VecMatrix::zero(cov.dim(), 1);
+                let mut always_zero = true;
+
+                for d in cov.elements() {
+                    let n = BigRational::from_usize(
+                        cov.orbit(1..i, d).iter().count()
+                    ).unwrap();
+                    sum = sum + (&pos[&(d, i)] - &pos[&(d, 0)]) / n;
+                    always_zero &= sum.is_zero();
+
+                    for k in 0..i {
+                        assert_eq!(
+                            pos[&(d, i)],
+                            pos[&(cov.op(k, d).unwrap_or(d), i)]
+                        )
                     }
                 }
-                println!();
+
+                assert!(sum.is_zero());
+                assert!(!always_zero);
             }
         }
 
         test("<1.1:1 3:1,1,1,1:4,3,4>");
+        test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
+        test("<1.1:3 3:1 3,2 3,1 2 3,1 2 3:3,4 4,4 3 3>");
+        test("<1.1:3 3:1 2 3,1 2 3,2 3,1 3:4 3 3,4 4,3>");
     }
 }

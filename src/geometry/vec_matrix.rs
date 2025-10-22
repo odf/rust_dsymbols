@@ -1,6 +1,8 @@
 use std::iter::Sum;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
+use num_traits::FromPrimitive;
+
 use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 use crate::geometry::matrix::Matrix;
 
@@ -223,6 +225,21 @@ impl<T: Scalar + Clone> VecMatrix<T> {
         }
 
         result
+    }
+}
+
+
+impl VecMatrix<i64> {
+    pub fn upcast<S>(&self)
+        -> Option<VecMatrix<S>>
+        where S: Scalar + Clone + FromPrimitive
+    {
+        let mut data = vec![];
+        for &x in &self.data {
+            data.push(S::from_i64(x)?);
+        }
+
+        Some(VecMatrix { data, nr_rows: self.nr_rows, nr_cols: self.nr_cols})
     }
 }
 
