@@ -15,3 +15,4 @@ pub mod pgraphs;
 pub mod tilings;
 pub mod parse_dsym;
 pub mod generators;
+pub mod display;
