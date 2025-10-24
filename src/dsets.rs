@@ -170,6 +170,31 @@ pub trait DSet: Sized {
     }
 
 
+    fn orbit_2d(&self, i: usize, j: usize, d: usize) -> Vec<usize> {
+        let mut result = vec![];
+        let mut seen = vec![false; self.size() + 1];
+
+        let mut e = d;
+        let mut k = i;
+
+        loop {
+            if !seen[e] {
+                result.push(e);
+                seen[e] = true;
+            }
+
+            e = self.op(k, e).unwrap_or(e);
+            k = (i + j) - k;
+
+            if k == i && e == d {
+                break;
+            }
+        }
+
+        result
+    }
+
+
     fn orbit_reps_2d(&self, i: usize, j: usize) -> Vec<usize> {
         let mut result = vec![];
         let mut seen = vec![false; self.size() + 1];
