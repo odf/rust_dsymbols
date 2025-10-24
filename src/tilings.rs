@@ -227,7 +227,7 @@ fn orbit_indices<T, I1, I2>(ds: &T, indices: I1, seeds: I2) -> Vec<usize>
 }
 
 
-fn tile_surfaces<S, D, I>(
+pub fn tile_surfaces<S, D, I>(
     cov: &D,
     skel: &Skeleton,
     vertex_pos: &BTreeMap<usize, VecMatrix<S>>,

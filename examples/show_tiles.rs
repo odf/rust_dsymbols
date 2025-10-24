@@ -1,8 +1,12 @@
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, vec4, Point3};
-
-use rust_dsymbols::display::mesh::{self, ItemType, Mesh};
+use num_traits::ToPrimitive;
 use three_d::Mat4;
+
+use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
+use rust_dsymbols::display::mesh::{decompose_mesh, ItemType, Mesh};
+use rust_dsymbols::dsyms::PartialDSym;
+use rust_dsymbols::tilings::{tile_surfaces, Skeleton};
 
 
 fn main() {
@@ -55,24 +59,11 @@ fn run() {
 
     let control = rust_dsymbols::display::controls::OrbitControl::new(1.0, 1000.0);
 
-    let base_mesh = diamond_cage();
-
-    let shift = |x, y, z| Mat4::from_translation(vec3(x, y, z));
-    let flip = Mat4::from_axis_angle(
-        vec3(0.7071, 0.7071, 0.0),
-        three_d::degrees(180.0)
-    );
-    let scale = Mat4::from_scale(0.9);
+    let base_mesh = tile("<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>");
 
     let instances = three_d::Instances {
         transformations: vec![
             Mat4::from_scale(0.9),
-            shift( 2.0,  2.0,  0.0) * scale,
-            shift( 0.0,  2.0,  2.0) * scale,
-            shift( 2.0,  0.0,  2.0) * scale,
-            shift( 1.0, -1.0,  1.0) * flip * scale,
-            shift(-1.0,  1.0,  1.0) * flip * scale,
-            shift( 1.0,  1.0, -1.0) * flip * scale,
         ],
         ..Default::default()
     };
@@ -80,7 +71,7 @@ fn run() {
     let face_color = three_d::Srgba::BLUE;
     let edge_color = three_d::Srgba::new(224, 128, 0, 255);
 
-    let models: Vec<_> = mesh::decompose_mesh(base_mesh).iter()
+    let models: Vec<_> = decompose_mesh(base_mesh).iter()
         .map(|(mesh, item_type)| {
             let color = match item_type {
                 ItemType::Vertex => edge_color,
@@ -139,28 +130,26 @@ fn run() {
 }
 
 
-fn diamond_cage() -> Mesh<Point3<f64>> {
-    Mesh::from_oriented_faces(
-        [
-            point3( 1.0,  1.0,  1.0), // 0
-            point3(-1.0, -1.0,  1.0), // 1
-            point3( 1.0, -1.0, -1.0), // 2
-            point3(-1.0,  1.0, -1.0), // 3
-            point3(-2.0,  0.0,  0.0), // 4
-            point3( 0.0, -2.0,  0.0), // 5
-            point3( 0.0,  0.0, -2.0), // 6
-            point3( 2.0,  0.0,  0.0), // 7
-            point3( 0.0,  2.0,  0.0), // 8
-            point3( 0.0,  0.0,  2.0), // 9
-        ],
-        [
-            [0, 9, 1, 5, 2, 7],
-            [0, 7, 2, 6, 3, 8],
-            [0, 8, 3, 4, 1, 9],
-            [3, 6, 2, 5, 1, 4],
-        ]
-    )
-        .unwrap()
+fn tile(spec: &str) -> Mesh<Point3<f64>> {
+    let ds = spec.parse::<PartialDSym>().unwrap();
+    let cov = pseudo_toroidal_cover(&ds).unwrap();
+    let skel = Skeleton::of(&cov);
+    let pos = skel.graph.vertices().iter()
+        .map(|&v| (v, skel.graph.position(v)))
+        .collect();
+    let surf = tile_surfaces(&cov, &skel, &pos, [1]);
+    let (vertices, faces) = surf[0].clone();
+
+    let mut vs = vec![];
+    for v in vertices {
+        vs.push(point3(
+            v[(0, 0)].to_f64().unwrap(),
+            v[(1, 0)].to_f64().unwrap(),
+            v[(2, 0)].to_f64().unwrap()
+        ));
+    }
+
+    Mesh::from_oriented_faces(vs, faces).unwrap()
 }
 
 
