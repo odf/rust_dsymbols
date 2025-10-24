@@ -216,7 +216,7 @@ fn orbit_indices<T, I1, I2>(ds: &T, indices: I1, seeds: I2) -> Vec<usize>
     let mut result = vec![0; ds.size() + 1];
     let mut next_index = 0;
 
-    for (i, d, _) in ds.traversal(indices, seeds) {
+    for (i, _, d) in ds.traversal(indices, seeds) {
         if i.is_none() {
             next_index += 1;
         }
@@ -227,10 +227,10 @@ fn orbit_indices<T, I1, I2>(ds: &T, indices: I1, seeds: I2) -> Vec<usize>
 }
 
 
-fn tile_surface<S, D, I>(
+fn tile_surfaces<S, D, I>(
     cov: &D,
     skel: &Skeleton,
-    vertex_pos: BTreeMap<usize, VecMatrix<S>>,
+    vertex_pos: &BTreeMap<usize, VecMatrix<S>>,
     seeds: I
 )
     -> Vec<(Vec<VecMatrix<S>>, Vec<Vec<usize>>)>
@@ -255,11 +255,11 @@ fn tile_surface<S, D, I>(
         let mut faces = vec![];
         for d in cov.orbit_reps([0, 1], tile) {
             let e = match ori[d] {
-                Sign::MINUS => cov.op(1, d).unwrap(),
+                Sign::MINUS => cov.op(0, d).unwrap(),
                 _ => d
             };
             faces.push(
-                cov.orbit([0, 1], e).into_iter()
+                cov.orbit_2d(0, 1, e).into_iter()
                     .step_by(2)
                     .map(|d| corner_indices[d])
                     .collect()
@@ -435,5 +435,34 @@ mod test {
         test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
         test("<1.1:3 3:1 3,2 3,1 2 3,1 2 3:3,4 4,4 3 3>");
         test("<1.1:3 3:1 2 3,1 2 3,2 3,1 3:4 3 3,4 4,3>");
+    }
+
+    #[test]
+    fn test_tile_surfaces() {
+        fn test(spec: &str) {
+            let ds = spec.parse::<PartialDSym>().unwrap();
+            let cov = canonical(&pseudo_toroidal_cover(&ds).unwrap());
+            let skel = Skeleton::of(&cov);
+            let pos = skel.graph.vertices().iter()
+                .map(|&v| (v, skel.graph.position(v)))
+                .collect();
+            let surf = tile_surfaces(&cov, &skel, &pos, [1]);
+
+            for (pos, faces) in surf {
+                for p in pos {
+                    for i in 0..p.nr_rows() {
+                        print!("  {}", p[(i, 0)]);
+                    }
+                    println!();
+                }
+                for f in faces {
+                    println!("{f:?}");
+                }
+                println!();
+            }
+        }
+
+        test("<1.1:1 3:1,1,1,1:4,3,4>");
+        test("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
     }
 }
