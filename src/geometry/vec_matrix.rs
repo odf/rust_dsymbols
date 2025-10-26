@@ -1,7 +1,7 @@
 use std::iter::Sum;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::geometry::traits::{Entry, Scalar, ScalarPtr, Array2d};
 use crate::geometry::matrix::Matrix;
@@ -237,6 +237,22 @@ impl VecMatrix<i64> {
         let mut data = vec![];
         for &x in &self.data {
             data.push(S::from_i64(x)?);
+        }
+
+        Some(VecMatrix { data, nr_rows: self.nr_rows, nr_cols: self.nr_cols})
+    }
+}
+
+
+impl<T> VecMatrix<T>
+    where T: Scalar + Clone + ToPrimitive
+{
+    pub fn to_f64(&self)
+        -> Option<VecMatrix<f64>>
+    {
+        let mut data = vec![];
+        for x in &self.data {
+            data.push(x.to_f64()?);
         }
 
         Some(VecMatrix { data, nr_rows: self.nr_rows, nr_cols: self.nr_cols})

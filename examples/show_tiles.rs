@@ -1,6 +1,5 @@
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, vec4, Point3};
-use num_traits::ToPrimitive;
 use three_d::Mat4;
 
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
@@ -142,11 +141,8 @@ fn tile(spec: &str) -> Mesh<Point3<f64>> {
 
     let mut vs = vec![];
     for v in vertices {
-        vs.push(point3(
-            v[(0, 0)].to_f64().unwrap(),
-            v[(1, 0)].to_f64().unwrap(),
-            v[(2, 0)].to_f64().unwrap()
-        ));
+        let v = v.to_f64().unwrap();
+        vs.push(point3(v[(0, 0)], v[(1, 0)], v[(2, 0)]));
     }
 
     Mesh::from_oriented_faces(vs, faces).unwrap()
