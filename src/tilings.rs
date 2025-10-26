@@ -273,6 +273,46 @@ pub fn tile_surfaces<S, D, I>(
 }
 
 
+pub fn gram_matrix<D: DSym>(ds: &D, cov: &D, skel: &Skeleton) -> Option<VecMatrix<f64>> {
+    let proj = cov.morphism(ds, 1)?;
+    let pos = chamber_positions(cov, skel);
+    let d0 = non_degenerate_chamber(cov, &pos)?;
+
+    let mut result = VecMatrix::zero(cov.dim(), cov.dim());
+    for d in cov.elements() {
+        if proj[d] == 1 {
+            let phi = cov.morphism(cov, d)?;
+            let b0 = &chamber_basis(&pos, phi[d0]).to_f64()?;
+            let b1 = &chamber_basis(&pos, d0).to_f64()?;
+            let a = b0.solve(b1)?;
+            result = result + &a * a.transpose();
+        }
+    }
+
+    Some(result / cov.size() as f64)
+}
+
+
+pub fn invariant_basis(gram: &VecMatrix<f64>) -> VecMatrix<f64> {
+    let dim = gram.nr_rows();
+
+    let mut result = VecMatrix::identity(dim);
+
+    for i in 0..dim {
+        for j in 0..=i {
+            let mut s = gram[(i, j)];
+            for k in 0..j {
+                s -= result[(i, k)] * result[(j, k)];
+            }
+
+            result[(i, j)] = if i == j { s.max(0.0).sqrt() } else { s / result[(j, j)]};
+        }
+    }
+
+    result
+}
+
+
 #[cfg(test)]
 mod test {
     use crate::derived::canonical;
@@ -447,6 +487,10 @@ mod test {
                 .map(|&v| (v, skel.graph.position(v)))
                 .collect();
             let surf = tile_surfaces(&cov, &skel, &pos, [1]);
+
+            let gram = gram_matrix(&ds, &cov, &skel).unwrap();
+            let basis = invariant_basis(&gram);
+            println!("{:?} {:?}", gram, &basis * basis.transpose());
 
             for (pos, faces) in surf {
                 for p in pos {

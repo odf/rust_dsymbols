@@ -5,7 +5,7 @@ use three_d::Mat4;
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
 use rust_dsymbols::display::mesh::{decompose_mesh, ItemType, Mesh};
 use rust_dsymbols::dsyms::PartialDSym;
-use rust_dsymbols::tilings::{tile_surfaces, Skeleton};
+use rust_dsymbols::tilings::{gram_matrix, invariant_basis, tile_surfaces, Skeleton};
 
 
 fn main() {
@@ -58,7 +58,8 @@ fn run() {
 
     let control = rust_dsymbols::display::controls::OrbitControl::new(1.0, 1000.0);
 
-    let base_mesh = tile("<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>");
+    //let base_mesh = tile("<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>");
+    let base_mesh = tile("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
 
     let instances = three_d::Instances {
         transformations: vec![
@@ -133,6 +134,7 @@ fn tile(spec: &str) -> Mesh<Point3<f64>> {
     let ds = spec.parse::<PartialDSym>().unwrap();
     let cov = pseudo_toroidal_cover(&ds).unwrap();
     let skel = Skeleton::of(&cov);
+    let basis = invariant_basis(&gram_matrix(&ds, &cov, &skel).unwrap()).transpose();
     let pos = skel.graph.vertices().iter()
         .map(|&v| (v, skel.graph.position(v)))
         .collect();
@@ -141,7 +143,7 @@ fn tile(spec: &str) -> Mesh<Point3<f64>> {
 
     let mut vs = vec![];
     for v in vertices {
-        let v = v.to_f64().unwrap();
+        let v = &basis * v.to_f64().unwrap();
         vs.push(point3(v[(0, 0)], v[(1, 0)], v[(2, 0)]));
     }
 
