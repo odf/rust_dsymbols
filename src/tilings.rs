@@ -162,12 +162,12 @@ fn chamber_basis<T>(pos: &EdgeVectors<T>, d: usize)
     -> VecMatrix<T>
     where T: Entry + Clone, for <'a> &'a T: ScalarPtr<T>
 {
-    let c0 = &pos[&(d, 0)];
-    let dim = c0.nr_rows();
+    let c3 = &pos[&(d, 3)];
+    let dim = c3.nr_rows();
 
     let mut result = VecMatrix::zero(dim, dim);
     for i in 0..dim {
-        let row = (&pos[&(d, i + 1)] - c0).transpose();
+        let row = (&pos[&(d, i)] - c3).transpose();
         result[i].clone_from_slice(&row[0]);
     }
 
@@ -178,14 +178,15 @@ fn chamber_basis<T>(pos: &EdgeVectors<T>, d: usize)
 fn normalized_orientation<D>(cov: &D, skel: &Skeleton) -> Vec<Sign>
     where D: DSym,
 {
+    let ori = cov.partial_orientation();
     let pos = chamber_positions(cov, skel);
 
     let mut vol = BigRational::from_i64(0).unwrap();
     for d in cov.elements() {
-        vol = vol + chamber_basis(&pos, d).determinant();
+        let vol_d = chamber_basis(&pos, d).determinant();
+        vol = if ori[d] == Sign::MINUS { vol - vol_d } else { vol + vol_d };
     }
 
-    let ori = cov.partial_orientation();
     if vol.is_negative() {
         ori.iter().map(|s|
             match s {
