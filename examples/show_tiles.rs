@@ -152,10 +152,11 @@ fn tile(spec: &str) -> Mesh<Point3<f64>> {
         n += 1;
     };
     let scale = n as f64 / s;
+    let shift = -scale * &basis * ch_pos[&(1, 3)].to_f64().unwrap();
 
     let mut vs = vec![];
     for v in vertices {
-        let v = scale * &basis * v.to_f64().unwrap();
+        let v = scale * &basis * v.to_f64().unwrap() + &shift;
         vs.push(point3(v[(0, 0)], v[(1, 0)], v[(2, 0)]));
     }
 
