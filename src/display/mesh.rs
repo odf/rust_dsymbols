@@ -336,7 +336,7 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
         let mut gz = vec![0.0; n];
 
         let f1 = 0.1;
-        let f2 = 0.05;
+        let f2 = 0.1;
 
         for _ in 0..100 {
             for v in 0..n {
@@ -727,7 +727,7 @@ pub enum ItemType {
 pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
     -> Vec<(Mesh<Point3<S>>, ItemType)>
 {
-    let edge_radius = S::from(0.0475).unwrap();
+    let edge_radius = S::from(0.049).unwrap();
     let edge_lift = S::from(0.05).unwrap();
 
     let mut result = vec![];
