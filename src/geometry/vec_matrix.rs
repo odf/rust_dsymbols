@@ -882,6 +882,13 @@ impl<T: Entry + Clone> VecMatrix<T>
 }
 
 
+impl VecMatrix<f64> {
+    pub fn norm(&self) -> f64 {
+        self.data.iter().map(|x| x * x).sum::<f64>().sqrt()
+    }
+}
+
+
 #[test]
 fn test_matrix_clone() {
     let m1 = VecMatrix::from([[1, 2], [3, 4]]);
