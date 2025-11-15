@@ -1,11 +1,12 @@
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, vec4, Point3};
+use rust_dsymbols::dsets::DSet;
 use three_d::Mat4;
 
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
 use rust_dsymbols::display::mesh::{decompose_mesh, ItemType, Mesh};
 use rust_dsymbols::dsyms::PartialDSym;
-use rust_dsymbols::tilings::{gram_matrix, invariant_basis, tile_surfaces, Skeleton};
+use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces};
 
 
 fn main() {
@@ -141,9 +142,20 @@ fn tile(spec: &str) -> Mesh<Point3<f64>> {
     let surf = tile_surfaces(&cov, &skel, &pos, [1]);
     let (vertices, faces) = surf[0].clone();
 
+    let ch_pos = chamber_positions(&cov, &skel);
+    let mut s = 0.0;
+    let mut n = 0;
+
+    for d in  cov.orbit_reps([0, 2, 3], cov.elements()) {
+        let v = 2.0 * &basis * (&ch_pos[&(d, 1)] - &ch_pos[&(d, 0)]).to_f64().unwrap();
+        s += v.norm();
+        n += 1;
+    };
+    let scale = n as f64 / s;
+
     let mut vs = vec![];
     for v in vertices {
-        let v = &basis * v.to_f64().unwrap();
+        let v = scale * &basis * v.to_f64().unwrap();
         vs.push(point3(v[(0, 0)], v[(1, 0)], v[(2, 0)]));
     }
 
