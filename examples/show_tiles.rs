@@ -60,41 +60,46 @@ fn run() {
 
     let control = rust_dsymbols::display::controls::OrbitControl::new(1.0, 1000.0);
 
-    //let base_mesh = tile("<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>");
-    let base_mesh = tile("<1.1:2 3:2,1 2,1 2,2:6,3 2,6>");
+    //let ds_spec = "<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>";
+    let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
 
     let instances = three_d::Instances {
         transformations: vec![
-            Mat4::from_scale(0.9),
+            Mat4::from_scale(1.0),
         ],
         ..Default::default()
     };
 
-    let face_color = three_d::Srgba::RED;
+    let vertex_color = three_d::Srgba::BLACK;
     let edge_color = three_d::Srgba::BLUE;
+    let face_color = three_d::Srgba::RED;
 
-    let models: Vec<_> = decompose_mesh(base_mesh).iter()
-        .map(|(mesh, item_type)| {
-            let color = match item_type {
-                ItemType::Vertex => edge_color,
-                ItemType::Edge => edge_color,
-                ItemType::Face => face_color,
-            };
+    let models: Vec<_> = tiles(ds_spec).iter().flat_map(|tile_mesh|
+        // todo shrink the mesh so that the individual tiles are separated
+        decompose_mesh(tile_mesh).iter()
+            .map(|(part_mesh, item_type)| {
+                let color = match item_type {
+                    ItemType::Vertex => vertex_color,
+                    ItemType::Edge => edge_color,
+                    ItemType::Face => face_color,
+                };
 
-            three_d::Gm::new(
-                three_d::InstancedMesh::new(
-                    &context,
-                    &instances,
-                    &mesh.to_cpu_mesh()
-                ),
-                three_d::PhysicalMaterial {
-                    albedo: color,
-                    metallic: 0.0,
-                    roughness: 0.5,
-                    ..Default::default()
-                }
-            )
-        })
+                three_d::Gm::new(
+                    three_d::InstancedMesh::new(
+                        &context,
+                        &instances,
+                        &part_mesh.to_cpu_mesh()
+                    ),
+                    three_d::PhysicalMaterial {
+                        albedo: color,
+                        metallic: 0.0,
+                        roughness: 0.5,
+                        ..Default::default()
+                    }
+                )
+            })
+            .collect::<Vec<_>>()
+        )
         .collect();
 
     let sun_dir = vec4(1.0, -1.0, -1.0, 0.0);
@@ -132,7 +137,7 @@ fn run() {
 }
 
 
-fn tile(spec: &str) -> Mesh<Point3<f64>> {
+fn tiles(spec: &str) -> Vec<Mesh<Point3<f64>>> {
     let ds = spec.parse::<PartialDSym>().unwrap();
     let cov = pseudo_toroidal_cover(&ds).unwrap();
     let skel = Skeleton::of(&cov);
@@ -142,17 +147,16 @@ fn tile(spec: &str) -> Mesh<Point3<f64>> {
         .collect();
 
     let (scale, shift) = scale_and_shift(&cov, &skel, &basis);
+    let reps = cov.orbit_reps([0, 1, 2], cov.elements());
 
-    let surf = tile_surfaces(&cov, &skel, &pos, [1]);
-    let (vertices, faces) = surf[0].clone();
+    tile_surfaces(&cov, &skel, &pos, reps).iter().map(|(vertices, faces)| {
+        let vs = vertices.iter().map(|v| {
+            let v = scale * &basis * v.to_f64().unwrap() + &shift;
+            point3(v[(0, 0)], v[(1, 0)], v[(2, 0)])
+        });
 
-    let mut vs = vec![];
-    for v in vertices {
-        let v = scale * &basis * v.to_f64().unwrap() + &shift;
-        vs.push(point3(v[(0, 0)], v[(1, 0)], v[(2, 0)]));
-    }
-
-    Mesh::from_oriented_faces(vs, faces).unwrap()
+        Mesh::from_oriented_faces(vs, faces.clone()).unwrap()
+    }).collect()
 }
 
 
