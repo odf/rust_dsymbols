@@ -724,7 +724,7 @@ pub enum ItemType {
 }
 
 
-pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
+pub fn decompose_mesh<S: BaseFloat>(mesh: &Mesh<Point3<S>>)
     -> Vec<(Mesh<Point3<S>>, ItemType)>
 {
     let edge_radius = S::from(0.049).unwrap();
