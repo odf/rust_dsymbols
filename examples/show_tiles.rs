@@ -5,7 +5,7 @@ use rust_dsymbols::geometry::vec_matrix::VecMatrix;
 use three_d::Mat4;
 
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
-use rust_dsymbols::display::mesh::{decompose_mesh, ItemType, Mesh};
+use rust_dsymbols::display::mesh::{ItemType, Mesh, decompose_mesh, scaled_mesh};
 use rust_dsymbols::dsyms::PartialDSym;
 use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces};
 
@@ -75,8 +75,7 @@ fn run() {
     let face_color = three_d::Srgba::RED;
 
     let models: Vec<_> = tiles(ds_spec).iter().flat_map(|tile_mesh|
-        // todo shrink the mesh so that the individual tiles are separated
-        decompose_mesh(tile_mesh).iter()
+        decompose_mesh(&scaled_mesh(tile_mesh, 0.8)).iter()
             .map(|(part_mesh, item_type)| {
                 let color = match item_type {
                     ItemType::Vertex => vertex_color,
