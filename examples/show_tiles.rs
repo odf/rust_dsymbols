@@ -70,8 +70,8 @@ fn run() {
         ..Default::default()
     };
 
-    let face_color = three_d::Srgba::BLUE;
-    let edge_color = three_d::Srgba::new(224, 128, 0, 255);
+    let face_color = three_d::Srgba::RED;
+    let edge_color = three_d::Srgba::BLUE;
 
     let models: Vec<_> = decompose_mesh(base_mesh).iter()
         .map(|(mesh, item_type)| {
