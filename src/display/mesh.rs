@@ -686,6 +686,20 @@ fn spherified<S: BaseFloat>(mesh: &Mesh<Point3<S>>) -> Mesh<Point3<S>> {
 }
 
 
+pub fn scaled_mesh<S: BaseFloat>(mesh: &Mesh<Point3<S>>, factor: S)
+    -> Mesh<Point3<S>>
+{
+    let center = Point3::centroid(mesh.vertices());
+
+    Mesh::from_oriented_faces_unchecked(
+        mesh.vertices().iter()
+            .map(|v| center + (v - center) * factor)
+            .collect(),
+        mesh.face_indices()
+    )
+}
+
+
 pub fn unit_sphere<S: BaseFloat>(nr_divisions: usize)
     -> Mesh<Point3<S>>
 {
