@@ -48,6 +48,8 @@ fn run() {
 
     let context = window.gl();
 
+    let mut gui = three_d::GUI::new(&context);
+
     let mut camera = three_d::Camera::new_perspective(
         window.viewport(),
         vec3(0.0, 2.0, 8.0),
@@ -116,19 +118,54 @@ fn run() {
         three_d::Srgba::WHITE,
     );
 
-    window.render_loop(move |mut frame_input| {
-        // This ensures a correct viewport after a window resize.
-        camera.set_viewport(frame_input.viewport);
+    let mut shadows_enabled = false;
 
-        // Camera control must be after the gui update.
+    window.render_loop(move |mut frame_input| {
+        let mut panel_width = 0.0;
+        gui.update(
+            &mut frame_input.events,
+            frame_input.accumulated_time,
+            frame_input.viewport,
+            frame_input.device_pixel_ratio,
+            |gui_context| {
+                use three_d::egui::*;
+                SidePanel::left("side_panel").show(gui_context, |ui| {
+                    ui.heading("Settings");
+
+                    ui.label("Appearance");
+
+                    if ui.checkbox(&mut shadows_enabled, "Shadows On").clicked() &&
+                        !shadows_enabled
+                    {
+                        sun.clear_shadow_map();
+                    }
+                });
+                panel_width = gui_context.used_rect().width();
+            },
+        );
+
+        let viewport = three_d::Viewport {
+            x: (panel_width * frame_input.device_pixel_ratio) as i32,
+            y: 0,
+            width: frame_input.viewport.width
+                - (panel_width * frame_input.device_pixel_ratio) as u32,
+            height: frame_input.viewport.height,
+        };
+        camera.set_viewport(viewport);
         control.handle_events(&mut camera, &mut frame_input.events);
 
         // Moves the sun around the objects in sync with the camera.
         sun.direction = (camera.view().invert().unwrap() * sun_dir).truncate();
 
-        frame_input.screen()
-            .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
-            .render(&camera, &models, &[&sun, &ambient]);
+        if shadows_enabled {
+            sun.generate_shadow_map(2048, &models);
+        }
+
+        let screen = frame_input.screen();
+
+        screen.clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0));
+        screen.render(&camera, &models, &[&sun, &ambient]);
+        screen.write(|| gui.render()).unwrap();
 
         // Ensures a valid return value.
         three_d::FrameOutput::default()
