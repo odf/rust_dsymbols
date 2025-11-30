@@ -109,22 +109,20 @@ fn render_callback(
         frame_input.viewport,
         frame_input.device_pixel_ratio,
         |gui_context| {
-            use three_d::egui::*;
-
-            SidePanel::left("side_panel").show(gui_context, |ui| {
+            three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
                 ui.heading("Settings");
                 ui.label("Appearance");
                 ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
             });
-            panel_width = gui_context.used_rect().width();
+            panel_width = gui_context.used_rect().width()
+                * frame_input.device_pixel_ratio;
         },
     );
 
     let viewport = three_d::Viewport {
-        x: (panel_width * frame_input.device_pixel_ratio) as i32,
+        x: panel_width as i32,
         y: 0,
-        width: frame_input.viewport.width
-            - (panel_width * frame_input.device_pixel_ratio) as u32,
+        width: frame_input.viewport.width - panel_width as u32,
         height: frame_input.viewport.height,
     };
     camera.set_viewport(viewport);
