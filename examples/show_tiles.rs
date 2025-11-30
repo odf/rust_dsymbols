@@ -10,6 +10,26 @@ use rust_dsymbols::dsyms::PartialDSym;
 use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces};
 
 
+struct Options {
+    tile_scale: f64,
+    vertex_color: three_d::Srgba,
+    edge_color: three_d::Srgba,
+    face_color: three_d::Srgba,
+}
+
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            tile_scale: 0.75,
+            vertex_color: three_d::Srgba::BLACK,
+            edge_color: three_d::Srgba::BLUE,
+            face_color: three_d::Srgba::RED,
+        }
+    }
+}
+
+
 fn main() {
     #[cfg(feature = "pprof")]
     let guard = pprof::ProfilerGuardBuilder::default()
@@ -44,43 +64,9 @@ fn main() {
     //let ds_spec = "<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>";
     let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
 
-    let instances = three_d::Instances {
-        transformations: vec![
-            Mat4::from_scale(1.0),
-        ],
-        ..Default::default()
-    };
+    let options = Default::default();
 
-    let vertex_color = three_d::Srgba::BLACK;
-    let edge_color = three_d::Srgba::BLUE;
-    let face_color = three_d::Srgba::RED;
-
-    let models: Vec<_> = tiles(ds_spec).iter().flat_map(|tile_mesh|
-        decompose_mesh(&scaled_mesh(tile_mesh, 0.8)).iter()
-            .map(|(part_mesh, item_type)| {
-                let color = match item_type {
-                    ItemType::Vertex => vertex_color,
-                    ItemType::Edge => edge_color,
-                    ItemType::Face => face_color,
-                };
-
-                three_d::Gm::new(
-                    three_d::InstancedMesh::new(
-                        &context,
-                        &instances,
-                        &part_mesh.to_cpu_mesh()
-                    ),
-                    three_d::PhysicalMaterial {
-                        albedo: color,
-                        metallic: 0.0,
-                        roughness: 0.5,
-                        ..Default::default()
-                    }
-                )
-            })
-            .collect::<Vec<_>>()
-        )
-        .collect();
+    let models = build_models(&context, ds_spec, &options);
 
     let sun_dir = vec4(1.0, -1.0, -1.0, 0.0);
 
@@ -155,6 +141,45 @@ fn main() {
         // Ensures a valid return value.
         three_d::FrameOutput::default()
     });
+}
+
+
+fn build_models(context: &three_d::Context, ds_spec: &str, options: &Options)
+    -> Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
+{
+    let instances = three_d::Instances {
+        transformations: vec![
+            Mat4::from_scale(1.0),
+        ],
+        ..Default::default()
+    };
+
+    tiles(ds_spec).iter().flat_map(|tile_mesh|
+        decompose_mesh(&scaled_mesh(tile_mesh, options.tile_scale)).iter()
+            .map(|(part_mesh, item_type)| {
+                let color = match item_type {
+                    ItemType::Vertex => options.vertex_color,
+                    ItemType::Edge => options.edge_color,
+                    ItemType::Face => options.face_color,
+                };
+
+                three_d::Gm::new(
+                    three_d::InstancedMesh::new(
+                        context,
+                        &instances,
+                        &part_mesh.to_cpu_mesh()
+                    ),
+                    three_d::PhysicalMaterial {
+                        albedo: color,
+                        metallic: 0.0,
+                        roughness: 0.5,
+                        ..Default::default()
+                    }
+                )
+            })
+            .collect::<Vec<_>>()
+        )
+        .collect()
 }
 
 
