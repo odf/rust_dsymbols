@@ -65,7 +65,6 @@ fn main() {
         1000.0,
     );
 
-    let control = rust_dsymbols::display::controls::OrbitControl::new(1.0, 1000.0);
 
     //let ds_spec = "<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>";
     let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
@@ -86,7 +85,6 @@ fn main() {
             &mut camera,
             &mut options,
             &context,
-            &control,
             &models,
         )
     });
@@ -99,7 +97,6 @@ fn render_callback(
     camera: &mut three_d::Camera,
     options: &mut Options,
     context: &three_d::Context,
-    control: &rust_dsymbols::display::controls::OrbitControl,
     models: &Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
 )
     -> three_d::FrameOutput
@@ -131,7 +128,10 @@ fn render_callback(
         height: frame_input.viewport.height,
     };
     camera.set_viewport(viewport);
-    control.handle_events(camera, &mut frame_input.events);
+
+    rust_dsymbols::display::controls::orbit_control_update_camera(
+        camera, &mut frame_input.events, 1.0, 1000.0
+    );
 
     let white = three_d::Srgba::WHITE;
     let sun_dir = (
