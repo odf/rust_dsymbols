@@ -1,8 +1,8 @@
 use cgmath::prelude::*;
-use cgmath::{point3, vec3, vec4, Point3};
+use cgmath::{point3, vec3, Point3};
 use rust_dsymbols::dsets::DSet;
 use rust_dsymbols::geometry::vec_matrix::VecMatrix;
-use three_d::Mat4;
+use three_d::{Mat4, Vec3};
 
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
 use rust_dsymbols::display::mesh::{ItemType, Mesh, decompose_mesh, scaled_mesh};
@@ -13,6 +13,8 @@ use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant
 struct Options {
     tile_scale: f64,
     edge_radius: f64,
+    sun_direction: Vec3,
+    sun_casts_shadows: bool,
     vertex_color: three_d::Srgba,
     edge_color: three_d::Srgba,
     face_color: three_d::Srgba,
@@ -24,6 +26,8 @@ impl Default for Options {
         Self {
             tile_scale: 0.75,
             edge_radius: 0.05,
+            sun_direction: vec3(1.0, -1.0, -1.0),
+            sun_casts_shadows: false,
             vertex_color: three_d::Srgba::BLACK,
             edge_color: three_d::Srgba::BLUE,
             face_color: three_d::Srgba::RED,
@@ -66,26 +70,8 @@ fn main() {
     //let ds_spec = "<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>";
     let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
 
-    let options = Default::default();
-
+    let mut options = Default::default();
     let models = build_models(&context, ds_spec, &options);
-
-    let sun_dir = vec4(1.0, -1.0, -1.0, 0.0);
-
-    let mut sun = three_d::DirectionalLight::new(
-        &context,
-        2.0,
-        three_d::Srgba::WHITE,
-        sun_dir.truncate()
-    );
-
-    let ambient = three_d::AmbientLight::new(
-        &context,
-        0.1,
-        three_d::Srgba::WHITE,
-    );
-
-    let mut shadows_enabled = false;
 
     #[cfg(feature = "pprof")]
     if let Ok(report) = guard.report().build() {
@@ -94,55 +80,79 @@ fn main() {
     };
 
     window.render_loop(move |mut frame_input| {
-        let mut panel_width = 0.0;
-        gui.update(
-            &mut frame_input.events,
-            frame_input.accumulated_time,
-            frame_input.viewport,
-            frame_input.device_pixel_ratio,
-            |gui_context| {
-                use three_d::egui::*;
-                SidePanel::left("side_panel").show(gui_context, |ui| {
-                    ui.heading("Settings");
-
-                    ui.label("Appearance");
-
-                    if ui.checkbox(&mut shadows_enabled, "Shadows On").clicked() &&
-                        !shadows_enabled
-                    {
-                        sun.clear_shadow_map();
-                    }
-                });
-                panel_width = gui_context.used_rect().width();
-            },
-        );
-
-        let viewport = three_d::Viewport {
-            x: (panel_width * frame_input.device_pixel_ratio) as i32,
-            y: 0,
-            width: frame_input.viewport.width
-                - (panel_width * frame_input.device_pixel_ratio) as u32,
-            height: frame_input.viewport.height,
-        };
-        camera.set_viewport(viewport);
-        control.handle_events(&mut camera, &mut frame_input.events);
-
-        // Moves the sun around the objects in sync with the camera.
-        sun.direction = (camera.view().invert().unwrap() * sun_dir).truncate();
-
-        if shadows_enabled {
-            sun.generate_shadow_map(2048, &models);
-        }
-
-        let screen = frame_input.screen();
-
-        screen.clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0));
-        screen.render(&camera, &models, &[&sun, &ambient]);
-        screen.write(|| gui.render()).unwrap();
-
-        // Ensures a valid return value.
-        three_d::FrameOutput::default()
+        render_callback(
+            &mut frame_input,
+            &mut gui,
+            &mut camera,
+            &mut options,
+            &context,
+            &control,
+            &models,
+        )
     });
+}
+
+
+fn render_callback(
+    frame_input: &mut three_d::FrameInput,
+    gui: &mut three_d::GUI,
+    camera: &mut three_d::Camera,
+    options: &mut Options,
+    context: &three_d::Context,
+    control: &rust_dsymbols::display::controls::OrbitControl,
+    models: &Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
+)
+    -> three_d::FrameOutput
+{
+    let mut panel_width = 0.0;
+
+    gui.update(
+        &mut frame_input.events,
+        frame_input.accumulated_time,
+        frame_input.viewport,
+        frame_input.device_pixel_ratio,
+        |gui_context| {
+            use three_d::egui::*;
+
+            SidePanel::left("side_panel").show(gui_context, |ui| {
+                ui.heading("Settings");
+                ui.label("Appearance");
+                ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
+            });
+            panel_width = gui_context.used_rect().width();
+        },
+    );
+
+    let viewport = three_d::Viewport {
+        x: (panel_width * frame_input.device_pixel_ratio) as i32,
+        y: 0,
+        width: frame_input.viewport.width
+            - (panel_width * frame_input.device_pixel_ratio) as u32,
+        height: frame_input.viewport.height,
+    };
+    camera.set_viewport(viewport);
+    control.handle_events(camera, &mut frame_input.events);
+
+    let white = three_d::Srgba::WHITE;
+    let sun_dir = (
+        camera.view().invert().unwrap() *
+        options.sun_direction.extend(0.0)
+    ).truncate();
+
+    let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
+    let ambient = three_d::AmbientLight::new(context, 0.1, white);
+
+    if options.sun_casts_shadows {
+        sun.generate_shadow_map(2048, models);
+    }
+
+    frame_input.screen()
+        .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
+        .render(&camera, models, &[&sun, &ambient])
+        .write(|| gui.render()).unwrap();
+
+    // Ensures a valid return value.
+    three_d::FrameOutput::default()
 }
 
 
