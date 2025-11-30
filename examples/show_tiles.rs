@@ -11,33 +11,12 @@ use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant
 
 
 fn main() {
-    wrapper();
-}
-
-
-#[cfg(not(feature = "pprof"))]
-fn wrapper() {
-    run();
-}
-
-
-#[cfg(feature = "pprof")]
-fn wrapper() {
+    #[cfg(feature = "pprof")]
     let guard = pprof::ProfilerGuardBuilder::default()
         .frequency(1000)
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    decompose_mesh();
-
-    if let Ok(report) = guard.report().build() {
-        let file = std::fs::File::create("flamegraph.svg").unwrap();
-        report.flamegraph(file).unwrap();
-    };
-}
-
-
-fn run() {
     // On the web, this creates a canvas instead.
     let window = three_d::Window::new(three_d::WindowSettings {
         title: "Rust 3d Test".to_string(),
@@ -119,6 +98,12 @@ fn run() {
     );
 
     let mut shadows_enabled = false;
+
+    #[cfg(feature = "pprof")]
+    if let Ok(report) = guard.report().build() {
+        let file = std::fs::File::create("flamegraph.svg").unwrap();
+        report.flamegraph(file).unwrap();
+    };
 
     window.render_loop(move |mut frame_input| {
         let mut panel_width = 0.0;
