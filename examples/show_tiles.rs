@@ -12,6 +12,7 @@ use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant
 
 struct Options {
     tile_scale: f64,
+    edge_radius: f64,
     vertex_color: three_d::Srgba,
     edge_color: three_d::Srgba,
     face_color: three_d::Srgba,
@@ -22,6 +23,7 @@ impl Default for Options {
     fn default() -> Self {
         Self {
             tile_scale: 0.75,
+            edge_radius: 0.05,
             vertex_color: three_d::Srgba::BLACK,
             edge_color: three_d::Srgba::BLUE,
             face_color: three_d::Srgba::RED,
@@ -155,7 +157,11 @@ fn build_models(context: &three_d::Context, ds_spec: &str, options: &Options)
     };
 
     tiles(ds_spec).iter().flat_map(|tile_mesh|
-        decompose_mesh(&scaled_mesh(tile_mesh, options.tile_scale)).iter()
+        decompose_mesh(
+                &scaled_mesh(tile_mesh, options.tile_scale),
+                options.edge_radius
+            )
+            .iter()
             .map(|(part_mesh, item_type)| {
                 let color = match item_type {
                     ItemType::Vertex => options.vertex_color,
