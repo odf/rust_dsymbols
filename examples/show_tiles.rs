@@ -108,20 +108,16 @@ fn render_callback(
         frame_input.viewport,
         frame_input.device_pixel_ratio,
         |gui_context| {
-            three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
-                ui.heading("Settings");
-                ui.label("Appearance");
-                ui.checkbox(&mut state.options.sun_casts_shadows, "Shadows On");
-            });
-            panel_width = gui_context.used_rect().width()
-                * frame_input.device_pixel_ratio;
+            panel_width = gui_callback(&mut state.options, gui_context);
         },
     );
 
+    let wd = panel_width * frame_input.device_pixel_ratio;
+
     let viewport = three_d::Viewport {
-        x: panel_width as i32,
+        x: wd as i32,
         y: 0,
-        width: frame_input.viewport.width - panel_width as u32,
+        width: frame_input.viewport.width - wd as u32,
         height: frame_input.viewport.height,
     };
     state.camera.set_viewport(viewport);
@@ -150,6 +146,18 @@ fn render_callback(
 
     // Ensures a valid return value.
     three_d::FrameOutput::default()
+}
+
+
+fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
+    -> f32
+{
+    three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
+        ui.heading("Settings");
+        ui.label("Appearance");
+        ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
+    });
+    gui_context.used_rect().width()
 }
 
 
