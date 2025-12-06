@@ -36,13 +36,16 @@ impl Default for Options {
 }
 
 
-fn main() {
-    #[cfg(feature = "pprof")]
-    let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
-        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-        .build().unwrap();
+struct State {
+    models: Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
+    options: Options,
+    gui: three_d::GUI,
+    camera: three_d::Camera,
+    context: three_d::Context,
+}
 
+
+fn main() {
     // On the web, this creates a canvas instead.
     let window = three_d::Window::new(three_d::WindowSettings {
         title: "Rust 3d Test".to_string(),
@@ -53,9 +56,9 @@ fn main() {
 
     let context = window.gl();
 
-    let mut gui = three_d::GUI::new(&context);
+    let gui = three_d::GUI::new(&context);
 
-    let mut camera = three_d::Camera::new_perspective(
+    let camera = three_d::Camera::new_perspective(
         window.viewport(),
         vec3(0.0, 2.0, 8.0),
         vec3(0.0, 0.0, 0.0),
@@ -65,11 +68,16 @@ fn main() {
         1000.0,
     );
 
+    let options = Default::default();
+
+    #[cfg(feature = "pprof")]
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build().unwrap();
 
     //let ds_spec = "<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>";
     let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
-
-    let mut options = Default::default();
     let models = build_models(&context, ds_spec, &options);
 
     #[cfg(feature = "pprof")]
@@ -78,32 +86,23 @@ fn main() {
         report.flamegraph(file).unwrap();
     };
 
+    let mut state = State { models, options, gui, camera, context };
+
     window.render_loop(move |mut frame_input| {
-        render_callback(
-            &mut frame_input,
-            &mut gui,
-            &mut camera,
-            &mut options,
-            &context,
-            &models,
-        )
+        render_callback(&mut frame_input, &mut state)
     });
 }
 
 
 fn render_callback(
     frame_input: &mut three_d::FrameInput,
-    gui: &mut three_d::GUI,
-    camera: &mut three_d::Camera,
-    options: &mut Options,
-    context: &three_d::Context,
-    models: &Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
+    state: &mut State,
 )
     -> three_d::FrameOutput
 {
     let mut panel_width = 0.0;
 
-    gui.update(
+    state.gui.update(
         &mut frame_input.events,
         frame_input.accumulated_time,
         frame_input.viewport,
@@ -112,7 +111,7 @@ fn render_callback(
             three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
                 ui.heading("Settings");
                 ui.label("Appearance");
-                ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
+                ui.checkbox(&mut state.options.sun_casts_shadows, "Shadows On");
             });
             panel_width = gui_context.used_rect().width()
                 * frame_input.device_pixel_ratio;
@@ -125,29 +124,29 @@ fn render_callback(
         width: frame_input.viewport.width - panel_width as u32,
         height: frame_input.viewport.height,
     };
-    camera.set_viewport(viewport);
+    state.camera.set_viewport(viewport);
 
     rust_dsymbols::display::controls::orbit_control_update_camera(
-        camera, &mut frame_input.events, 1.0, 1000.0
+        &mut state.camera, &mut frame_input.events, 1.0, 1000.0
     );
 
     let white = three_d::Srgba::WHITE;
     let sun_dir = (
-        camera.view().invert().unwrap() *
-        options.sun_direction.extend(0.0)
+        state.camera.view().invert().unwrap() *
+        state.options.sun_direction.extend(0.0)
     ).truncate();
 
-    let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
-    let ambient = three_d::AmbientLight::new(context, 0.1, white);
+    let mut sun = three_d::DirectionalLight::new(&state.context, 2.0, white, sun_dir);
+    let ambient = three_d::AmbientLight::new(&state.context, 0.1, white);
 
-    if options.sun_casts_shadows {
-        sun.generate_shadow_map(2048, models);
+    if state.options.sun_casts_shadows {
+        sun.generate_shadow_map(2048, &state.models);
     }
 
     frame_input.screen()
         .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
-        .render(&camera, models, &[&sun, &ambient])
-        .write(|| gui.render()).unwrap();
+        .render(&state.camera, &state.models, &[&sun, &ambient])
+        .write(|| state.gui.render()).unwrap();
 
     // Ensures a valid return value.
     three_d::FrameOutput::default()
