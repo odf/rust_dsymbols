@@ -167,7 +167,7 @@ fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
         ui.heading("Settings");
         ui.label("Appearance");
         ui.add(
-            three_d::egui::Slider::new(&mut options.tile_scale, 0.0..=1.0)
+            three_d::egui::Slider::new(&mut options.tile_scale, 0.1..=1.0)
                 .text("Tile scale")
         );
         ui.add(
