@@ -14,11 +14,11 @@ use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant
 struct Options {
     tile_scale: f64,
     edge_radius: f64,
+    vertex_color: three_d::egui::Color32,
+    edge_color: three_d::egui::Color32,
+    face_color: three_d::egui::Color32,
     sun_direction: Vec3,
     sun_casts_shadows: bool,
-    vertex_color: three_d::Srgba,
-    edge_color: three_d::Srgba,
-    face_color: three_d::Srgba,
 }
 
 
@@ -27,11 +27,11 @@ impl Default for Options {
         Self {
             tile_scale: 0.75,
             edge_radius: 0.05,
+            vertex_color: three_d::egui::Color32::BLACK,
+            edge_color: three_d::egui::Color32::BLUE,
+            face_color: three_d::egui::Color32::RED,
             sun_direction: vec3(1.0, -1.0, -1.0),
             sun_casts_shadows: false,
-            vertex_color: three_d::Srgba::BLACK,
-            edge_color: three_d::Srgba::BLUE,
-            face_color: three_d::Srgba::RED,
         }
     }
 }
@@ -40,6 +40,7 @@ impl Default for Options {
 struct State {
     models: Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
     options: Options,
+    previous_options: Options,
     gui: three_d::GUI,
     camera: three_d::Camera,
     context: three_d::Context,
@@ -71,6 +72,7 @@ fn main() {
     );
 
     let options = Default::default();
+    let previous_options = options;
 
     #[cfg(feature = "pprof")]
     let guard = pprof::ProfilerGuardBuilder::default()
@@ -88,7 +90,9 @@ fn main() {
         report.flamegraph(file).unwrap();
     };
 
-    let mut state = State { models, options, gui, camera, context, ds_spec };
+    let mut state = State {
+        models, options, previous_options, gui, camera, context, ds_spec
+    };
 
     window.render_loop(move |mut frame_input| {
         render_callback(&mut frame_input, &mut state)
@@ -102,7 +106,6 @@ fn render_callback(
 )
     -> three_d::FrameOutput
 {
-    let options = state.options;
     let mut panel_width = 0.0;
 
     state.gui.update(
@@ -125,8 +128,9 @@ fn render_callback(
     };
     state.camera.set_viewport(viewport);
 
-    if state.options != options {
-        state.models = build_models(&state.context, &state.ds_spec, &options);
+    if state.options != state.previous_options {
+        state.models = build_models(&state.context, &state.ds_spec, &state.options);
+        state.previous_options = state.options;
     }
 
     rust_dsymbols::display::controls::orbit_control_update_camera(
@@ -162,7 +166,6 @@ fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
     three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
         ui.heading("Settings");
         ui.label("Appearance");
-        ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
         ui.add(
             three_d::egui::Slider::new(&mut options.tile_scale, 0.0..=1.0)
                 .text("Tile scale")
@@ -171,6 +174,19 @@ fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
             three_d::egui::Slider::new(&mut options.edge_radius, 0.0..=0.1)
                 .text("Edge radius")
         );
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgba(&mut options.face_color);
+            ui.label("Face color");
+        });
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgba(&mut options.edge_color);
+            ui.label("Edge color");
+        });
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgba(&mut options.vertex_color);
+            ui.label("Vertex color");
+        });
+        ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
     });
     gui_context.used_rect().width()
 }
@@ -206,7 +222,7 @@ fn build_models(context: &three_d::Context, ds_spec: &str, options: &Options)
                         &part_mesh.to_cpu_mesh()
                     ),
                     three_d::PhysicalMaterial {
-                        albedo: color,
+                        albedo: color.to_srgba_unmultiplied().into(),
                         metallic: 0.0,
                         roughness: 0.5,
                         ..Default::default()
