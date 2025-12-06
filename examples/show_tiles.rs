@@ -10,6 +10,7 @@ use rust_dsymbols::dsyms::PartialDSym;
 use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces};
 
 
+#[derive(Clone, Copy, PartialEq)]
 struct Options {
     tile_scale: f64,
     edge_radius: f64,
@@ -42,6 +43,7 @@ struct State {
     gui: three_d::GUI,
     camera: three_d::Camera,
     context: three_d::Context,
+    ds_spec: String,
 }
 
 
@@ -77,8 +79,8 @@ fn main() {
         .build().unwrap();
 
     //let ds_spec = "<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>";
-    let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>";
-    let models = build_models(&context, ds_spec, &options);
+    let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>".to_string();
+    let models = build_models(&context, &ds_spec, &options);
 
     #[cfg(feature = "pprof")]
     if let Ok(report) = guard.report().build() {
@@ -86,7 +88,7 @@ fn main() {
         report.flamegraph(file).unwrap();
     };
 
-    let mut state = State { models, options, gui, camera, context };
+    let mut state = State { models, options, gui, camera, context, ds_spec };
 
     window.render_loop(move |mut frame_input| {
         render_callback(&mut frame_input, &mut state)
@@ -100,6 +102,7 @@ fn render_callback(
 )
     -> three_d::FrameOutput
 {
+    let options = state.options;
     let mut panel_width = 0.0;
 
     state.gui.update(
@@ -121,6 +124,10 @@ fn render_callback(
         height: frame_input.viewport.height,
     };
     state.camera.set_viewport(viewport);
+
+    if state.options != options {
+        state.models = build_models(&state.context, &state.ds_spec, &options);
+    }
 
     rust_dsymbols::display::controls::orbit_control_update_camera(
         &mut state.camera, &mut frame_input.events, 1.0, 1000.0
@@ -156,6 +163,14 @@ fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
         ui.heading("Settings");
         ui.label("Appearance");
         ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
+        ui.add(
+            three_d::egui::Slider::new(&mut options.tile_scale, 0.0..=1.0)
+                .text("Tile scale")
+        );
+        ui.add(
+            three_d::egui::Slider::new(&mut options.edge_radius, 0.0..=0.1)
+                .text("Edge radius")
+        );
     });
     gui_context.used_rect().width()
 }
