@@ -17,6 +17,7 @@ struct Options {
     vertex_color: three_d::egui::Color32,
     edge_color: three_d::egui::Color32,
     face_color: three_d::egui::Color32,
+    background_color: three_d::egui::Color32,
     sun_direction: Vec3,
     sun_casts_shadows: bool,
 }
@@ -30,6 +31,7 @@ impl Default for Options {
             vertex_color: three_d::egui::Color32::BLACK,
             edge_color: three_d::egui::Color32::BLUE,
             face_color: three_d::egui::Color32::RED,
+            background_color: three_d::egui::Color32::GRAY,
             sun_direction: vec3(1.0, -1.0, -1.0),
             sun_casts_shadows: false,
         }
@@ -150,8 +152,10 @@ fn render_callback(
         sun.generate_shadow_map(2048, &state.models);
     }
 
+    let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
+
     frame_input.screen()
-        .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
+        .clear(three_d::ClearState::color_and_depth(r, g, b, a, 1.0))
         .render(&state.camera, &state.models, &[&sun, &ambient])
         .write(|| state.gui.render()).unwrap();
 
@@ -185,6 +189,10 @@ fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
         ui.horizontal(|ui| {
             ui.color_edit_button_srgba(&mut options.vertex_color);
             ui.label("Vertex color");
+        });
+        ui.horizontal(|ui| {
+            ui.color_edit_button_srgba(&mut options.background_color);
+            ui.label("Background color");
         });
         ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
     });
@@ -222,7 +230,7 @@ fn build_models(context: &three_d::Context, ds_spec: &str, options: &Options)
                         &part_mesh.to_cpu_mesh()
                     ),
                     three_d::PhysicalMaterial {
-                        albedo: color.to_srgba_unmultiplied().into(),
+                        albedo: color.to_normalized_gamma_f32().into(),
                         metallic: 0.0,
                         roughness: 0.5,
                         ..Default::default()
