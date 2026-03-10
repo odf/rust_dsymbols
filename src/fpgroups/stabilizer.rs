@@ -52,11 +52,11 @@ fn close_relations_in_place(
     let (p, g) = start_edge;
     let mut queue = VecDeque::from([(p, g, wd.clone())]);
 
-    while let Some((point, gen, w)) = queue.pop_front() {
-        edge_to_word.insert((ct.get(point, gen).unwrap(), -gen), w.inverse());
-        edge_to_word.insert((point, gen), w);
+    while let Some((point, gener, w)) = queue.pop_front() {
+        edge_to_word.insert((ct.get(point, gener).unwrap(), -gener), w.inverse());
+        edge_to_word.insert((point, gener), w);
 
-        for r in rels_by_gen[&gen].iter() {
+        for r in rels_by_gen[&gener].iter() {
             let mut cuts = vec![];
             let mut x = point;
 
@@ -85,12 +85,12 @@ fn spanning_tree(base_point: usize, ct: &CosetTable) -> Vec<(usize, isize)> {
     let mut seen = HashSet::from([base_point]);
 
     while let Some(point) = queue.pop_front() {
-        for gen in ct.all_gens() {
-            let p = ct.get(point, gen).unwrap();
+        for gener in ct.all_gens() {
+            let p = ct.get(point, gener).unwrap();
             if !seen.contains(&p) {
                 queue.push_back(p);
                 seen.insert(p);
-                edges.push((point, gen));
+                edges.push((point, gener));
             }
         }
     }
@@ -108,11 +108,11 @@ pub fn stabilizer<I>(base_point: usize, rels: I, ct: &CosetTable)
     let mut point_to_word = HashMap::from([(base_point, FreeWord::empty())]);
     let mut edge_to_word = HashMap::new();
 
-    for (pt, gen) in spanning_tree(base_point, ct) {
+    for (pt, gener) in spanning_tree(base_point, ct) {
         close_relations_in_place(
-            &mut edge_to_word, (pt, gen), &FreeWord::empty(), &rels_by_gen, ct
+            &mut edge_to_word, (pt, gener), &FreeWord::empty(), &rels_by_gen, ct
         );
-        point_to_word.insert(ct.get(pt, gen).unwrap(), &point_to_word[&pt] * gen);
+        point_to_word.insert(ct.get(pt, gener).unwrap(), &point_to_word[&pt] * gener);
     }
 
     let mut generators = vec![];

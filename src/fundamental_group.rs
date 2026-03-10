@@ -172,11 +172,11 @@ fn find_generators<T: DSym>(ds: &T)
         for i in 0..=ds.dim() {
             if (0..=ds.dim()).any(|j| bnd.opposite(d, i, j).is_some()) {
                 let di = ds.op(i, d).unwrap();
-                let gen = gen_to_edge.len() + 1;
-                gen_to_edge.insert(gen, (d, i));
+                let gener = gen_to_edge.len() + 1;
+                gen_to_edge.insert(gener, (d, i));
 
-                edge_to_word.insert((d, i), FreeWord::from([gen as isize]));
-                edge_to_word.insert((di, i), FreeWord::from([-(gen as isize)]));
+                edge_to_word.insert((d, i), FreeWord::from([gener as isize]));
+                edge_to_word.insert((di, i), FreeWord::from([-(gener as isize)]));
 
                 let glued = bnd.glue_recursively(vec![(d, i, None)]);
 
