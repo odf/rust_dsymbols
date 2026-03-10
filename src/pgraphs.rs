@@ -1,5 +1,5 @@
 use core::cmp::Ordering;
-use std::cell::UnsafeCell;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
 use std::ops::Neg;
@@ -121,7 +121,7 @@ pub struct PeriodicGraph {
     edges: Vec<VectorLabelledEdge>,
     vertices: Vec<usize>,
     incidences: HashMap<usize, Vec<VectorLabelledEdge>>,
-    positions: UnsafeCell<HashMap<usize, VecMatrix<BigRational>>>
+    positions: RefCell<HashMap<usize, VecMatrix<BigRational>>>
 }
 
 
@@ -151,7 +151,7 @@ impl<I> From<I> for PeriodicGraph
             incidences.entry(e.tail).or_default().push(-e);
         }
 
-        let positions = UnsafeCell::new(HashMap::new());
+        let positions = RefCell::new(HashMap::new());
 
         PeriodicGraph { edges, vertices, incidences, positions }
     }
@@ -178,12 +178,12 @@ impl PeriodicGraph {
     pub fn position(&self, v: usize) -> VecMatrix<BigRational> {
         assert!(self.incidences.contains_key(&v));
 
-        if let Some(output) = unsafe { (*self.positions.get()).get(&v) } {
+        if let Some(output) = self.positions.borrow().get(&v) {
             output.clone()
         } else {
             let positions = barycentric_placement(self);
             let output = positions[&v].clone();
-            unsafe { *self.positions.get() = positions };
+            self.positions.replace(positions);
             output
         }
     }

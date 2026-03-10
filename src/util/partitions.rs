@@ -1,4 +1,4 @@
-use std::cell::UnsafeCell;
+use std::cell::RefCell;
 use std::hash::Hash;
 use std::collections::HashMap;
 
@@ -77,22 +77,23 @@ impl<T> PartitionImpl<T> where T: Clone + Eq + Hash {
 }
 
 
+#[derive(Clone)]
 pub struct Partition<T> {
-    _impl: UnsafeCell<PartitionImpl<T>>,
+    _impl: RefCell<PartitionImpl<T>>,
 }
 
 
 impl<T> Partition<T> where T: Clone + Eq + Hash {
     pub fn new() -> Self {
-        Partition { _impl: UnsafeCell::new(PartitionImpl::new())}
+        Partition { _impl: RefCell::new(PartitionImpl::new()) }
     }
 
     pub fn find(&self, x: &T) -> T {
-        unsafe { (*self._impl.get()).find(x) }
+        self._impl.borrow_mut().find(x)
     }
 
     pub fn unite(&mut self, x: &T, y: &T) {
-        unsafe { (*self._impl.get()).unite(x, y) };
+        self._impl.borrow_mut().unite(x, y);
     }
 
     pub fn classes(&self, elms: &[T]) -> Vec<Vec<T>> {
@@ -111,15 +112,6 @@ impl<T> Partition<T> where T: Clone + Eq + Hash {
         }
 
         classes
-    }
-}
-
-
-impl<T> Clone for Partition<T> where T: Clone {
-    fn clone(&self) -> Self {
-        Self {
-            _impl: UnsafeCell::new(unsafe { (*self._impl.get()).clone() })
-        }
     }
 }
 
@@ -183,22 +175,23 @@ impl IntPartitionImpl {
 }
 
 
+#[derive(Clone)]
 pub struct IntPartition {
-    _impl: UnsafeCell<IntPartitionImpl>,
+    _impl: RefCell<IntPartitionImpl>,
 }
 
 
 impl IntPartition {
     pub fn new() -> Self {
-        IntPartition { _impl: UnsafeCell::new(IntPartitionImpl::new())}
+        IntPartition { _impl: RefCell::new(IntPartitionImpl::new())}
     }
 
     pub fn find(&self, x: usize) -> usize {
-        unsafe { (*self._impl.get()).find(x) }
+        self._impl.borrow_mut().find(x)
     }
 
     pub fn unite(&mut self, x: usize, y: usize) {
-        unsafe { (*self._impl.get()).unite(x, y) };
+        self._impl.borrow_mut().unite(x, y)
     }
 
     pub fn classes(&self, elms: &[usize]) -> Vec<Vec<usize>> {
@@ -217,15 +210,6 @@ impl IntPartition {
         }
 
         classes
-    }
-}
-
-
-impl Clone for IntPartition {
-    fn clone(&self) -> Self {
-        Self {
-            _impl: UnsafeCell::new(unsafe { (*self._impl.get()).clone() })
-        }
     }
 }
 
