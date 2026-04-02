@@ -1,13 +1,15 @@
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, Point3};
-use rust_dsymbols::dsets::DSet;
-use rust_dsymbols::geometry::vec_matrix::VecMatrix;
 use three_d::{Mat4, Vec3};
 
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
 use rust_dsymbols::display::mesh::{ItemType, Mesh, decompose_mesh, scaled_mesh};
+use rust_dsymbols::dsets::DSet;
 use rust_dsymbols::dsyms::PartialDSym;
-use rust_dsymbols::tilings::{Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces};
+use rust_dsymbols::geometry::vec_matrix::VecMatrix;
+use rust_dsymbols::tilings::{
+    Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces
+};
 
 
 #[derive(Clone, Copy, PartialEq)]
