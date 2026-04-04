@@ -46,7 +46,6 @@ impl Default for Options {
 struct State {
     options: Options,
     previous_options: Options,
-    gui: three_d::GUI,
     camera: three_d::Camera,
     context: three_d::Context,
     catalog: HashMap<String, Vec<String>>,
@@ -67,7 +66,7 @@ fn main() {
 
     let context = window.gl();
 
-    let gui = three_d::GUI::new(&context);
+    let mut gui = three_d::GUI::new(&context);
 
     let camera = three_d::Camera::new_perspective(
         window.viewport(),
@@ -117,31 +116,32 @@ fn main() {
     };
 
     let mut state = State {
-        options, previous_options, gui, camera, context,
+        options, previous_options, camera, context,
         catalog, collection_name, index_in_collection, models
     };
 
     window.render_loop(move |mut frame_input| {
-        render_callback(&mut frame_input, &mut state)
+        render_callback(&mut frame_input, &mut gui, &mut state)
     });
 }
 
 
 fn render_callback(
     frame_input: &mut three_d::FrameInput,
+    gui: &mut three_d::GUI,
     state: &mut State,
 )
     -> three_d::FrameOutput
 {
     let mut panel_width = 0.0;
 
-    state.gui.update(
+    gui.update(
         &mut frame_input.events,
         frame_input.accumulated_time,
         frame_input.viewport,
         frame_input.device_pixel_ratio,
         |gui_context| {
-            panel_width = gui_callback(&mut state.options, gui_context);
+            panel_width = gui_callback(state, gui_context);
         },
     );
 
@@ -186,19 +186,29 @@ fn render_callback(
     frame_input.screen()
         .clear(three_d::ClearState::color_and_depth(r, g, b, a, 1.0))
         .render(&state.camera, &state.models, &[&sun, &ambient])
-        .write(|| state.gui.render()).unwrap();
+        .write(|| gui.render()).unwrap();
 
     // Ensures a valid return value.
     three_d::FrameOutput::default()
 }
 
 
-fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
+fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
     -> f32
 {
     three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
-        ui.heading("Settings");
-        ui.label("Appearance");
+        let options = &mut state.options;
+
+        ui.heading("Tiling");
+        ui.add_space(12.0);
+
+        ui.label(format!("Collection '{}'", state.collection_name));
+        ui.label(format!("Index {}", state.index_in_collection));
+        ui.add_space(24.0);
+
+        ui.heading("Appearance");
+        ui.add_space(12.0);
+
         ui.add(
             three_d::egui::Slider::new(&mut options.tile_scale, 0.1..=1.0)
                 .text("Tile scale")
@@ -207,6 +217,8 @@ fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
             three_d::egui::Slider::new(&mut options.edge_radius, 0.0..=0.1)
                 .text("Edge radius")
         );
+        ui.add_space(12.0);
+
         ui.horizontal(|ui| {
             ui.color_edit_button_srgba(&mut options.face_color);
             ui.label("Face color");
@@ -219,11 +231,15 @@ fn gui_callback(options: &mut Options, gui_context: &three_d::egui::Context)
             ui.color_edit_button_srgba(&mut options.vertex_color);
             ui.label("Vertex color");
         });
+        ui.add_space(12.0);
+
+        ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
+        ui.add_space(12.0);
+
         ui.horizontal(|ui| {
             ui.color_edit_button_srgba(&mut options.background_color);
             ui.label("Background color");
         });
-        ui.checkbox(&mut options.sun_casts_shadows, "Shadows On");
     });
     gui_context.used_rect().width()
 }
