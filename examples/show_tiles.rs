@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, Point3};
 use three_d::{Mat4, Vec3};
@@ -42,13 +44,15 @@ impl Default for Options {
 
 
 struct State {
-    models: Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
     options: Options,
     previous_options: Options,
     gui: three_d::GUI,
     camera: three_d::Camera,
     context: three_d::Context,
-    ds_spec: String,
+    catalog: HashMap<String, Vec<String>>,
+    collection_name: String,
+    index_in_collection: usize,
+    models: Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
 }
 
 
@@ -78,15 +82,33 @@ fn main() {
     let options = Default::default();
     let previous_options = options;
 
+    let builtin = [
+        /* bcu */ "<1.1:2 3:2,1 2,1 2,2:4,4 2,6>",
+        /* pcu */ "<1.1:1 3:1,1,1,1:4,3,4>",
+        /* nbo */ "<1.1:2 3:2,1 2,1 2,2:6,4 2,4>",
+        /* dia */ "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>",
+        /* srs */ "<1.1:10 3:2 4 6 8 10,10 3 5 7 9,10 9 8 7 6,4 3 10 9 8:10,3 2 2,10>"
+    ];
+
+    let catalog = HashMap::from([
+        (
+            String::from("__builtin__"),
+            builtin.into_iter().map(String::from).collect::<Vec<_>>()
+        )
+    ]);
+
+    let collection_name = "__builtin__".to_string();
+    let index_in_collection = 4;
+
     #[cfg(feature = "pprof")]
     let guard = pprof::ProfilerGuardBuilder::default()
         .frequency(1000)
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    //let ds_spec = "<1.1:2 3:1 2,1 2,1 2,2:3 3,4 3,4>";
-    let ds_spec = "<1.1:2 3:2,1 2,1 2,2:6,3 2,6>".to_string();
-    let models = build_models(&context, &ds_spec, &options);
+    let models = build_models(
+        &context, &catalog[&collection_name[..]][index_in_collection], &options
+    );
 
     #[cfg(feature = "pprof")]
     if let Ok(report) = guard.report().build() {
@@ -95,7 +117,8 @@ fn main() {
     };
 
     let mut state = State {
-        models, options, previous_options, gui, camera, context, ds_spec
+        options, previous_options, gui, camera, context,
+        catalog, collection_name, index_in_collection, models
     };
 
     window.render_loop(move |mut frame_input| {
@@ -133,7 +156,11 @@ fn render_callback(
     state.camera.set_viewport(viewport);
 
     if state.options != state.previous_options {
-        state.models = build_models(&state.context, &state.ds_spec, &state.options);
+        state.models = build_models(
+            &state.context,
+            &state.catalog[&state.collection_name][state.index_in_collection],
+            &state.options
+        );
         state.previous_options = state.options;
     }
 
