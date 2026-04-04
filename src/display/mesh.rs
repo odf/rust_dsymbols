@@ -742,7 +742,8 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: &Mesh<Point3<S>>, radius: f64)
     -> Vec<(Mesh<Point3<S>>, ItemType)>
 {
     let edge_radius = S::from(radius).unwrap();
-    let edge_lift = S::from(1.02 * radius).unwrap();
+    let vertex_radius = S::from(0.98 * radius).unwrap();
+    let edge_lift = S::from(1.05 * radius).unwrap();
 
     let mut result = vec![];
 
@@ -759,7 +760,7 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: &Mesh<Point3<S>>, radius: f64)
     for center in mesh.vertices() {
         let sphere = Mesh::from_oriented_faces_unchecked(
             s.vertices().iter()
-                .map(|p| center + (p - Point3::origin()) * edge_radius)
+                .map(|p| center + (p - Point3::origin()) * vertex_radius)
                 .collect(),
             s.face_indices()
         );
