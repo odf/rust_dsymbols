@@ -46,11 +46,10 @@ impl Default for Options {
 struct State {
     options: Options,
     previous_options: Options,
-    camera: three_d::Camera,
-    context: three_d::Context,
     catalog: HashMap<String, Vec<String>>,
     collection_name: String,
     index_in_collection: usize,
+    camera: three_d::Camera,
     models: Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
 }
 
@@ -64,8 +63,7 @@ fn main() {
     })
     .unwrap();
 
-    let context = window.gl();
-
+    let mut context = window.gl();
     let mut gui = three_d::GUI::new(&context);
 
     let camera = three_d::Camera::new_perspective(
@@ -116,18 +114,20 @@ fn main() {
     };
 
     let mut state = State {
-        options, previous_options, camera, context,
-        catalog, collection_name, index_in_collection, models
+        options, previous_options,
+        catalog, collection_name, index_in_collection,
+        camera, models,
     };
 
     window.render_loop(move |mut frame_input| {
-        render_callback(&mut frame_input, &mut gui, &mut state)
+        render_callback(&mut frame_input, &mut context, &mut gui, &mut state)
     });
 }
 
 
 fn render_callback(
     frame_input: &mut three_d::FrameInput,
+    context: &mut three_d::Context,
     gui: &mut three_d::GUI,
     state: &mut State,
 )
@@ -157,7 +157,7 @@ fn render_callback(
 
     if state.options != state.previous_options {
         state.models = build_models(
-            &state.context,
+            context,
             &state.catalog[&state.collection_name][state.index_in_collection],
             &state.options
         );
@@ -174,8 +174,8 @@ fn render_callback(
         state.options.sun_direction.extend(0.0)
     ).truncate();
 
-    let mut sun = three_d::DirectionalLight::new(&state.context, 2.0, white, sun_dir);
-    let ambient = three_d::AmbientLight::new(&state.context, 0.1, white);
+    let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
+    let ambient = three_d::AmbientLight::new(context, 0.1, white);
 
     if state.options.sun_casts_shadows {
         sun.generate_shadow_map(9192, &state.models);
