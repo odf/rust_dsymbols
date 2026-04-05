@@ -155,15 +155,6 @@ fn render_callback(
     };
     state.camera.set_viewport(viewport);
 
-    if state.options != state.previous_options {
-        state.models = build_models(
-            context,
-            &state.catalog[&state.collection_name][state.index_in_collection],
-            &state.options
-        );
-        state.previous_options = state.options;
-    }
-
     rust_dsymbols::display::controls::orbit_control_update_camera(
         &mut state.camera, &mut frame_input.events, 1.0, 1000.0
     );
@@ -176,6 +167,15 @@ fn render_callback(
 
     let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
     let ambient = three_d::AmbientLight::new(context, 0.1, white);
+
+    if state.options != state.previous_options {
+        state.models = build_models(
+            context,
+            &state.catalog[&state.collection_name][state.index_in_collection],
+            &state.options
+        );
+        state.previous_options = state.options;
+    }
 
     if state.options.sun_casts_shadows {
         sun.generate_shadow_map(9192, &state.models);
