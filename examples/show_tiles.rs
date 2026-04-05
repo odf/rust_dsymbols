@@ -178,7 +178,7 @@ fn render_callback(
     let ambient = three_d::AmbientLight::new(&state.context, 0.1, white);
 
     if state.options.sun_casts_shadows {
-        sun.generate_shadow_map(2048, &state.models);
+        sun.generate_shadow_map(9192, &state.models);
     }
 
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
