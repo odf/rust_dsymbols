@@ -334,6 +334,17 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
 fn build_models(context: &three_d::Context, til: &Tiling, options: &Options)
     -> Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
 {
+    let mut parts = vec!();
+    
+    for tile_mesh in tiles(til) {
+        for (part_mesh, item_type) in decompose_mesh(
+            &scaled_mesh(&tile_mesh, options.tile_scale),
+            options.edge_radius
+        ) {
+            parts.push((part_mesh.to_cpu_mesh(), item_type))
+        }
+    }
+
     let instances = three_d::Instances {
         transformations: vec![
             Mat4::from_scale(1.0),
@@ -341,36 +352,23 @@ fn build_models(context: &three_d::Context, til: &Tiling, options: &Options)
         ..Default::default()
     };
 
-    tiles(til).iter().flat_map(|tile_mesh|
-        decompose_mesh(
-                &scaled_mesh(tile_mesh, options.tile_scale),
-                options.edge_radius
-            )
-            .iter()
-            .map(|(part_mesh, item_type)| {
-                let color = match item_type {
-                    ItemType::Vertex => options.vertex_color,
-                    ItemType::Edge => options.edge_color,
-                    ItemType::Face => options.face_color,
-                };
+    parts.iter().map(|(part_mesh, item_type)| {
+        let color = match item_type {
+            ItemType::Vertex => options.vertex_color,
+            ItemType::Edge => options.edge_color,
+            ItemType::Face => options.face_color,
+        };
 
-                three_d::Gm::new(
-                    three_d::InstancedMesh::new(
-                        context,
-                        &instances,
-                        &part_mesh.to_cpu_mesh()
-                    ),
-                    three_d::PhysicalMaterial {
-                        albedo: color.to_normalized_gamma_f32().into(),
-                        metallic: 0.0,
-                        roughness: 0.5,
-                        ..Default::default()
-                    }
-                )
-            })
-            .collect::<Vec<_>>()
+        three_d::Gm::new(
+            three_d::InstancedMesh::new(context, &instances, part_mesh),
+            three_d::PhysicalMaterial {
+                albedo: color.to_normalized_gamma_f32().into(),
+                metallic: 0.0,
+                roughness: 0.5,
+                ..Default::default()
+            }
         )
-        .collect()
+    }).collect()
 }
 
 
