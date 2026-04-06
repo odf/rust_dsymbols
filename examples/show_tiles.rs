@@ -93,7 +93,7 @@ impl Tiling {
         self.skel.borrow().as_ref().unwrap().clone()
     }
 
-    pub fn clearCache(&self) {
+    pub fn clear_cache(&self) {
         self.ds.replace(None);
         self.cov.replace(None);
         self.skel.replace(None);
