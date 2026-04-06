@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, Point3};
@@ -7,7 +9,7 @@ use three_d::{Mat4, Vec3};
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
 use rust_dsymbols::display::mesh::{ItemType, Mesh, decompose_mesh, scaled_mesh};
 use rust_dsymbols::dsets::DSet;
-use rust_dsymbols::dsyms::PartialDSym;
+use rust_dsymbols::dsyms::{DSym, PartialDSym};
 use rust_dsymbols::geometry::vec_matrix::VecMatrix;
 use rust_dsymbols::tilings::{
     Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces
@@ -43,10 +45,94 @@ impl Default for Options {
 }
 
 
+pub struct Tiling {
+    spec: String,
+    ds: RefCell<Option<Rc<Result<PartialDSym, String>>>>,
+    cov: RefCell<Option<Rc<Result<PartialDSym, String>>>>,
+    skel: RefCell<Option<Rc<Result<Skeleton, String>>>>,
+}
+
+
+impl Tiling {
+    pub fn from(spec: &str) -> Tiling {
+        Tiling {
+            spec: String::from(spec),
+            ds: RefCell::new(None),
+            cov: RefCell::new(None),
+            skel: RefCell::new(None)
+        }
+    }
+
+    pub fn ds(&self) -> Rc<Result<PartialDSym, String>> {
+        if self.ds.borrow().is_none() {
+            let maybe_ds = self.spec.parse::<PartialDSym>();
+            self.ds.replace(Some(Rc::new(maybe_ds)));
+        }
+
+        self.ds.borrow().as_ref().unwrap().clone()
+    }
+
+    pub fn cov(&self) -> Rc<Result<PartialDSym, String>> {
+        if self.cov.borrow().is_none() {
+            let maybe_cov = self.cov_impl();
+            self.cov.replace(Some(Rc::new(maybe_cov)));
+        }
+
+        self.cov.borrow().as_ref().unwrap().clone()
+    }
+
+    pub fn skel(&self) -> Rc<Result<Skeleton, String>> {
+        if self.skel.borrow().is_none() {
+            let maybe_skel = match self.cov().as_ref() {
+                Ok(val) => Ok(Skeleton::of(val)),
+                Err(msg) => Err(msg.clone()),
+            };
+            self.skel.replace(Some(Rc::new(maybe_skel)));
+        }
+
+        self.skel.borrow().as_ref().unwrap().clone()
+    }
+
+    pub fn clearCache(&self) {
+        self.ds.replace(None);
+        self.cov.replace(None);
+        self.skel.replace(None);
+    }
+
+    fn cov_impl(&self) -> Result<PartialDSym, String> {
+        match self.ds().as_ref() {
+            Ok(ds) => {
+                if ds.dim() != 3 {
+                    Err("is not three_dimensional".to_string())
+                } else if !ds.is_complete() {
+                    Err("is incomplete".to_string())
+                } else {
+                    for i in 0..ds.dim() {
+                        for d in ds.orbit_reps_2d(i, i + 1) {
+                            let v = ds.v(i, i + 1, d).unwrap();
+                            if v > 6 && v == 5 {
+                                return Err(String::from(
+                                    "violates the crystallographic restriction"
+                                ));
+                            }
+                        }
+                    }
+
+                    pseudo_toroidal_cover(ds).ok_or(
+                        "does not have a pseudo-toroidal cover".to_string()
+                    )
+                }
+            },
+            Err(msg) => Err(msg.clone())
+        }
+    }
+}
+
+
 struct State {
     options: Options,
     previous_options: Options,
-    catalog: HashMap<String, Vec<String>>,
+    catalog: HashMap<String, Vec<Tiling>>,
     collection_name: String,
     index_in_collection: usize,
     camera: three_d::Camera,
@@ -90,7 +176,7 @@ fn main() {
     let catalog = HashMap::from([
         (
             String::from("__builtin__"),
-            builtin.into_iter().map(String::from).collect::<Vec<_>>()
+            builtin.into_iter().map(Tiling::from).collect::<Vec<_>>()
         )
     ]);
 
@@ -245,7 +331,7 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
 }
 
 
-fn build_models(context: &three_d::Context, ds_spec: &str, options: &Options)
+fn build_models(context: &three_d::Context, til: &Tiling, options: &Options)
     -> Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
 {
     let instances = three_d::Instances {
@@ -255,7 +341,7 @@ fn build_models(context: &three_d::Context, ds_spec: &str, options: &Options)
         ..Default::default()
     };
 
-    tiles(ds_spec).iter().flat_map(|tile_mesh|
+    tiles(til).iter().flat_map(|tile_mesh|
         decompose_mesh(
                 &scaled_mesh(tile_mesh, options.tile_scale),
                 options.edge_radius
@@ -288,19 +374,24 @@ fn build_models(context: &three_d::Context, ds_spec: &str, options: &Options)
 }
 
 
-fn tiles(spec: &str) -> Vec<Mesh<Point3<f64>>> {
-    let ds = spec.parse::<PartialDSym>().unwrap();
-    let cov = pseudo_toroidal_cover(&ds).unwrap();
-    let skel = Skeleton::of(&cov);
-    let basis = invariant_basis(&gram_matrix(&ds, &cov, &skel).unwrap()).transpose();
+fn tiles(til: &Tiling) -> Vec<Mesh<Point3<f64>>> {
+    let ds = til.ds();
+    let ds = ds.as_ref().as_ref().unwrap();
+    let cov = til.cov();
+    let cov = cov.as_ref().as_ref().unwrap();
+    let skel = til.skel();
+    let skel = skel.as_ref().as_ref().unwrap();
+
+    let basis = invariant_basis(&gram_matrix(ds, cov, skel).unwrap()
+    ).transpose();
     let pos = skel.graph.vertices().iter()
         .map(|&v| (v, skel.graph.position(v)))
         .collect();
 
-    let (scale, shift) = scale_and_shift(&cov, &skel, &basis);
+    let (scale, shift) = scale_and_shift(cov, skel, &basis);
     let reps = cov.orbit_reps([0, 1, 2], cov.elements());
 
-    tile_surfaces(&cov, &skel, &pos, reps).iter().map(|(vertices, faces)| {
+    tile_surfaces(cov, skel, &pos, reps).iter().map(|(vertices, faces)| {
         let vs = vertices.iter().map(|v| {
             let v = scale * &basis * v.to_f64().unwrap() + &shift;
             point3(v[(0, 0)], v[(1, 0)], v[(2, 0)])
