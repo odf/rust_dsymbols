@@ -137,9 +137,6 @@ struct CacheKey {
     index_in_collection: usize,
     tile_scale: i64,
     edge_radius: i64,
-    vertex_color: three_d::egui::Color32,
-    edge_color: three_d::egui::Color32,
-    face_color: three_d::egui::Color32,
 }
 
 
@@ -149,10 +146,7 @@ struct State {
     collection_name: String,
     index_in_collection: usize,
     camera: three_d::Camera,
-    cache: LruCache<
-        CacheKey,
-        Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
-    >,
+    cache: LruCache<CacheKey, Vec<(three_d::CpuMesh, ItemType)>>,
 }
 
 
@@ -163,9 +157,6 @@ impl State {
             index_in_collection: self.index_in_collection,
             tile_scale: (self.options.tile_scale * 10000.0) as i64,
             edge_radius: (self.options.edge_radius * 10000.0) as i64,
-            vertex_color: self.options.vertex_color,
-            edge_color: self.options.edge_color,
-            face_color: self.options.face_color,
         }
     }
 }
@@ -284,17 +275,18 @@ fn render_callback(
     let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
     let ambient = three_d::AmbientLight::new(context, 0.1, white);
 
-    let models = state.cache.get_or_insert(
+    let tiling = &state.catalog[&state.collection_name][state.index_in_collection];
+    let options = &state.options;
+
+    let parts = state.cache.get_or_insert(
         state.cache_key(),
-        || build_models(
-            context,
-            &state.catalog[&state.collection_name][state.index_in_collection],
-            &state.options
-        )
+        || build_parts(tiling, options)
     );
 
+    let models = build_models(context, parts, options);
+
     if state.options.sun_casts_shadows {
-        sun.generate_shadow_map(9192, models);
+        sun.generate_shadow_map(9192, &models);
     }
 
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
@@ -361,20 +353,13 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
 }
 
 
-fn build_models(context: &three_d::Context, til: &Tiling, options: &Options)
+fn build_models(
+    context: &three_d::Context,
+    parts: &Vec<(three_d::CpuMesh, ItemType)>,
+    options: &Options
+)
     -> Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
 {
-    let mut parts = vec!();
-    
-    for tile_mesh in tiles(til) {
-        for (part_mesh, item_type) in decompose_mesh(
-            &scaled_mesh(&tile_mesh, options.tile_scale),
-            options.edge_radius
-        ) {
-            parts.push((part_mesh.to_cpu_mesh(), item_type))
-        }
-    }
-
     let instances = three_d::Instances {
         transformations: vec![
             Mat4::from_scale(1.0),
@@ -399,6 +384,23 @@ fn build_models(context: &three_d::Context, til: &Tiling, options: &Options)
             }
         )
     }).collect()
+}
+
+
+fn build_parts(til: &Tiling, options: &Options)
+    -> Vec<(three_d::CpuMesh, ItemType)>
+{
+    let mut parts = vec!();
+
+    for tile_mesh in tiles(til) {
+        for (part_mesh, item_type) in decompose_mesh(
+            &scaled_mesh(&tile_mesh, options.tile_scale),
+            options.edge_radius
+        ) {
+            parts.push((part_mesh.to_cpu_mesh(), item_type))
+        }
+    }
+    parts
 }
 
 
