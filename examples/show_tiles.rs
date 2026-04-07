@@ -1,9 +1,11 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::num::NonZero;
 use std::rc::Rc;
 
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, Point3};
+use lru::LruCache;
 use three_d::{Mat4, Vec3};
 
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
@@ -14,35 +16,6 @@ use rust_dsymbols::geometry::vec_matrix::VecMatrix;
 use rust_dsymbols::tilings::{
     Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces
 };
-
-
-#[derive(Clone, Copy, PartialEq)]
-struct Options {
-    tile_scale: f64,
-    edge_radius: f64,
-    vertex_color: three_d::egui::Color32,
-    edge_color: three_d::egui::Color32,
-    face_color: three_d::egui::Color32,
-    background_color: three_d::egui::Color32,
-    sun_direction: Vec3,
-    sun_casts_shadows: bool,
-}
-
-
-impl Default for Options {
-    fn default() -> Self {
-        Self {
-            tile_scale: 0.75,
-            edge_radius: 0.05,
-            vertex_color: three_d::egui::Color32::BLACK,
-            edge_color: three_d::egui::Color32::BLUE,
-            face_color: three_d::egui::Color32::RED,
-            background_color: three_d::egui::Color32::GRAY,
-            sun_direction: vec3(1.0, -1.0, -1.0),
-            sun_casts_shadows: false,
-        }
-    }
-}
 
 
 pub struct Tiling {
@@ -129,14 +102,72 @@ impl Tiling {
 }
 
 
+#[derive(Clone, Copy, PartialEq)]
+struct Options {
+    tile_scale: f64,
+    edge_radius: f64,
+    vertex_color: three_d::egui::Color32,
+    edge_color: three_d::egui::Color32,
+    face_color: three_d::egui::Color32,
+    background_color: three_d::egui::Color32,
+    sun_direction: Vec3,
+    sun_casts_shadows: bool,
+}
+
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            tile_scale: 0.75,
+            edge_radius: 0.05,
+            vertex_color: three_d::egui::Color32::BLACK,
+            edge_color: three_d::egui::Color32::BLUE,
+            face_color: three_d::egui::Color32::RED,
+            background_color: three_d::egui::Color32::GRAY,
+            sun_direction: vec3(1.0, -1.0, -1.0),
+            sun_casts_shadows: false,
+        }
+    }
+}
+
+
+#[derive(Eq, Hash, PartialEq)]
+struct CacheKey {
+    collection_name: String,
+    index_in_collection: usize,
+    tile_scale: i64,
+    edge_radius: i64,
+    vertex_color: three_d::egui::Color32,
+    edge_color: three_d::egui::Color32,
+    face_color: three_d::egui::Color32,
+}
+
+
 struct State {
     options: Options,
-    previous_options: Options,
     catalog: HashMap<String, Vec<Tiling>>,
     collection_name: String,
     index_in_collection: usize,
     camera: three_d::Camera,
-    models: Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>,
+    cache: LruCache<
+        CacheKey,
+        Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
+    >,
+}
+
+
+impl State {
+    fn cache_key(&self) -> CacheKey {
+        CacheKey {
+            collection_name: self.collection_name.clone(),
+            index_in_collection: self.index_in_collection,
+            tile_scale: (self.options.tile_scale * 10000.0) as i64,
+            edge_radius: (self.options.edge_radius * 10000.0) as i64,
+            vertex_color: self.options.vertex_color,
+            edge_color: self.options.edge_color,
+            face_color: self.options.face_color,
+        }
+    }
 }
 
 
@@ -163,7 +194,6 @@ fn main() {
     );
 
     let options = Default::default();
-    let previous_options = options;
 
     let builtin = [
         /* bcu */ "<1.1:2 3:2,1 2,1 2,2:4,4 2,6>",
@@ -183,26 +213,26 @@ fn main() {
     let collection_name = "__builtin__".to_string();
     let index_in_collection = 4;
 
-    #[cfg(feature = "pprof")]
-    let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
-        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-        .build().unwrap();
+    #[cfg(feature = "pprof")] {
+        let guard = pprof::ProfilerGuardBuilder::default()
+            .frequency(1000)
+            .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+            .build().unwrap();
 
-    let models = build_models(
-        &context, &catalog[&collection_name[..]][index_in_collection], &options
-    );
+        build_models(
+            &context, &catalog[&collection_name[..]][index_in_collection], &options
+        );
 
-    #[cfg(feature = "pprof")]
-    if let Ok(report) = guard.report().build() {
-        let file = std::fs::File::create("flamegraph.svg").unwrap();
-        report.flamegraph(file).unwrap();
-    };
+        if let Ok(report) = guard.report().build() {
+            let file = std::fs::File::create("flamegraph.svg").unwrap();
+            report.flamegraph(file).unwrap();
+        };
+    }
+
+    let cache = LruCache::new(NonZero::new(10).unwrap());
 
     let mut state = State {
-        options, previous_options,
-        catalog, collection_name, index_in_collection,
-        camera, models,
+        options, catalog, collection_name, index_in_collection, camera, cache
     };
 
     window.render_loop(move |mut frame_input| {
@@ -254,24 +284,24 @@ fn render_callback(
     let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
     let ambient = three_d::AmbientLight::new(context, 0.1, white);
 
-    if state.options != state.previous_options {
-        state.models = build_models(
+    let models = state.cache.get_or_insert(
+        state.cache_key(),
+        || build_models(
             context,
             &state.catalog[&state.collection_name][state.index_in_collection],
             &state.options
-        );
-        state.previous_options = state.options;
-    }
+        )
+    );
 
     if state.options.sun_casts_shadows {
-        sun.generate_shadow_map(9192, &state.models);
+        sun.generate_shadow_map(9192, models);
     }
 
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
 
     frame_input.screen()
         .clear(three_d::ClearState::color_and_depth(r, g, b, a, 1.0))
-        .render(&state.camera, &state.models, &[&sun, &ambient])
+        .render(&state.camera, models, &[&sun, &ambient])
         .write(|| gui.render()).unwrap();
 
     // Ensures a valid return value.
