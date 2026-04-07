@@ -202,7 +202,7 @@ fn main() {
     ]);
 
     let collection_name = "__builtin__".to_string();
-    let index_in_collection = 4;
+    let index_in_collection = 0;
 
     #[cfg(feature = "pprof")] {
         let guard = pprof::ProfilerGuardBuilder::default()
@@ -311,7 +311,21 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
         ui.add_space(12.0);
 
         ui.label(format!("Collection '{}'", state.collection_name));
-        ui.label(format!("Index {}", state.index_in_collection));
+        ui.label(format!("Index {}", state.index_in_collection + 1));
+
+        ui.horizontal(|ui| {
+            if ui.button("Prev").clicked() {
+                if state.index_in_collection > 0 {
+                    state.index_in_collection -= 1;
+                }
+            }
+            if ui.button("Next").clicked() {
+                let n = state.catalog[&state.collection_name].len();
+                if state.index_in_collection < n - 1 {
+                    state.index_in_collection += 1;
+                }
+            }
+        });
         ui.add_space(24.0);
 
         ui.heading("Appearance");
