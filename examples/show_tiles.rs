@@ -1,5 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -343,7 +345,18 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
                 if let Some(file) = dialog.path() {
                     let path = file.to_path_buf();
                     state.opened_file = Some(path.clone());
-                    println!("{}", path.to_string_lossy());
+                    match file_contents(&path) {
+                        Ok(content) => {
+                            let collection = content.lines()
+                                .map(Tiling::from)
+                                .collect::<Vec<_>>();
+                            let title = path.components().last().unwrap()
+                                .as_os_str().to_str().unwrap();
+                            state.catalog.insert(title.to_string(), collection);
+                            state.collection_name = title.to_string();
+                        },
+                        Err(msg) => println!("{msg}"),
+                    }
                 }
             }
         }
@@ -402,6 +415,15 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
         });
     });
     gui_context.used_rect().width()
+}
+
+
+fn file_contents(path: &PathBuf) -> std::io::Result<String> {
+    let mut file = File::open(path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    Ok(contents)
 }
 
 
