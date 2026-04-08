@@ -1,10 +1,12 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::num::NonZero;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, Point3};
+use egui_file::FileDialog;
 use lru::LruCache;
 use three_d::{Mat4, Vec3};
 
@@ -146,6 +148,8 @@ struct State {
     collection_name: String,
     index_in_collection: usize,
     camera: three_d::Camera,
+    opened_file: Option<PathBuf>,
+    open_file_dialog: Option<FileDialog>,
     cache: LruCache<CacheKey, Vec<(three_d::CpuMesh, ItemType)>>,
 }
 
@@ -184,8 +188,6 @@ fn main() {
         1000.0,
     );
 
-    let options = Default::default();
-
     let builtin = [
         /* bcu */ "<1.1:2 3:2,1 2,1 2,2:4,4 2,6>",
         /* pcu */ "<1.1:1 3:1,1,1,1:4,3,4>",
@@ -204,31 +206,44 @@ fn main() {
     let collection_name = "__builtin__".to_string();
     let index_in_collection = 0;
 
-    #[cfg(feature = "pprof")] {
-        let guard = pprof::ProfilerGuardBuilder::default()
-            .frequency(1000)
-            .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-            .build().unwrap();
-
-        build_models(
-            &context, &catalog[&collection_name[..]][index_in_collection], &options
-        );
-
-        if let Ok(report) = guard.report().build() {
-            let file = std::fs::File::create("flamegraph.svg").unwrap();
-            report.flamegraph(file).unwrap();
-        };
-    }
-
-    let cache = LruCache::new(NonZero::new(10).unwrap());
-
     let mut state = State {
-        options, catalog, collection_name, index_in_collection, camera, cache
+        options: Default::default(),
+        catalog,
+        collection_name,
+        index_in_collection,
+        camera,
+        opened_file: None,
+        open_file_dialog: None,
+        cache: LruCache::new(NonZero::new(10).unwrap()),
     };
+
+    #[cfg(feature = "pprof")] {
+        profile_build_models(&mut context, &state);
+    }
 
     window.render_loop(move |mut frame_input| {
         render_callback(&mut frame_input, &mut context, &mut gui, &mut state)
     });
+}
+
+
+#[cfg(feature = "pprof")]
+fn profile_build_models(context: &mut three_d::Context, state: &State) {
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build().unwrap();
+
+    let tiling = &state.catalog[&state.collection_name][state.index_in_collection];
+    let options = &state.options;
+
+    let parts = build_parts(tiling, options);
+    build_models(&context, &parts, options);
+
+    if let Ok(report) = guard.report().build() {
+        let file = std::fs::File::create("flamegraph.svg").unwrap();
+        report.flamegraph(file).unwrap();
+    };
 }
 
 
@@ -311,6 +326,28 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
         ui.add_space(12.0);
 
         ui.label(format!("Collection '{}'", state.collection_name));
+
+        if (ui.button("Open...")).clicked() {
+            let filter = Box::new({
+                let ext = Some(std::ffi::OsStr::new("ds"));
+                move |path: &Path| -> bool { path.extension() == ext }
+            });
+            let mut dialog = FileDialog::open_file(state.opened_file.clone())
+                .show_files_filter(filter);
+            dialog.open();
+            state.open_file_dialog = Some(dialog);
+        }
+
+        if let Some(dialog) = &mut state.open_file_dialog {
+            if dialog.show(gui_context).selected() {
+                if let Some(file) = dialog.path() {
+                    let path = file.to_path_buf();
+                    state.opened_file = Some(path.clone());
+                    println!("{}", path.to_string_lossy());
+                }
+            }
+        }
+
         ui.label(format!("Index {}", state.index_in_collection + 1));
 
         ui.horizontal(|ui| {
@@ -326,6 +363,7 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
                 }
             }
         });
+
         ui.add_space(24.0);
 
         ui.heading("Appearance");
