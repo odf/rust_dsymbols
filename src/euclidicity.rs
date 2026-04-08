@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 use crate::delaney3d::{orbifold_graph, pseudo_toroidal_cover};
 use crate::derived::{canonical, minimal_image, subsymbol};
@@ -67,7 +67,7 @@ fn bad_subgroup_count(fg: &FundamentalGroup, index: usize, expected: usize)
 }
 
 
-static INVARIANTS: Lazy<BTreeSet<String>> = Lazy::new(|| {
+static INVARIANTS: LazyLock<BTreeSet<String>> = LazyLock::new(|| {
     include_str!(
         concat!(
             env!("CARGO_MANIFEST_DIR"),
