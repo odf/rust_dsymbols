@@ -1384,7 +1384,6 @@ dependencies = [
  "num-bigint",
  "num-rational",
  "num-traits",
- "once_cell",
  "pprof",
  "proptest",
  "three-d",
