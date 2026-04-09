@@ -426,6 +426,7 @@ fn ui_file_loader(
                             .as_os_str().to_str().unwrap();
                         state.catalog.insert(title.to_string(), collection);
                         state.collection_name = title.to_string();
+                        state.index_in_collection = 0;
                     },
                     Err(err) => {
                         state.message = err.to_string()
