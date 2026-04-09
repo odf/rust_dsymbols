@@ -153,6 +153,7 @@ struct State {
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
     cache: LruCache<CacheKey, Vec<(three_d::CpuMesh, ItemType)>>,
+    message: String,
 }
 
 
@@ -217,6 +218,7 @@ fn main() {
         opened_file: None,
         open_file_dialog: None,
         cache: LruCache::new(NonZero::new(10).unwrap()),
+        message: "Yee-haw!".to_string(),
     };
 
     #[cfg(feature = "pprof")] {
@@ -257,7 +259,8 @@ fn render_callback(
 )
     -> three_d::FrameOutput
 {
-    let mut panel_width = 0.0;
+    let mut offset_wd = 0.0;
+    let mut offset_ht = 0.0;
 
     gui.update(
         &mut frame_input.events,
@@ -265,17 +268,18 @@ fn render_callback(
         frame_input.viewport,
         frame_input.device_pixel_ratio,
         |gui_context| {
-            panel_width = gui_callback(state, gui_context);
+            (offset_wd, offset_ht) = gui_callback(state, gui_context);
         },
     );
 
-    let wd = panel_width * frame_input.device_pixel_ratio;
+    let wd = offset_wd * frame_input.device_pixel_ratio;
+    let ht = offset_ht * frame_input.device_pixel_ratio;
 
     let viewport = three_d::Viewport {
         x: wd as i32,
-        y: 0,
+        y: ht as i32,
         width: frame_input.viewport.width - wd as u32,
-        height: frame_input.viewport.height,
+        height: frame_input.viewport.height - ht as u32,
     };
     state.camera.set_viewport(viewport);
 
@@ -319,7 +323,7 @@ fn render_callback(
 
 
 fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
-    -> f32
+    -> (f32, f32)
 {
     three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
         let options = &mut state.options;
@@ -414,7 +418,16 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
             ui.label("Background color");
         });
     });
-    gui_context.used_rect().width()
+
+    let width = gui_context.used_rect().width();
+
+    let response = three_d::egui::TopBottomPanel::top("status line").show(
+        gui_context,
+        |ui| { ui.label(&state.message[..]); }
+    );
+    let height = response.response.rect.height();
+
+    (width, height)
 }
 
 
