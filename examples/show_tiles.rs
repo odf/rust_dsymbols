@@ -8,12 +8,14 @@ use std::rc::Rc;
 
 use cgmath::prelude::*;
 use cgmath::{point3, vec3, Point3};
+use egui;
 use egui_file::FileDialog;
 use lru::LruCache;
 use three_d::{Mat4, Vec3};
 
 use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
 use rust_dsymbols::display::mesh::{ItemType, Mesh, decompose_mesh, scaled_mesh};
+use rust_dsymbols::display::gui::GUI;
 use rust_dsymbols::dsets::DSet;
 use rust_dsymbols::dsyms::{DSym, PartialDSym};
 use rust_dsymbols::geometry::vec_matrix::VecMatrix;
@@ -110,10 +112,10 @@ impl Tiling {
 struct Options {
     tile_scale: f64,
     edge_radius: f64,
-    vertex_color: three_d::egui::Color32,
-    edge_color: three_d::egui::Color32,
-    face_color: three_d::egui::Color32,
-    background_color: three_d::egui::Color32,
+    vertex_color: egui::Color32,
+    edge_color: egui::Color32,
+    face_color: egui::Color32,
+    background_color: egui::Color32,
     sun_direction: Vec3,
     sun_casts_shadows: bool,
 }
@@ -124,10 +126,10 @@ impl Default for Options {
         Self {
             tile_scale: 0.75,
             edge_radius: 0.05,
-            vertex_color: three_d::egui::Color32::BLACK,
-            edge_color: three_d::egui::Color32::BLUE,
-            face_color: three_d::egui::Color32::RED,
-            background_color: three_d::egui::Color32::GRAY,
+            vertex_color: egui::Color32::BLACK,
+            edge_color: egui::Color32::BLUE,
+            face_color: egui::Color32::RED,
+            background_color: egui::Color32::GRAY,
             sun_direction: vec3(1.0, -1.0, -1.0),
             sun_casts_shadows: false,
         }
@@ -178,7 +180,7 @@ fn main() {
     .unwrap();
 
     let mut context = window.gl();
-    let mut gui = three_d::GUI::new(&context);
+    let mut gui = GUI::new(&context);
 
     let camera = three_d::Camera::new_perspective(
         window.viewport(),
@@ -252,7 +254,7 @@ fn profile_build_models(context: &mut three_d::Context, state: &State) {
 fn render_callback(
     frame_input: &mut three_d::FrameInput,
     context: &mut three_d::Context,
-    gui: &mut three_d::GUI,
+    gui: &mut GUI,
     state: &mut State,
 )
     -> three_d::FrameOutput
@@ -318,10 +320,10 @@ fn render_callback(
 }
 
 
-fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
+fn gui_callback(state: &mut State, gui_context: &egui::Context)
     -> f32
 {
-    three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
+    egui::SidePanel::left("side_panel").show(gui_context, |ui| {
         let options = &mut state.options;
 
         ui.heading("Tiling");
@@ -383,11 +385,11 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
         ui.add_space(12.0);
 
         ui.add(
-            three_d::egui::Slider::new(&mut options.tile_scale, 0.1..=1.0)
+            egui::Slider::new(&mut options.tile_scale, 0.1..=1.0)
                 .text("Tile scale")
         );
         ui.add(
-            three_d::egui::Slider::new(&mut options.edge_radius, 0.0..=0.1)
+            egui::Slider::new(&mut options.edge_radius, 0.0..=0.1)
                 .text("Edge radius")
         );
         ui.add_space(12.0);
