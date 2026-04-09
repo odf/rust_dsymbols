@@ -152,7 +152,7 @@ struct State {
     camera: three_d::Camera,
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
-    cache: LruCache<CacheKey, Vec<(three_d::CpuMesh, ItemType)>>,
+    cache: LruCache<CacheKey, Result<Vec<(three_d::CpuMesh, ItemType)>, String>>,
     message: String,
 }
 
@@ -287,12 +287,12 @@ fn render_callback(
         &mut state.camera, &mut frame_input.events, 1.0, 1000.0
     );
 
-    let white = three_d::Srgba::WHITE;
     let sun_dir = (
         state.camera.view().invert().unwrap() *
         state.options.sun_direction.extend(0.0)
     ).truncate();
 
+    let white = three_d::Srgba::WHITE;
     let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
     let ambient = three_d::AmbientLight::new(context, 0.1, white);
 
@@ -304,18 +304,27 @@ fn render_callback(
         || build_parts(tiling, options)
     );
 
-    let models = build_models(context, parts, options);
+    let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
+    let clear_state = three_d::ClearState::color_and_depth(r, g, b, a, 1.0);
+    let screen = frame_input.screen();
 
-    if state.options.sun_casts_shadows {
-        sun.generate_shadow_map(9192, &models);
+    match parts {
+        Ok(parts) => {
+            state.message = String::from("Ok!");
+            let models = build_models(context, parts, options);
+            if state.options.sun_casts_shadows {
+                sun.generate_shadow_map(9192, &models);
+            }
+            screen.clear(clear_state)
+                .render(&state.camera, models, &[&sun, &ambient]);
+        },
+        Err(msg) => {
+            state.message = msg.clone();
+            screen.clear(clear_state);
+        },
     }
 
-    let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
-
-    frame_input.screen()
-        .clear(three_d::ClearState::color_and_depth(r, g, b, a, 1.0))
-        .render(&state.camera, models, &[&sun, &ambient])
-        .write(|| gui.render()).unwrap();
+    screen.write(|| gui.render()).unwrap();
 
     // Ensures a valid return value.
     three_d::FrameOutput::default()
@@ -475,11 +484,11 @@ fn build_models(
 
 
 fn build_parts(til: &Tiling, options: &Options)
-    -> Vec<(three_d::CpuMesh, ItemType)>
+    -> Result<Vec<(three_d::CpuMesh, ItemType)>, String>
 {
     let mut parts = vec!();
 
-    for tile_mesh in tiles(til) {
+    for tile_mesh in tiles(til)? {
         for (part_mesh, item_type) in decompose_mesh(
             &scaled_mesh(&tile_mesh, options.tile_scale),
             options.edge_radius
@@ -487,20 +496,25 @@ fn build_parts(til: &Tiling, options: &Options)
             parts.push((part_mesh.to_cpu_mesh(), item_type))
         }
     }
-    parts
+
+    Ok(parts)
 }
 
 
-fn tiles(til: &Tiling) -> Vec<Mesh<Point3<f64>>> {
+fn tiles(til: &Tiling)
+    -> Result<Vec<Mesh<Point3<f64>>>, String>
+{
     let ds = til.ds();
-    let ds = ds.as_ref().as_ref().unwrap();
+    let ds = ds.as_ref().as_ref()?;
     let cov = til.cov();
-    let cov = cov.as_ref().as_ref().unwrap();
+    let cov = cov.as_ref().as_ref()?;
     let skel = til.skel();
-    let skel = skel.as_ref().as_ref().unwrap();
+    let skel = skel.as_ref().as_ref()?;
 
-    let basis = invariant_basis(&gram_matrix(ds, cov, skel).unwrap()
+    let basis = invariant_basis(
+        &gram_matrix(ds, cov, skel).ok_or("error computing the Gram matrix")?
     ).transpose();
+
     let pos = skel.graph.vertices().iter()
         .map(|&v| (v, skel.graph.position(v)))
         .collect();
@@ -514,7 +528,7 @@ fn tiles(til: &Tiling) -> Vec<Mesh<Point3<f64>>> {
             point3(v[(0, 0)], v[(1, 0)], v[(2, 0)])
         });
 
-        Mesh::from_oriented_faces(vs, faces.clone()).unwrap()
+        Mesh::from_oriented_faces(vs, faces.clone())
     }).collect()
 }
 
