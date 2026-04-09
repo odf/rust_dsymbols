@@ -335,65 +335,21 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
     -> (f32, f32)
 {
     three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
-        let options = &mut state.options;
-
         ui.heading("Tiling");
         ui.add_space(12.0);
 
         ui.label(format!("Collection '{}'", state.collection_name));
 
-        if (ui.button("Open...")).clicked() {
-            let filter = Box::new({
-                let ext = Some(std::ffi::OsStr::new("ds"));
-                move |path: &Path| -> bool { path.extension() == ext }
-            });
-            let mut dialog = FileDialog::open_file(state.opened_file.clone())
-                .show_files_filter(filter);
-            dialog.open();
-            state.open_file_dialog = Some(dialog);
-        }
+        ui_file_loader(ui, gui_context, state);
+        ui.add_space(12.0);
 
-        if let Some(dialog) = &mut state.open_file_dialog {
-            if dialog.show(gui_context).selected() {
-                if let Some(file) = dialog.path() {
-                    let path = file.to_path_buf();
-                    state.opened_file = Some(path.clone());
-                    match file_contents(&path) {
-                        Ok(content) => {
-                            let collection = content.lines()
-                                .map(Tiling::from)
-                                .collect::<Vec<_>>();
-                            let title = path.components().last().unwrap()
-                                .as_os_str().to_str().unwrap();
-                            state.catalog.insert(title.to_string(), collection);
-                            state.collection_name = title.to_string();
-                        },
-                        Err(msg) => println!("{msg}"),
-                    }
-                }
-            }
-        }
-
-        ui.label(format!("Index {}", state.index_in_collection + 1));
-
-        ui.horizontal(|ui| {
-            if ui.button("Prev").clicked() {
-                if state.index_in_collection > 0 {
-                    state.index_in_collection -= 1;
-                }
-            }
-            if ui.button("Next").clicked() {
-                let n = state.catalog[&state.collection_name].len();
-                if state.index_in_collection < n - 1 {
-                    state.index_in_collection += 1;
-                }
-            }
-        });
-
+        ui_navigation_buttons(ui, state);
         ui.add_space(24.0);
 
         ui.heading("Appearance");
         ui.add_space(12.0);
+
+        let options = &mut state.options;
 
         ui.add(
             three_d::egui::Slider::new(&mut options.tile_scale, 0.1..=1.0)
@@ -437,6 +393,77 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
     let height = response.response.rect.height();
 
     (width, height)
+}
+
+
+fn ui_file_loader(
+    ui: &mut three_d::egui::Ui,
+    gui_context: &three_d::egui::Context,
+    state: &mut State,
+) {
+    if (ui.button("Load...")).clicked() {
+        let filter = Box::new({
+            let ext = Some(std::ffi::OsStr::new("ds"));
+            move |path: &Path| -> bool { path.extension() == ext }
+        });
+        let mut dialog = FileDialog::open_file(state.opened_file.clone())
+            .show_files_filter(filter);
+        dialog.open();
+        state.open_file_dialog = Some(dialog);
+    }
+
+    if let Some(dialog) = &mut state.open_file_dialog {
+        if dialog.show(gui_context).selected() {
+            if let Some(file) = dialog.path() {
+                let path = file.to_path_buf();
+                state.opened_file = Some(path.clone());
+                match file_contents(&path) {
+                    Ok(content) => {
+                        let collection = content.lines()
+                            .map(Tiling::from)
+                            .collect::<Vec<_>>();
+                        let title = path.components().last().unwrap()
+                            .as_os_str().to_str().unwrap();
+                        state.catalog.insert(title.to_string(), collection);
+                        state.collection_name = title.to_string();
+                    },
+                    Err(err) => {
+                        state.message = err.to_string()
+                    },
+                }
+            }
+        }
+    }
+}
+
+
+fn ui_navigation_buttons(
+    ui: &mut three_d::egui::Ui,
+    state: &mut State,
+) {
+    let n = state.catalog[&state.collection_name].len();
+    let k = state.index_in_collection;
+
+    ui.label(format!("Index {} of {}", k + 1, n));
+
+    ui.horizontal(|ui| {
+        if ui.button("First").clicked() {
+            state.index_in_collection = 0;
+        }
+        if ui.button("Prev").clicked() {
+            if k > 0 {
+                state.index_in_collection -= 1;
+            }
+        }
+        if ui.button("Next").clicked() {
+            if k < n - 1 {
+                state.index_in_collection += 1;
+            }
+        }
+        if ui.button("Last").clicked() {
+            state.index_in_collection = n - 1;
+        }
+    });
 }
 
 
