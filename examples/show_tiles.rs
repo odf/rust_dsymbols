@@ -137,7 +137,7 @@ impl Default for Options {
 
 #[derive(Eq, Hash, PartialEq)]
 struct CacheKey {
-    tile_spec: String,
+    tiling_spec: String,
     tile_scale: i64,
     edge_radius: i64,
 }
@@ -145,13 +145,14 @@ struct CacheKey {
 
 struct State {
     options: Options,
-    catalog: HashMap<String, Vec<Tiling>>,
+    catalog: HashMap<String, Vec<String>>,
     collection_name: String,
     index_in_collection: usize,
     camera: three_d::Camera,
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
-    cache: LruCache<CacheKey, Result<Vec<(three_d::CpuMesh, ItemType)>, String>>,
+    tiling_cache: LruCache<String, Tiling>,
+    parts_cache: LruCache<CacheKey, Result<Vec<(three_d::CpuMesh, ItemType)>, String>>,
     message: String,
 }
 
@@ -160,9 +161,9 @@ impl State {
     fn cache_key(&self) -> CacheKey {
         let tiling = &self.catalog[&self.collection_name][self.index_in_collection];
         CacheKey {
-            tile_spec: tiling.spec.clone(),
-            tile_scale: (self.options.tile_scale * 10000.0) as i64,
-            edge_radius: (self.options.edge_radius * 10000.0) as i64,
+            tiling_spec: tiling.clone(),
+            tile_scale: (self.options.tile_scale * 100.0) as i64,
+            edge_radius: (self.options.edge_radius * 1000.0) as i64,
         }
     }
 }
@@ -201,7 +202,7 @@ fn main() {
     let catalog = HashMap::from([
         (
             String::from("__builtin__"),
-            builtin.into_iter().map(Tiling::from).collect::<Vec<_>>()
+            builtin.into_iter().map(String::from).collect::<Vec<_>>()
         )
     ]);
 
@@ -216,8 +217,9 @@ fn main() {
         camera,
         opened_file: None,
         open_file_dialog: None,
-        cache: LruCache::new(NonZero::new(10).unwrap()),
-        message: "Yee-haw!".to_string(),
+        tiling_cache: LruCache::new(NonZero::new(10).unwrap()),
+        parts_cache: LruCache::new(NonZero::new(10).unwrap()),
+        message: "Initializing...".to_string(),
     };
 
     #[cfg(feature = "pprof")] {
@@ -295,13 +297,12 @@ fn render_callback(
     let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
     let ambient = three_d::AmbientLight::new(context, 0.1, white);
 
-    let tiling = &state.catalog[&state.collection_name][state.index_in_collection];
     let options = &state.options;
+    let spec = &state.catalog[&state.collection_name][state.index_in_collection];
+    let key = state.cache_key();
 
-    let parts = state.cache.get_or_insert(
-        state.cache_key(),
-        || build_parts(tiling, options)
-    );
+    let tiling = state.tiling_cache.get_or_insert(spec.clone(), || Tiling::from(spec));
+    let parts = state.parts_cache.get_or_insert(key, || build_parts(tiling, options));
 
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
     let clear_state = three_d::ClearState::color_and_depth(r, g, b, a, 1.0);
@@ -419,7 +420,7 @@ fn ui_file_loader(
                 match file_contents(&path) {
                     Ok(content) => {
                         let collection = content.lines()
-                            .map(Tiling::from)
+                            .map(String::from)
                             .collect::<Vec<_>>();
                         let title = path.components().last().unwrap()
                             .as_os_str().to_str().unwrap();
