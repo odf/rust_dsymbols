@@ -25,8 +25,7 @@ use rust_dsymbols::tilings::{
 
 
 pub struct Tiling {
-    spec: String,
-    ds: RefCell<Option<Rc<Result<PartialDSym, String>>>>,
+    ds: Result<PartialDSym, String>,
     cov: RefCell<Option<Rc<Result<PartialDSym, String>>>>,
     skel: RefCell<Option<Rc<Result<Skeleton, String>>>>,
 }
@@ -35,20 +34,14 @@ pub struct Tiling {
 impl Tiling {
     pub fn from(spec: &str) -> Tiling {
         Tiling {
-            spec: String::from(spec),
-            ds: RefCell::new(None),
+            ds: spec.parse::<PartialDSym>(),
             cov: RefCell::new(None),
             skel: RefCell::new(None)
         }
     }
 
-    pub fn ds(&self) -> Rc<Result<PartialDSym, String>> {
-        if self.ds.borrow().is_none() {
-            let maybe_ds = self.spec.parse::<PartialDSym>();
-            self.ds.replace(Some(Rc::new(maybe_ds)));
-        }
-
-        self.ds.borrow().as_ref().unwrap().clone()
+    pub fn ds(&self) -> &Result<PartialDSym, String> {
+        &self.ds
     }
 
     pub fn cov(&self) -> Rc<Result<PartialDSym, String>> {
@@ -73,21 +66,18 @@ impl Tiling {
     }
 
     fn cov_impl(&self) -> Result<PartialDSym, String> {
-        match self.ds().as_ref() {
-            Ok(ds) => {
-                if ds.dim() != 3 {
-                    Err("is not three_dimensional".to_string())
-                } else if !ds.is_complete() {
-                    Err("is incomplete".to_string())
-                } else if !obeys_crystallographic_restriction(ds) {
-                    return Err("violates the crystallographic restriction".to_string());
-                } else {
-                    pseudo_toroidal_cover(ds).ok_or(
-                        "does not have a pseudo-toroidal cover".to_string()
-                    )
-                }
-            },
-            Err(msg) => Err(msg.clone())
+        let ds = self.ds().as_ref()?;
+
+        if ds.dim() != 3 {
+            Err("is not three_dimensional".to_string())
+        } else if !ds.is_complete() {
+            Err("is incomplete".to_string())
+        } else if !obeys_crystallographic_restriction(ds) {
+            Err("violates the crystallographic restriction".to_string())
+        } else {
+            pseudo_toroidal_cover(ds).ok_or(
+                "does not have a pseudo-toroidal cover".to_string()
+            )
         }
     }
 }
@@ -519,8 +509,7 @@ fn build_parts(til: &Tiling, options: &Options)
 fn tiles(til: &Tiling)
     -> Result<Vec<Mesh<Point3<f64>>>, String>
 {
-    let ds = til.ds();
-    let ds = ds.as_ref().as_ref()?;
+    let ds = til.ds().as_ref()?;
     let cov = til.cov();
     let cov = cov.as_ref().as_ref()?;
     let skel = til.skel();
