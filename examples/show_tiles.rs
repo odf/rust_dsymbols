@@ -72,12 +72,6 @@ impl Tiling {
         self.skel.borrow().as_ref().unwrap().clone()
     }
 
-    pub fn clear_cache(&self) {
-        self.ds.replace(None);
-        self.cov.replace(None);
-        self.skel.replace(None);
-    }
-
     fn cov_impl(&self) -> Result<PartialDSym, String> {
         match self.ds().as_ref() {
             Ok(ds) => {
