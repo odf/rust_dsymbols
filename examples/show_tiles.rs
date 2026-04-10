@@ -12,10 +12,12 @@ use egui_file::FileDialog;
 use lru::LruCache;
 use three_d::{Mat4, Vec3};
 
-use rust_dsymbols::delaney3d::pseudo_toroidal_cover;
+use rust_dsymbols::delaney3d::{
+    obeys_crystallographic_restriction, pseudo_toroidal_cover
+};
 use rust_dsymbols::display::mesh::{ItemType, Mesh, decompose_mesh, scaled_mesh};
 use rust_dsymbols::dsets::DSet;
-use rust_dsymbols::dsyms::{DSym, PartialDSym};
+use rust_dsymbols::dsyms::PartialDSym;
 use rust_dsymbols::geometry::vec_matrix::VecMatrix;
 use rust_dsymbols::tilings::{
     Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces
@@ -83,18 +85,9 @@ impl Tiling {
                     Err("is not three_dimensional".to_string())
                 } else if !ds.is_complete() {
                     Err("is incomplete".to_string())
+                } else if !obeys_crystallographic_restriction(ds) {
+                    return Err("violates the crystallographic restriction".to_string());
                 } else {
-                    for i in 0..ds.dim() {
-                        for d in ds.orbit_reps_2d(i, i + 1) {
-                            let v = ds.v(i, i + 1, d).unwrap();
-                            if v > 6 && v == 5 {
-                                return Err(String::from(
-                                    "violates the crystallographic restriction"
-                                ));
-                            }
-                        }
-                    }
-
                     pseudo_toroidal_cover(ds).ok_or(
                         "does not have a pseudo-toroidal cover".to_string()
                     )

@@ -129,14 +129,8 @@ pub fn pseudo_toroidal_cover<T: DSym>(ds: &T) -> Option<PartialDSym> {
     assert!(ds.dim() == 3, "must be three-dimensional");
     assert!(ds.is_complete(), "must be complete");
 
-    for i in 0..ds.dim() {
-        for d in ds.orbit_reps_2d(i, i + 1) {
-            let v = ds.v(i, i + 1, d).unwrap();
-            assert!(
-                v <= 6 && v != 5,
-                "violates the crystallographic restriction"
-            );
-        }
+    if !obeys_crystallographic_restriction(ds) {
+        return None;
     }
 
     let ds = oriented_cover(ds);
@@ -155,6 +149,20 @@ pub fn pseudo_toroidal_cover<T: DSym>(ds: &T) -> Option<PartialDSym> {
     }
 
     None
+}
+
+
+pub fn obeys_crystallographic_restriction<T: DSym>(ds: &T) -> bool {
+    for i in 0..ds.dim() {
+        for d in ds.orbit_reps_2d(i, i + 1) {
+            if let Some(v) = ds.v(i, i + 1, d) {
+                if v > 6 || v == 5 {
+                    return false;
+                }
+            }
+        }
+    }
+    true
 }
 
 
