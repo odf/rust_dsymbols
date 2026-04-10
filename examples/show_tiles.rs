@@ -137,8 +137,7 @@ impl Default for Options {
 
 #[derive(Eq, Hash, PartialEq)]
 struct CacheKey {
-    collection_name: String,
-    index_in_collection: usize,
+    tile_spec: String,
     tile_scale: i64,
     edge_radius: i64,
 }
@@ -159,9 +158,9 @@ struct State {
 
 impl State {
     fn cache_key(&self) -> CacheKey {
+        let tiling = &self.catalog[&self.collection_name][self.index_in_collection];
         CacheKey {
-            collection_name: self.collection_name.clone(),
-            index_in_collection: self.index_in_collection,
+            tile_spec: tiling.spec.clone(),
             tile_scale: (self.options.tile_scale * 10000.0) as i64,
             edge_radius: (self.options.edge_radius * 10000.0) as i64,
         }
