@@ -10,6 +10,7 @@ use cgmath::prelude::*;
 use cgmath::{point3, vec3, Point3};
 use egui_file::FileDialog;
 use lru::LruCache;
+use sha2::{Sha256, Digest};
 use three_d::{Mat4, Vec3};
 
 use rust_dsymbols::delaney3d::{
@@ -135,10 +136,17 @@ struct State {
 
 
 impl State {
-    fn cache_key(&self) -> CacheKey {
-        let tiling = &self.catalog[&self.collection_name][self.index_in_collection];
+    fn current_spec(&self) -> &str {
+        &self.catalog[&self.collection_name][self.index_in_collection]
+    }
+
+    fn tiling_cache_key(&self) -> String {
+        hex::encode(Sha256::digest(self.current_spec()))
+    }
+
+    fn parts_cache_key(&self) -> CacheKey {
         CacheKey {
-            tiling_spec: tiling.clone(),
+            tiling_spec: hex::encode(Sha256::digest(self.current_spec())),
             tile_scale: (self.options.tile_scale * 100.0) as i64,
             edge_radius: (self.options.edge_radius * 1000.0) as i64,
         }
@@ -275,11 +283,12 @@ fn render_callback(
     let ambient = three_d::AmbientLight::new(context, 0.1, white);
 
     let options = &state.options;
-    let spec = &state.catalog[&state.collection_name][state.index_in_collection];
-    let key = state.cache_key();
+    let spec = String::from(state.current_spec());
+    let tkey = state.tiling_cache_key();
+    let pkey = state.parts_cache_key();
 
-    let tiling = state.tiling_cache.get_or_insert(spec.clone(), || Tiling::from(spec));
-    let parts = state.parts_cache.get_or_insert(key, || build_parts(tiling, options));
+    let tiling = state.tiling_cache.get_or_insert(tkey, || Tiling::from(&spec));
+    let parts = state.parts_cache.get_or_insert(pkey, || build_parts(tiling, options));
 
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
     let clear_state = three_d::ClearState::color_and_depth(r, g, b, a, 1.0);

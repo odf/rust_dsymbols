@@ -17,3 +17,5 @@ three-d = { version = "0.18.2", features = ["egui-gui"] }
 three-d-asset = "0.9.2"
 lru = "0.16.3"
 egui_file = "0.19.0" # use an older version to avoid egui version conflict with three-d
+sha2 = "0.11.0"
+hex = "0.4.3"
