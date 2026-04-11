@@ -136,6 +136,24 @@ struct State {
 
 
 impl State {
+    fn update_caches(&mut self) {
+        let tkey = self.tiling_cache_key();
+        let pkey = self.parts_cache_key();
+
+        if self.tiling_cache.get(&tkey).is_none() {
+            let til = Tiling::from(self.current_spec());
+            self.tiling_cache.put(tkey.clone(), til);
+        }
+
+        if self.parts_cache.get(&pkey).is_none() {
+            let parts = build_parts(
+                self.tiling_cache.get(&tkey).unwrap(),
+                &self.options
+            );
+            self.parts_cache.put(pkey, parts);
+        }
+    }
+
     fn current_spec(&self) -> &str {
         &self.catalog[&self.collection_name][self.index_in_collection]
     }
@@ -254,25 +272,17 @@ fn render_callback(
         &mut state.camera, &mut frame_input.events, 1.0, 1000.0
     );
 
-    let options = &state.options;
-    let tkey = state.tiling_cache_key();
-    let pkey = state.parts_cache_key();
-
-    if state.tiling_cache.get(&tkey).is_none() {
-        let til = Tiling::from(state.current_spec());
-        state.tiling_cache.put(tkey.clone(), til);
-    }
-    let tiling = state.tiling_cache.get(&tkey).unwrap();
-
-    let parts = state.parts_cache.get_or_insert(pkey, || build_parts(tiling, options));
-
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
     let clear_state = three_d::ClearState::color_and_depth(r, g, b, a, 1.0);
     let screen = frame_input.screen();
 
-    match parts {
+    state.update_caches();
+
+    match state.parts_cache.get(&state.parts_cache_key()).unwrap() {
         Ok(parts) => {
             state.message = String::from("Ok!");
+
+            let options = &state.options;
             let models = build_models(context, parts, options);
             screen.clear(clear_state);
 
