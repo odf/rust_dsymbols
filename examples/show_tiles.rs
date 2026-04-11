@@ -283,11 +283,15 @@ fn render_callback(
     let ambient = three_d::AmbientLight::new(context, 0.1, white);
 
     let options = &state.options;
-    let spec = String::from(state.current_spec());
     let tkey = state.tiling_cache_key();
     let pkey = state.parts_cache_key();
 
-    let tiling = state.tiling_cache.get_or_insert(tkey, || Tiling::from(&spec));
+    if state.tiling_cache.get(&tkey).is_none() {
+        let til = Tiling::from(state.current_spec());
+        state.tiling_cache.put(tkey.clone(), til);
+    }
+    let tiling = state.tiling_cache.get(&tkey).unwrap();
+
     let parts = state.parts_cache.get_or_insert(pkey, || build_parts(tiling, options));
 
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
