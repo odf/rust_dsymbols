@@ -224,11 +224,14 @@ fn profile_build_models(context: &mut three_d::Context, state: &State) {
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    let tiling = &state.catalog[&state.collection_name][state.index_in_collection];
+    let tiling = Tiling::from(
+        &state.catalog[&state.collection_name][state.index_in_collection]
+    );
     let options = &state.options;
 
-    let parts = build_parts(tiling, options);
-    build_models(&context, &parts, options);
+    if let Ok(parts) = build_parts(&tiling, options) {
+        build_models(&context, &parts, options);
+    }
 
     if let Ok(report) = guard.report().build() {
         let file = std::fs::File::create("flamegraph.svg").unwrap();
