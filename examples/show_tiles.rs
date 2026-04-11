@@ -248,29 +248,7 @@ fn render_callback(
 )
     -> three_d::FrameOutput
 {
-    let mut offset_wd = 0.0;
-    let mut offset_ht = 0.0;
-
-    gui.update(
-        &mut frame_input.events,
-        frame_input.accumulated_time,
-        frame_input.viewport,
-        frame_input.device_pixel_ratio,
-        |gui_context| {
-            (offset_wd, offset_ht) = gui_callback(state, gui_context);
-        },
-    );
-
-    let wd = offset_wd * frame_input.device_pixel_ratio;
-    let ht = offset_ht * frame_input.device_pixel_ratio;
-
-    let viewport = three_d::Viewport {
-        x: wd as i32,
-        y: ht as i32,
-        width: frame_input.viewport.width - wd as u32,
-        height: frame_input.viewport.height - ht as u32,
-    };
-    state.camera.set_viewport(viewport);
+    update_gui_and_viewport(frame_input, gui, state);
 
     rust_dsymbols::display::controls::orbit_control_update_camera(
         &mut state.camera, &mut frame_input.events, 1.0, 1000.0
@@ -321,6 +299,37 @@ fn render_callback(
 
     // Ensures a valid return value.
     three_d::FrameOutput::default()
+}
+
+
+fn update_gui_and_viewport(
+    frame_input: &mut three_d::FrameInput,
+    gui: &mut three_d::GUI,
+    state: &mut State)
+{
+    let mut offset_wd = 0.0;
+    let mut offset_ht = 0.0;
+
+    gui.update(
+        &mut frame_input.events,
+        frame_input.accumulated_time,
+        frame_input.viewport,
+        frame_input.device_pixel_ratio,
+        |gui_context| {
+            (offset_wd, offset_ht) = gui_callback(state, gui_context);
+        },
+    );
+
+    let wd = offset_wd * frame_input.device_pixel_ratio;
+    let ht = offset_ht * frame_input.device_pixel_ratio;
+
+    let viewport = three_d::Viewport {
+        x: wd as i32,
+        y: ht as i32,
+        width: frame_input.viewport.width - wd as u32,
+        height: frame_input.viewport.height - ht as u32,
+    };
+    state.camera.set_viewport(viewport);
 }
 
 
