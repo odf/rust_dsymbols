@@ -254,15 +254,6 @@ fn render_callback(
         &mut state.camera, &mut frame_input.events, 1.0, 1000.0
     );
 
-    let sun_dir = (
-        state.camera.view().invert().unwrap() *
-        state.options.sun_direction.extend(0.0)
-    ).truncate();
-
-    let white = three_d::Srgba::WHITE;
-    let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
-    let ambient = three_d::AmbientLight::new(context, 0.1, white);
-
     let options = &state.options;
     let tkey = state.tiling_cache_key();
     let pkey = state.parts_cache_key();
@@ -283,11 +274,9 @@ fn render_callback(
         Ok(parts) => {
             state.message = String::from("Ok!");
             let models = build_models(context, parts, options);
-            if state.options.sun_casts_shadows {
-                sun.generate_shadow_map(9192, &models);
-            }
-            screen.clear(clear_state)
-                .render(&state.camera, models, &[&sun, &ambient]);
+            screen.clear(clear_state);
+
+            render_models(context, &screen, options, &state.camera, models);
         },
         Err(msg) => {
             state.message = msg.clone();
@@ -299,6 +288,29 @@ fn render_callback(
 
     // Ensures a valid return value.
     three_d::FrameOutput::default()
+}
+
+
+fn render_models(
+    context: &mut three_d::Context,
+    screen: &three_d::RenderTarget<'_>,
+    options: &Options,
+    camera: &three_d::Camera,
+    models: Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
+) {
+    let sun_dir = (
+        camera.view().invert().unwrap() *
+        options.sun_direction.extend(0.0)
+    ).truncate();
+
+    let white = three_d::Srgba::WHITE;
+    let mut sun = three_d::DirectionalLight::new(context, 2.0, white, sun_dir);
+    let ambient = three_d::AmbientLight::new(context, 0.1, white);
+
+    if options.sun_casts_shadows {
+        sun.generate_shadow_map(9192, &models);
+    }
+    screen.render(camera, models, &[&sun, &ambient]);
 }
 
 
