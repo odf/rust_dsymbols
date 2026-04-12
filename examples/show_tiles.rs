@@ -177,6 +177,23 @@ struct State {
 
 
 impl State {
+    fn new(
+        catalog: Catalog<String>, camera: three_d::Camera, message: &str
+    )
+        -> Self
+    {
+        State {
+            options: Default::default(),
+            catalog,
+            camera,
+            opened_file: None,
+            open_file_dialog: None,
+            tiling_cache: RefCell::new(LruCache::new(NonZero::new(10).unwrap())),
+            parts_cache: RefCell::new(LruCache::new(NonZero::new(10).unwrap())),
+            message: String::from(message),
+        }
+    }
+
     fn update_caches(&self) {
         if let Some(tkey) = self.tiling_cache_key() {
             let spec = self.catalog.get().unwrap();
@@ -248,16 +265,8 @@ fn main() {
         /* srs */ "<1.1:10 3:2 4 6 8 10,10 3 5 7 9,10 9 8 7 6,4 3 10 9 8:10,3 2 2,10>"
     ];
 
-    let mut state = State {
-        options: Default::default(),
-        catalog: Catalog::from("__builtin__", builtin.into_iter().map(String::from)),
-        camera,
-        opened_file: None,
-        open_file_dialog: None,
-        tiling_cache: RefCell::new(LruCache::new(NonZero::new(10).unwrap())),
-        parts_cache: RefCell::new(LruCache::new(NonZero::new(10).unwrap())),
-        message: "Initializing...".to_string(),
-    };
+    let catalog = Catalog::from("__builtin__", builtin.into_iter().map(String::from));
+    let mut state = State::new(catalog, camera, "Initializing...");
 
     let mut context = window.gl();
     let mut gui = three_d::GUI::new(&context);
