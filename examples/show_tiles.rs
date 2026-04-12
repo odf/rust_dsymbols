@@ -84,6 +84,30 @@ impl Tiling {
 }
 
 
+struct Catalog<T> {
+    collections: HashMap<String, Vec<T>>,
+    collection_name: String,
+    index_in_collection: usize,
+}
+
+
+impl<T> Catalog<T> {
+    fn get(&self) -> &T {
+        &self.collections[&self.collection_name][self.index_in_collection]
+    }
+
+    fn add_collection(
+        &mut self,
+        title: &str,
+        collection: impl IntoIterator<Item=T>
+    ) {
+        self.collections.insert(title.to_string(), collection.into_iter().collect());
+        self.collection_name = title.to_string();
+        self.index_in_collection = 0;
+    }
+}
+
+
 #[derive(Clone, Copy, PartialEq)]
 struct Options {
     tile_scale: f64,
@@ -123,9 +147,7 @@ struct CacheKey {
 
 struct State {
     options: Options,
-    catalog: HashMap<String, Vec<String>>,
-    collection_name: String,
-    index_in_collection: usize,
+    catalog: Catalog<String>,
     camera: three_d::Camera,
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
@@ -141,7 +163,7 @@ impl State {
         let pkey = self.parts_cache_key();
 
         if self.tiling_cache.get(&tkey).is_none() {
-            let til = Tiling::from(self.current_spec());
+            let til = Tiling::from(self.catalog.get());
             self.tiling_cache.put(tkey.clone(), til);
         }
 
@@ -154,17 +176,13 @@ impl State {
         }
     }
 
-    fn current_spec(&self) -> &str {
-        &self.catalog[&self.collection_name][self.index_in_collection]
-    }
-
     fn tiling_cache_key(&self) -> String {
-        hex::encode(Sha256::digest(self.current_spec()))
+        hex::encode(Sha256::digest(self.catalog.get()))
     }
 
     fn parts_cache_key(&self) -> CacheKey {
         CacheKey {
-            tiling_spec: hex::encode(Sha256::digest(self.current_spec())),
+            tiling_spec: hex::encode(Sha256::digest(self.catalog.get())),
             tile_scale: (self.options.tile_scale * 100.0) as i64,
             edge_radius: (self.options.edge_radius * 1000.0) as i64,
         }
@@ -202,21 +220,20 @@ fn main() {
         /* srs */ "<1.1:10 3:2 4 6 8 10,10 3 5 7 9,10 9 8 7 6,4 3 10 9 8:10,3 2 2,10>"
     ];
 
-    let catalog = HashMap::from([
-        (
-            String::from("__builtin__"),
-            builtin.into_iter().map(String::from).collect::<Vec<_>>()
-        )
-    ]);
-
-    let collection_name = "__builtin__".to_string();
-    let index_in_collection = 0;
+    let catalog = Catalog {
+        collections: HashMap::from([
+            (
+                String::from("__builtin__"),
+                builtin.into_iter().map(String::from).collect::<Vec<_>>()
+            )
+        ]),
+        collection_name: String::from("__builtin__"),
+        index_in_collection: 0
+    };
 
     let mut state = State {
         options: Default::default(),
         catalog,
-        collection_name,
-        index_in_collection,
         camera,
         opened_file: None,
         open_file_dialog: None,
@@ -242,9 +259,7 @@ fn profile_build_models(context: &mut three_d::Context, state: &State) {
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    let tiling = Tiling::from(
-        &state.catalog[&state.collection_name][state.index_in_collection]
-    );
+    let tiling = Tiling::from(state.catalog.get());
     let options = &state.options;
 
     if let Ok(parts) = build_parts(&tiling, options) {
@@ -362,7 +377,7 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
         ui.heading("Tiling");
         ui.add_space(12.0);
 
-        ui.label(format!("Collection '{}'", state.collection_name));
+        ui.label(format!("Collection '{}'", state.catalog.collection_name));
 
         ui_file_loader(ui, gui_context, state);
         ui.add_space(12.0);
@@ -443,14 +458,10 @@ fn ui_file_loader(
                 state.opened_file = Some(path.clone());
                 match file_contents(&path) {
                     Ok(content) => {
-                        let collection = content.lines()
-                            .map(String::from)
-                            .collect::<Vec<_>>();
                         let title = path.components().last().unwrap()
                             .as_os_str().to_str().unwrap();
-                        state.catalog.insert(title.to_string(), collection);
-                        state.collection_name = title.to_string();
-                        state.index_in_collection = 0;
+                        let collection = content.lines().map(String::from);
+                        state.catalog.add_collection(title, collection);
                     },
                     Err(err) => {
                         state.message = err.to_string()
@@ -466,27 +477,27 @@ fn ui_navigation_buttons(
     ui: &mut three_d::egui::Ui,
     state: &mut State,
 ) {
-    let n = state.catalog[&state.collection_name].len();
-    let k = state.index_in_collection;
+    let n = state.catalog.collections[&state.catalog.collection_name].len();
+    let k = state.catalog.index_in_collection;
 
     ui.label(format!("Index {} of {}", k + 1, n));
 
     ui.horizontal(|ui| {
         if ui.button("First").clicked() {
-            state.index_in_collection = 0;
+            state.catalog.index_in_collection = 0;
         }
         if ui.button("Prev").clicked() {
             if k > 0 {
-                state.index_in_collection -= 1;
+                state.catalog.index_in_collection -= 1;
             }
         }
         if ui.button("Next").clicked() {
             if k < n - 1 {
-                state.index_in_collection += 1;
+                state.catalog.index_in_collection += 1;
             }
         }
         if ui.button("Last").clicked() {
-            state.index_in_collection = n - 1;
+            state.catalog.index_in_collection = n - 1;
         }
     });
 }
