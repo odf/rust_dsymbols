@@ -213,9 +213,6 @@ fn main() {
     })
     .unwrap();
 
-    let mut context = window.gl();
-    let mut gui = three_d::GUI::new(&context);
-
     let camera = three_d::Camera::new_perspective(
         window.viewport(),
         vec3(0.0, 2.0, 8.0),
@@ -244,6 +241,9 @@ fn main() {
         parts_cache: LruCache::new(NonZero::new(10).unwrap()),
         message: "Initializing...".to_string(),
     };
+
+    let mut context = window.gl();
+    let mut gui = three_d::GUI::new(&context);
 
     #[cfg(feature = "pprof")] {
         profile_build_models(&mut context, &state);
