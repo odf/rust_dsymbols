@@ -170,26 +170,26 @@ struct State {
     camera: three_d::Camera,
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
-    tiling_cache: LruCache<String, Tiling>,
+    tiling_cache: RefCell<LruCache<String, Tiling>>,
     parts_cache: RefCell<LruCache<CacheKey, Rc<Result<Parts, String>>>>,
     message: String,
 }
 
 
 impl State {
-    fn update_caches(&mut self) {
+    fn update_caches(&self) {
         if let Some(tkey) = self.tiling_cache_key() {
             let spec = self.catalog.get().unwrap();
             let pkey = self.parts_cache_key().unwrap();
 
-            if self.tiling_cache.get(&tkey).is_none() {
+            if self.tiling_cache.borrow_mut().get(&tkey).is_none() {
                 let til = Tiling::from(spec);
-                self.tiling_cache.put(tkey.clone(), til);
+                self.tiling_cache.borrow_mut().put(tkey.clone(), til);
             }
 
             if self.parts_cache.borrow_mut().get(&pkey).is_none() {
                 let parts = build_parts(
-                    self.tiling_cache.get(&tkey).unwrap(),
+                    self.tiling_cache.borrow_mut().get(&tkey).unwrap(),
                     &self.options
                 );
                 self.parts_cache.borrow_mut().put(pkey, Rc::new(parts));
@@ -212,6 +212,8 @@ impl State {
     }
 
     fn current_parts(&self) -> Option<Rc<Result<Parts, String>>> {
+        self.update_caches();
+
         self.parts_cache_key().and_then(|k|
             self.parts_cache.borrow_mut().get(&k).cloned()
         )
@@ -252,7 +254,7 @@ fn main() {
         camera,
         opened_file: None,
         open_file_dialog: None,
-        tiling_cache: LruCache::new(NonZero::new(10).unwrap()),
+        tiling_cache: RefCell::new(LruCache::new(NonZero::new(10).unwrap())),
         parts_cache: RefCell::new(LruCache::new(NonZero::new(10).unwrap())),
         message: "Initializing...".to_string(),
     };
@@ -308,8 +310,6 @@ fn render_callback(
     let [r, g, b, a] = state.options.background_color.to_normalized_gamma_f32();
     let clear_state = three_d::ClearState::color_and_depth(r, g, b, a, 1.0);
     let screen = frame_input.screen();
-
-    state.update_caches();
 
     if let Some(parts) = state.current_parts() {
         match parts.as_ref() {
