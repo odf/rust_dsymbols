@@ -499,21 +499,27 @@ fn ui_navigation_buttons(
     ui.label(format!("Index {} of {}", k + 1, n));
 
     ui.horizontal(|ui| {
-        if ui.button("First").clicked() {
-            state.catalog.index_in_collection = 0;
-        }
-        if ui.button("Prev").clicked() {
-            if k > 0 {
+        if k == 0 {
+            ui.add_enabled(false, three_d::egui::Button::new("First"));
+            ui.add_enabled(false, three_d::egui::Button::new("Prev"));
+        } else {
+            if ui.button("First").clicked() {
+                state.catalog.index_in_collection = 0;
+            }
+            if ui.button("Prev").clicked() {
                 state.catalog.index_in_collection -= 1;
             }
         }
-        if ui.button("Next").clicked() {
-            if k + 1 < n {
+        if k + 1 >= n {
+            ui.add_enabled(false, three_d::egui::Button::new("Next"));
+            ui.add_enabled(false, three_d::egui::Button::new("Last"));
+        } else {
+            if ui.button("Next").clicked() {
                 state.catalog.index_in_collection += 1;
             }
-        }
-        if ui.button("Last").clicked() {
-            state.catalog.index_in_collection = n.max(1) - 1;
+            if ui.button("Last").clicked() {
+                state.catalog.index_in_collection = n.max(1) - 1;
+            }
         }
     });
 }
