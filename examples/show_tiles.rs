@@ -161,6 +161,9 @@ struct CacheKey {
 }
 
 
+type Parts = Vec<(three_d::CpuMesh, ItemType)>;
+
+
 struct State {
     options: Options,
     catalog: Catalog<String>,
@@ -168,7 +171,7 @@ struct State {
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
     tiling_cache: LruCache<String, Tiling>,
-    parts_cache: LruCache<CacheKey, Result<Vec<(three_d::CpuMesh, ItemType)>, String>>,
+    parts_cache: RefCell<LruCache<CacheKey, Rc<Result<Parts, String>>>>,
     message: String,
 }
 
@@ -184,12 +187,12 @@ impl State {
                 self.tiling_cache.put(tkey.clone(), til);
             }
 
-            if self.parts_cache.get(&pkey).is_none() {
+            if self.parts_cache.borrow_mut().get(&pkey).is_none() {
                 let parts = build_parts(
                     self.tiling_cache.get(&tkey).unwrap(),
                     &self.options
                 );
-                self.parts_cache.put(pkey, parts);
+                self.parts_cache.borrow_mut().put(pkey, Rc::new(parts));
             }
         }
     }
@@ -205,6 +208,12 @@ impl State {
                 tile_scale: (self.options.tile_scale * 100.0) as i64,
                 edge_radius: (self.options.edge_radius * 1000.0) as i64,
             }
+        )
+    }
+
+    fn current_parts(&self) -> Option<Rc<Result<Parts, String>>> {
+        self.parts_cache_key().and_then(|k|
+            self.parts_cache.borrow_mut().get(&k).cloned()
         )
     }
 }
@@ -244,7 +253,7 @@ fn main() {
         opened_file: None,
         open_file_dialog: None,
         tiling_cache: LruCache::new(NonZero::new(10).unwrap()),
-        parts_cache: LruCache::new(NonZero::new(10).unwrap()),
+        parts_cache: RefCell::new(LruCache::new(NonZero::new(10).unwrap())),
         message: "Initializing...".to_string(),
     };
 
@@ -302,10 +311,8 @@ fn render_callback(
 
     state.update_caches();
 
-    if let Some(parts) = state.parts_cache_key()
-        .and_then(|k| state.parts_cache.get(&k))
-    {
-        match parts {
+    if let Some(parts) = state.current_parts() {
+        match parts.as_ref() {
             Ok(parts) => {
                 state.message = String::from("Ok!");
 
@@ -535,9 +542,7 @@ fn file_contents(path: &PathBuf) -> std::io::Result<String> {
 
 
 fn build_models(
-    context: &three_d::Context,
-    parts: &Vec<(three_d::CpuMesh, ItemType)>,
-    options: &Options
+    context: &three_d::Context, parts: &Parts, options: &Options
 )
     -> Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
 {
@@ -568,9 +573,7 @@ fn build_models(
 }
 
 
-fn build_parts(til: &Tiling, options: &Options)
-    -> Result<Vec<(three_d::CpuMesh, ItemType)>, String>
-{
+fn build_parts(til: &Tiling, options: &Options) -> Result<Parts, String> {
     let mut parts = vec!();
 
     for tile_mesh in tiles(til)? {
