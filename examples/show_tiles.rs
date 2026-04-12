@@ -106,8 +106,10 @@ impl<T> Catalog<T> {
         result
     }
 
-    fn get(&self) -> &T {
-        &self.collections[&self.collection_name][self.index_in_collection]
+    fn get(&self) -> Option<&T> {
+        self.collections
+            .get(&self.collection_name)?
+            .get(self.index_in_collection)
     }
 
     fn add_collection(
@@ -173,33 +175,37 @@ struct State {
 
 impl State {
     fn update_caches(&mut self) {
-        let tkey = self.tiling_cache_key();
-        let pkey = self.parts_cache_key();
+        if let Some(tkey) = self.tiling_cache_key() {
+            let spec = self.catalog.get().unwrap();
+            let pkey = self.parts_cache_key().unwrap();
 
-        if self.tiling_cache.get(&tkey).is_none() {
-            let til = Tiling::from(self.catalog.get());
-            self.tiling_cache.put(tkey.clone(), til);
-        }
+            if self.tiling_cache.get(&tkey).is_none() {
+                let til = Tiling::from(spec);
+                self.tiling_cache.put(tkey.clone(), til);
+            }
 
-        if self.parts_cache.get(&pkey).is_none() {
-            let parts = build_parts(
-                self.tiling_cache.get(&tkey).unwrap(),
-                &self.options
-            );
-            self.parts_cache.put(pkey, parts);
+            if self.parts_cache.get(&pkey).is_none() {
+                let parts = build_parts(
+                    self.tiling_cache.get(&tkey).unwrap(),
+                    &self.options
+                );
+                self.parts_cache.put(pkey, parts);
+            }
         }
     }
 
-    fn tiling_cache_key(&self) -> String {
-        hex::encode(Sha256::digest(self.catalog.get()))
+    fn tiling_cache_key(&self) -> Option<String> {
+        self.catalog.get().map(|spec| hex::encode(Sha256::digest(spec)))
     }
 
-    fn parts_cache_key(&self) -> CacheKey {
-        CacheKey {
-            tiling_spec: hex::encode(Sha256::digest(self.catalog.get())),
-            tile_scale: (self.options.tile_scale * 100.0) as i64,
-            edge_radius: (self.options.edge_radius * 1000.0) as i64,
-        }
+    fn parts_cache_key(&self) -> Option<CacheKey> {
+        self.catalog.get().map(|spec|
+            CacheKey {
+                tiling_spec: hex::encode(Sha256::digest(spec)),
+                tile_scale: (self.options.tile_scale * 100.0) as i64,
+                edge_radius: (self.options.edge_radius * 1000.0) as i64,
+            }
+        )
     }
 }
 
@@ -296,20 +302,27 @@ fn render_callback(
 
     state.update_caches();
 
-    match state.parts_cache.get(&state.parts_cache_key()).unwrap() {
-        Ok(parts) => {
-            state.message = String::from("Ok!");
+    if let Some(parts) = state.parts_cache_key()
+        .and_then(|k| state.parts_cache.get(&k))
+    {
+        match parts {
+            Ok(parts) => {
+                state.message = String::from("Ok!");
 
-            let options = &state.options;
-            let models = build_models(context, parts, options);
-            screen.clear(clear_state);
+                let options = &state.options;
+                let models = build_models(context, parts, options);
+                screen.clear(clear_state);
 
-            render_models(context, &screen, options, &state.camera, models);
-        },
-        Err(msg) => {
-            state.message = msg.clone();
-            screen.clear(clear_state);
-        },
+                render_models(context, &screen, options, &state.camera, models);
+            },
+            Err(msg) => {
+                state.message = msg.clone();
+                screen.clear(clear_state);
+            },
+        }
+    } else {
+        state.message = String::from("nothing to render");
+        screen.clear(clear_state);
     }
 
     screen.write(|| gui.render()).unwrap();
