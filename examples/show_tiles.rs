@@ -92,12 +92,18 @@ struct Catalog<T> {
 
 
 impl<T> Catalog<T> {
-    fn new() -> Self {
-        Self {
+    fn from(
+        title: &str,
+        collection: impl IntoIterator<Item=T>
+    ) -> Self {
+        let mut result = Self {
             collections: HashMap::new(),
-            collection_name: String::from(""),
-            index_in_collection: 0
-        }
+            collection_name: Default::default(),
+            index_in_collection: Default::default()
+        };
+        result.add_collection(title, collection);
+
+        result
     }
 
     fn get(&self) -> &T {
@@ -228,12 +234,9 @@ fn main() {
         /* srs */ "<1.1:10 3:2 4 6 8 10,10 3 5 7 9,10 9 8 7 6,4 3 10 9 8:10,3 2 2,10>"
     ];
 
-    let mut catalog = Catalog::new();
-    catalog.add_collection("__builtin__", builtin.into_iter().map(String::from));
-
     let mut state = State {
         options: Default::default(),
-        catalog,
+        catalog: Catalog::from("__builtin__", builtin.into_iter().map(String::from)),
         camera,
         opened_file: None,
         open_file_dialog: None,
