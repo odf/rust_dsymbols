@@ -508,12 +508,12 @@ fn ui_navigation_buttons(
             }
         }
         if ui.button("Next").clicked() {
-            if k < n - 1 {
+            if k + 1 < n {
                 state.catalog.index_in_collection += 1;
             }
         }
         if ui.button("Last").clicked() {
-            state.catalog.index_in_collection = n - 1;
+            state.catalog.index_in_collection = n.max(1) - 1;
         }
     });
 }
