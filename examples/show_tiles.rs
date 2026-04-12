@@ -92,6 +92,14 @@ struct Catalog<T> {
 
 
 impl<T> Catalog<T> {
+    fn new() -> Self {
+        Self {
+            collections: HashMap::new(),
+            collection_name: String::from(""),
+            index_in_collection: 0
+        }
+    }
+
     fn get(&self) -> &T {
         &self.collections[&self.collection_name][self.index_in_collection]
     }
@@ -220,16 +228,8 @@ fn main() {
         /* srs */ "<1.1:10 3:2 4 6 8 10,10 3 5 7 9,10 9 8 7 6,4 3 10 9 8:10,3 2 2,10>"
     ];
 
-    let catalog = Catalog {
-        collections: HashMap::from([
-            (
-                String::from("__builtin__"),
-                builtin.into_iter().map(String::from).collect::<Vec<_>>()
-            )
-        ]),
-        collection_name: String::from("__builtin__"),
-        index_in_collection: 0
-    };
+    let mut catalog = Catalog::new();
+    catalog.add_collection("__builtin__", builtin.into_iter().map(String::from));
 
     let mut state = State {
         options: Default::default(),
