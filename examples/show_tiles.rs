@@ -11,7 +11,7 @@ use cgmath::{point3, vec3, Point3};
 use egui_file::FileDialog;
 use lru::LruCache;
 use sha2::{Sha256, Digest};
-use three_d::{Mat4, Vec3};
+use three_d::{egui, Mat4, Vec3};
 
 use rust_dsymbols::delaney3d::{
     obeys_crystallographic_restriction, pseudo_toroidal_cover
@@ -128,10 +128,10 @@ impl<T> Catalog<T> {
 struct Options {
     tile_scale: f64,
     edge_radius: f64,
-    vertex_color: three_d::egui::Color32,
-    edge_color: three_d::egui::Color32,
-    face_color: three_d::egui::Color32,
-    background_color: three_d::egui::Color32,
+    vertex_color: egui::Color32,
+    edge_color: egui::Color32,
+    face_color: egui::Color32,
+    background_color: egui::Color32,
     sun_direction: Vec3,
     sun_casts_shadows: bool,
 }
@@ -142,10 +142,10 @@ impl Default for Options {
         Self {
             tile_scale: 0.75,
             edge_radius: 0.05,
-            vertex_color: three_d::egui::Color32::BLACK,
-            edge_color: three_d::egui::Color32::BLUE,
-            face_color: three_d::egui::Color32::RED,
-            background_color: three_d::egui::Color32::GRAY,
+            vertex_color: egui::Color32::BLACK,
+            edge_color: egui::Color32::BLUE,
+            face_color: egui::Color32::RED,
+            background_color: egui::Color32::GRAY,
             sun_direction: vec3(1.0, -1.0, -1.0),
             sun_casts_shadows: false,
         }
@@ -386,10 +386,10 @@ fn update_gui_and_viewport(
 }
 
 
-fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
+fn gui_callback(state: &mut State, gui_context: &egui::Context)
     -> (f32, f32)
 {
-    three_d::egui::SidePanel::left("side_panel").show(gui_context, |ui| {
+    egui::SidePanel::left("side_panel").show(gui_context, |ui| {
         ui.heading("Tiling");
         ui.add_space(12.0);
 
@@ -407,11 +407,11 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
         let options = &mut state.options;
 
         ui.add(
-            three_d::egui::Slider::new(&mut options.tile_scale, 0.1..=1.0)
+            egui::Slider::new(&mut options.tile_scale, 0.1..=1.0)
                 .text("Tile scale")
         );
         ui.add(
-            three_d::egui::Slider::new(&mut options.edge_radius, 0.0..=0.1)
+            egui::Slider::new(&mut options.edge_radius, 0.0..=0.1)
                 .text("Edge radius")
         );
         ui.add_space(12.0);
@@ -441,7 +441,7 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
 
     let width = gui_context.used_rect().width();
 
-    let response = three_d::egui::TopBottomPanel::top("status line").show(
+    let response = egui::TopBottomPanel::top("status line").show(
         gui_context,
         |ui| { ui.label(&state.message[..]); }
     );
@@ -452,8 +452,8 @@ fn gui_callback(state: &mut State, gui_context: &three_d::egui::Context)
 
 
 fn ui_file_loader(
-    ui: &mut three_d::egui::Ui,
-    gui_context: &three_d::egui::Context,
+    ui: &mut egui::Ui,
+    gui_context: &egui::Context,
     state: &mut State,
 ) {
     if (ui.button("Load...")).clicked() {
@@ -490,7 +490,7 @@ fn ui_file_loader(
 
 
 fn ui_navigation_buttons(
-    ui: &mut three_d::egui::Ui,
+    ui: &mut egui::Ui,
     state: &mut State,
 ) {
     let n = state.catalog.collections[&state.catalog.collection_name].len();
@@ -500,8 +500,8 @@ fn ui_navigation_buttons(
 
     ui.horizontal(|ui| {
         if k == 0 {
-            ui.add_enabled(false, three_d::egui::Button::new("First"));
-            ui.add_enabled(false, three_d::egui::Button::new("Prev"));
+            ui.add_enabled(false, egui::Button::new("First"));
+            ui.add_enabled(false, egui::Button::new("Prev"));
         } else {
             if ui.button("First").clicked() {
                 state.catalog.index_in_collection = 0;
@@ -511,8 +511,8 @@ fn ui_navigation_buttons(
             }
         }
         if k + 1 >= n {
-            ui.add_enabled(false, three_d::egui::Button::new("Next"));
-            ui.add_enabled(false, three_d::egui::Button::new("Last"));
+            ui.add_enabled(false, egui::Button::new("Next"));
+            ui.add_enabled(false, egui::Button::new("Last"));
         } else {
             if ui.button("Next").clicked() {
                 state.catalog.index_in_collection += 1;
