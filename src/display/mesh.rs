@@ -743,7 +743,7 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: &Mesh<Point3<S>>, radius: f64)
 {
     let edge_radius = S::from(radius).unwrap();
     let vertex_radius = S::from(0.98 * radius).unwrap();
-    let edge_lift = S::from(1.05 * radius).unwrap();
+    //let edge_lift = S::from(1.05 * radius).unwrap();
 
     let mut result = vec![];
 
@@ -777,10 +777,12 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: &Mesh<Point3<S>>, radius: f64)
             face_mesh = face_mesh.subd(true).tightened(true);
         }
 
-        let elevate = |e| face_mesh.elevate_corner(e, edge_lift);
-        let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
+        let revised = face_mesh
+            .revised_boundaries(|e| face_mesh.inset_corner(e, edge_radius))
+            //.revised_boundaries(|e| face_mesh.elevate_corner(e, edge_lift))
+            .tightened(true);
 
-        result.push((elevated, ItemType::Face));
+        result.push((revised, ItemType::Face));
     }
 
     result

@@ -141,7 +141,7 @@ impl Default for Options {
     fn default() -> Self {
         Self {
             tile_scale: 0.75,
-            edge_radius: 0.05,
+            edge_radius: 0.015,
             vertex_color: egui::Color32::BLACK,
             edge_color: egui::Color32::BLUE,
             face_color: egui::Color32::RED,
