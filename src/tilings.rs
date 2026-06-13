@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use num_rational::BigRational;
-use num_traits::{FromPrimitive, Signed};
+use num_traits::{FromPrimitive, Signed, ToPrimitive};
 
 use crate::dsets::Sign;
 use crate::geometry::traits::{Array2d, Entry, ScalarPtr};
@@ -198,6 +198,25 @@ fn normalized_orientation<D>(cov: &D, skel: &Skeleton) -> Vec<Sign>
     } else {
         ori
     }
+}
+
+
+pub fn normalized_chamber_volumes<D: DSym>(cov: &D, skel: &Skeleton) -> Vec<f64>
+{
+    let pos = chamber_positions(cov, skel);
+    let ori = normalized_orientation(cov, skel);
+
+    let mut result = vec!();
+    for d in cov.elements() {
+        let sign = match ori[d] {
+            Sign::PLUS => 1.0,
+            Sign::MINUS => -1.0,
+            Sign::ZERO => 0.0,
+        };
+        result.push(sign * chamber_basis(&pos, d).determinant().to_f64().unwrap());
+    }
+
+    result
 }
 
 

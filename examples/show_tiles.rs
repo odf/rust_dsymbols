@@ -21,7 +21,7 @@ use rust_dsymbols::dsets::DSet;
 use rust_dsymbols::dsyms::PartialDSym;
 use rust_dsymbols::geometry::vec_matrix::VecMatrix;
 use rust_dsymbols::tilings::{
-    Skeleton, chamber_positions, gram_matrix, invariant_basis, tile_surfaces
+    Skeleton, chamber_positions, gram_matrix, invariant_basis, normalized_chamber_volumes, tile_surfaces
 };
 
 
@@ -617,6 +617,15 @@ fn tiles(til: &Tiling)
 
     let (scale, shift) = scale_and_shift(cov, skel, &basis);
     let reps = cov.orbit_reps([0, 1, 2], cov.elements());
+
+    let volumes = normalized_chamber_volumes(cov, skel);
+
+    println!(
+        "Chamber volumes: min = {}, max = {}, mean = {}",
+        volumes.iter().min_by(|a, b| a.total_cmp(b)).unwrap(),
+        volumes.iter().max_by(|a, b| a.total_cmp(b)).unwrap(),
+        volumes.iter().fold(0.0, |a, b| a + b) / (volumes.len() as f64)
+    );
 
     tile_surfaces(cov, skel, &pos, reps).iter().map(|(vertices, faces)| {
         let vs = vertices.iter().map(|v| {
