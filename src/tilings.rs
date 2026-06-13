@@ -46,23 +46,23 @@ impl Skeleton {
 fn skeleton_edge<T: DSym>(
     d: usize,
     cov: &T,
-    e2t: &EdgeVectors<i64>,
-    c2s: &EdgeVectors<i64>,
-    c2n: &Vec<usize>
+    edge_translations: &EdgeVectors<i64>,
+    corner_shifts: &EdgeVectors<i64>,
+    chamber_to_node: &Vec<usize>
 )
     -> VectorLabelledEdge
 {
     let e = cov.op(0, d).unwrap();
-    let sd = &c2s[&(d, 0)];
-    let se = &c2s[&(e, 0)];
+    let shift_d = &corner_shifts[&(d, 0)];
+    let shift_e = &corner_shifts[&(e, 0)];
 
-    let shift = if let Some(t) = e2t.get(&(d, 0)) {
-        se + t - sd
+    let shift = if let Some(t) = edge_translations.get(&(d, 0)) {
+        shift_e + t - shift_d
     } else {
-        se - sd
+        shift_e - shift_d
     };
 
-    VectorLabelledEdge::make(c2n[d], c2n[e], shift)
+    VectorLabelledEdge::make(chamber_to_node[d], chamber_to_node[e], shift)
 }
 
 
